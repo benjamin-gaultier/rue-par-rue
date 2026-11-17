@@ -25,6 +25,8 @@ export interface PhotoProps {
   heading?: number
   fov?: number
   confidence: number
+  /** JSON string of source-specific details (see pipeline/rpr/photo.py). */
+  extra?: string
 }
 
 export interface PhotoFeature {
@@ -109,6 +111,24 @@ export function colorExpression(): unknown[] {
   for (const [k, v] of Object.entries(SOURCE_COLORS)) expr.push(k, v)
   expr.push(FALLBACK_COLOR)
   return expr
+}
+
+export function extraOf(p: PhotoProps): Record<string, string> {
+  if (!p.extra) return {}
+  try {
+    return JSON.parse(p.extra) as Record<string, string>
+  } catch {
+    return {}
+  }
+}
+
+/** Explain how the photo was placed, naming the street for geocoded ones. */
+export function positionLabel(p: PhotoProps): string {
+  const street = extraOf(p).geocoded_street
+  if (p.pose === 'geocoded' && street) {
+    return `Approximate: on ${street.replace(/ \d{5} Paris$/, '')}, the street named in the caption`
+  }
+  return POSE_LABELS[p.pose] ?? p.pose
 }
 
 export function dateLabel(p: PhotoProps): string {

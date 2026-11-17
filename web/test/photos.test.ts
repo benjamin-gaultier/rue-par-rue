@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { dateLabel, histogram, inWindow, type PhotoFeature, type PhotoProps, yearFilter } from '../src/photos'
+import { dateLabel, histogram, positionLabel, inWindow, type PhotoFeature, type PhotoProps, yearFilter } from '../src/photos'
 
 const props = (p: Partial<PhotoProps>): PhotoProps => ({
   id: 'x:1', source: 'kahn', source_id: '1', title: 't', license: 'CC0', media: 'photo', pose: 'recorded', confidence: 0.8, ...p
@@ -35,4 +35,10 @@ it('labels dates', () => {
   expect(dateLabel(props({ year: 1918, year_end: 1919 }))).toBe('1918–1919')
   expect(dateLabel(props({ year: 1918 }))).toBe('1918')
   expect(dateLabel(props({ date_text: 'vers 1910' }))).toBe('vers 1910')
+})
+
+it('names the geocoded street in the position label', () => {
+  const p = props({ pose: 'geocoded', extra: JSON.stringify({ geocoded_street: "Rue d'Arras 75005 Paris" }) })
+  expect(positionLabel(p)).toBe("Approximate: on Rue d'Arras, the street named in the caption")
+  expect(positionLabel(props({ pose: 'recorded' }))).toBe('Camera position recorded by the archive')
 })

@@ -16,7 +16,8 @@ Everything shown comes from public archives. Nothing on the map is generated.
 | Aerial photograph mosaics | 2000–2023 | IGN Géoplateforme |
 | Plan IGN | today | IGN Géoplateforme |
 | Today's street-level photos, by place | 2014–today | Panoramax API |
-| Archive photographs | 1850s–1930s | Pipeline ready; harvest pending (see below) |
+| Archive photographs: Marville, Atget | 1850s–1920s | Paris Musées (CC0), placed by geocoding their captions |
+| Archive photographs: Albert-Kahn autochromes | 1910s–1930s | Pipeline ready; run the harvest workflow (see below) |
 
 After 1860 the cadastre turns into an orange ghost over later maps, so streets cut by Haussmann's works stay visible. The URL hash keeps the year, view and selected photo, so any view can be shared.
 
@@ -53,6 +54,8 @@ python -m rpr parismusees   # Paris Musées photos, needs PARISMUSEES_TOKEN
 python -m rpr index         # rebuild photos.geojson + manifest.json
 pytest -q
 ```
+
+Paris Musées records carry no coordinates, so `rpr/geocode.py` reads the caption ("Passage de l'Opéra, vue prise de la rue Lepeletier, 9ème arrondissement"), prefers the street the view was taken from, and looks it up in the national address base through the IGN Géoplateforme geocoder. Only matches scoring 0.8 or more inside the stated arrondissement are kept, so renamed or demolished streets stay unplaced rather than misplaced. Positions are street-level approximations (`pose: geocoded`, low confidence) until phase 3 refines them. Lookups are cached in `pipeline/cache/geocode.json`.
 
 Every photo source is normalised into one schema (`pipeline/rpr/photo.py`): position, date range, image links, licence, credit, and how the camera position was obtained (`recorded`, `geocoded`, `matched`, `manual`, `estimated`) with a confidence score. Records outside Paris, with impossible dates or without an image are rejected and counted in `manifest.json`.
 

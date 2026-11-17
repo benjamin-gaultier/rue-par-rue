@@ -4,7 +4,7 @@
  */
 
 import { type Basemap, BASEMAPS, YEAR_MAX, YEAR_MIN } from './timeline'
-import { type Bin, dateLabel, POSE_LABELS, type PhotoProps, SOURCE_COLORS, SOURCE_NAMES, FALLBACK_COLOR } from './photos'
+import { type Bin, dateLabel, positionLabel, type PhotoProps, SOURCE_COLORS, SOURCE_NAMES, FALLBACK_COLOR } from './photos'
 import type { TodayPicture } from './panoramax'
 
 export function el<K extends keyof HTMLElementTagNameMap>(
@@ -158,7 +158,7 @@ export function buildPanel(root: HTMLElement, onClose: () => void): Panel {
         ['Date', dateLabel(p)],
         ...(p.creator ? ([['Photographer', p.creator]] as [string, string][]) : []),
         ['Source', el('span', {}, [swatch, sourceName])],
-        ['Position', POSE_LABELS[p.pose] ?? p.pose],
+        ['Position', positionLabel(p)],
         ['Licence', p.license]
       ]
       const dl = el('dl', { class: 'facts' })
