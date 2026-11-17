@@ -35,7 +35,7 @@
     "updated_at": "2026-11-17T12:40:03Z"
   },
   "photos": {
-    "count": 4302,
+    "count": 8640,
     "sources": [
       {
         "key": "kahn",
@@ -46,6 +46,18 @@
         "count": 4302,
         "rejected": {},
         "harvested_at": "2026-11-17T18:08:20Z"
+      },
+      {
+        "key": "parismusees",
+        "name": "Paris Musées (Musée Carnavalet)",
+        "license": "CC0-1.0",
+        "homepage": "https://www.parismuseescollections.paris.fr/",
+        "attribution": "Paris Musées / Musée Carnavalet, Histoire de Paris (CC0)",
+        "count": 4338,
+        "rejected": {
+          "year_end before year": 1
+        },
+        "harvested_at": "2026-11-17T18:35:50Z"
       }
     ]
   },
