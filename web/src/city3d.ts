@@ -1,0 +1,328 @@
+/**
+ * The detailed focus area around Notre-Dame: procedural buildings with
+ * storeys, windows, shopfronts, mansard and tile roofs, chimneys, paved
+ * streets, and the Seine sunk between its quays with arched bridges.
+ *
+ * A MapLibre custom layer drawn with three.js in the map's WebGL context,
+ * sharing its depth buffer with the plain blocks of the rest of the model.
+ * The year is a shader uniform: changing it costs nothing, buildings that do
+ * not stand that year are dropped on the GPU.
+ *
+ * Data: the massing model (python -m rpr model3d), whose buildings in the
+ * focus area carry `focus: true`, and the site file (python -m rpr site):
+ * river, ground, quay edges, bridge decks and the spire of Notre-Dame.
+ */
+
+import * as THREE from 'three'
+import { MercatorCoordinate, type CustomLayerInterface, type CustomRenderMethodInput, type Map as MapLibreMap } from 'maplibre-gl'
+import {
+  addBridge,
+  addQuay,
+  addSpire,
+  addSurface,
+  buildCity,
+  insidePoly,
+  MeshData,
+  normalisePoly,
+  ROOF_MATERIAL,
+  STYLE,
+  type BuildingSpec,
+  type Poly,
+  type Pt,
+  type RoofShape
+} from './citygen'
+import * as S from './cityshaders'
+import type { ModelProps } from './model3d'
+
+export const SITE_URL = 'data/3d/site-cite.geojson'
+
+export interface CityProps extends ModelProps {
+  id: string
+  from?: number
+  until?: number
+  roof?: 'flat' | 'mansard' | 'gable'
+  roof_material?: 'tile' | 'zinc' | 'mineral' | 'planted'
+  landmark?: boolean
+  focus?: boolean
+}
+
+type Geometry = { type: 'Polygon'; coordinates: number[][][] } | { type: 'MultiPolygon'; coordinates: number[][][][] }
+interface Feature<P> {
+  geometry: Geometry | { type: 'Point'; coordinates: number[] } | { type: 'LineString'; coordinates: number[][] }
+  properties: P
+}
+
+const OPEN = 1e4
+
+/** A stable 0..1 number from a string. */
+export function seedOf(id: string): number {
+  let h = 2166136261
+  for (let i = 0; i < id.length; i++) {
+    h ^= id.charCodeAt(i)
+    h = Math.imul(h, 16777619)
+  }
+  return ((h >>> 0) % 10007) / 10007
+}
+
+/** Years a building stands, as the shader reads them: [from, until, gapFrom, gapUntil]. */
+export function lifeOf(p: Pick<CityProps, 'kind' | 'from' | 'until'>): [number, number, number, number] {
+  if (p.kind === 'standing') return [-OPEN, OPEN, 0, 0]
+  if (p.kind === 'reconstructed') return [-OPEN, p.until ?? 1860, 0, 0]
+  return [p.from ?? 1851, OPEN, 0, 0]
+}
+
+export function styleOf(p: CityProps): number {
+  if (p.landmark) return STYLE.monument
+  if (p.kind === 'standing' || p.kind === 'reconstructed') return STYLE.old
+  if (p.kind === 'later' && (p.from ?? 0) >= 1915) return STYLE.modern
+  return STYLE.haussmann
+}
+
+export function roofOf(p: CityProps): { shape: RoofShape; material: number } {
+  if (p.roof === 'flat') return { shape: 'flat', material: p.landmark ? ROOF_MATERIAL.stone : ROOF_MATERIAL.mineral }
+  if (p.landmark) return { shape: 'gable', material: ROOF_MATERIAL.lead }
+  const material = ROOF_MATERIAL[p.roof_material ?? 'zinc'] ?? ROOF_MATERIAL.zinc
+  return { shape: p.roof === 'gable' ? 'gable' : 'mansard', material }
+}
+
+export function specOf(p: CityProps, polys: Poly[]): BuildingSpec {
+  const roof = roofOf(p)
+  return { polys, height: p.height, roof: roof.shape, roofMaterial: roof.material, style: styleOf(p), seed: seedOf(p.id ?? ''), life: lifeOf(p) }
+}
+
+/**
+ * Where a church's west front stands: the line across its westernmost
+ * points, perpendicular to the axis (a compass bearing, west to east).
+ */
+export function westFront(polys: Poly[], bearing: number): { centre: Pt; axis: Pt; half: number } {
+  const r = (bearing * Math.PI) / 180
+  const axis: Pt = [Math.sin(r), Math.cos(r)]
+  const across: Pt = [-axis[1], axis[0]]
+  const pts = polys.flatMap((p) => p[0])
+  const along = (p: Pt) => p[0] * axis[0] + p[1] * axis[1]
+  const side = (p: Pt) => p[0] * across[0] + p[1] * across[1]
+  const west = Math.min(...pts.map(along))
+  const front = pts.filter((p) => along(p) < west + 3)
+  const t0 = Math.min(...front.map(side))
+  const t1 = Math.max(...front.map(side))
+  const t = (t0 + t1) / 2
+  return { centre: [axis[0] * west + across[0] * t, axis[1] * west + across[1] * t], axis, half: (t1 - t0) / 2 }
+}
+
+export function aliveIn(life: [number, number, number, number], year: number): boolean {
+  return year >= life[0] && year < life[1] && !(year >= life[2] && year < life[3])
+}
+
+function geometry(m: MeshData): THREE.BufferGeometry {
+  const g = new THREE.BufferGeometry()
+  g.setAttribute('position', new THREE.Float32BufferAttribute(m.position, 3))
+  g.setAttribute('normal', new THREE.Float32BufferAttribute(m.normal, 3))
+  g.setAttribute('a_a', new THREE.Float32BufferAttribute(m.a, 4))
+  g.setAttribute('a_b', new THREE.Float32BufferAttribute(m.b, 4))
+  g.setAttribute('a_life', new THREE.Float32BufferAttribute(m.life, 4))
+  g.computeBoundingSphere()
+  return g
+}
+
+/** The sun from the south-west, about 40° up: light on the Seine-facing facades of the Cité. */
+const SUN = new THREE.Vector3(-0.55, -0.6, 0.64).normalize()
+
+export class City3D implements CustomLayerInterface {
+  readonly id = 'city-3d'
+  readonly type = 'custom' as const
+  readonly renderingMode = '3d' as const
+
+  private map?: MapLibreMap
+  private renderer?: THREE.WebGLRenderer
+  private scene = new THREE.Scene()
+  private camera = new THREE.Camera()
+  private origin: MercatorCoordinate
+  private meter: number
+  private matrix = new THREE.Matrix4()
+  private inverse = new THREE.Matrix4()
+  private visible = true
+  private specs: BuildingSpec[] = []
+  private props: CityProps[] = []
+  private pickables: { mesh: THREE.Mesh; owner: Int32Array }[] = []
+  private water: Poly[] = []
+  private bridges: Poly[] = []
+  private uniforms = {
+    u_year: { value: 1836 },
+    u_camera: { value: new THREE.Vector3() },
+    u_sun: { value: SUN },
+    u_box: { value: new THREE.Vector4(-1e5, -1e5, 1e5, 1e5) },
+    u_fog: { value: new THREE.Color('#e6e1d6') },
+    u_front: { value: new THREE.Vector4() },
+    u_frontHalf: { value: 0 }
+  }
+  /** Number of detailed buildings, for the legend and tests. */
+  count = 0
+
+  constructor(center: [number, number]) {
+    this.origin = MercatorCoordinate.fromLngLat(center, 0)
+    this.meter = this.origin.meterInMercatorCoordinateUnits()
+  }
+
+  /** Local metres (x east, y north) for a longitude/latitude. */
+  project = ([lon, lat]: number[]): Pt => {
+    const m = MercatorCoordinate.fromLngLat([lon, lat], 0)
+    return [(m.x - this.origin.x) / this.meter, -(m.y - this.origin.y) / this.meter]
+  }
+
+  private polys(g: Geometry): Poly[] {
+    const list = g.type === 'Polygon' ? [g.coordinates] : g.coordinates
+    return list.map((rings) => normalisePoly(rings.map((r) => r.map(this.project)))).filter((p): p is Poly => p !== null)
+  }
+
+  /** Build every mesh from the model and site files. */
+  async load(modelUrl: string, siteUrl: string) {
+    const [model, site] = await Promise.all([fetch(modelUrl).then((r) => r.json()), fetch(siteUrl).then((r) => r.json())])
+    const features = (model.features as Feature<CityProps>[]).filter((f) => f.properties.focus)
+    const cathedral = (site.features as Feature<{ kind: string; ids?: string[]; axis_bearing?: number }>[]).find((f) => f.properties.kind === 'cathedral')?.properties
+    const cathedralIds = new Set(cathedral?.ids ?? [])
+    const cathedralPolys: Poly[] = []
+    for (const f of features) {
+      const polys = this.polys(f.geometry as Geometry)
+      if (!polys.length) continue
+      const spec = specOf(f.properties, polys)
+      if (cathedralIds.has(f.properties.id)) {
+        spec.style = STYLE.cathedral
+        cathedralPolys.push(...polys)
+      }
+      this.specs.push(spec)
+      this.props.push(f.properties)
+    }
+    if (cathedral?.axis_bearing !== undefined && cathedralPolys.length) {
+      const front = westFront(cathedralPolys, cathedral.axis_bearing)
+      this.uniforms.u_front.value.set(front.centre[0], front.centre[1], front.axis[0], front.axis[1])
+      this.uniforms.u_frontHalf.value = front.half
+    }
+    this.count = this.specs.length
+    const { walls, roofs } = buildCity(this.specs)
+
+    const meta = site.metadata ?? {}
+    const waterZ = (meta.water_level_m ?? 27) - (meta.street_level_m ?? 34) + 0.4
+    if (meta.ground_box) {
+      const [x0, y0] = this.project([meta.ground_box[0], meta.ground_box[1]])
+      const [x1, y1] = this.project([meta.ground_box[2], meta.ground_box[3]])
+      this.uniforms.u_box.value.set(x0, y0, x1, y1)
+    }
+    const ground = new MeshData()
+    const water = new MeshData()
+    const siteFeatures = site.features as Feature<{ kind: string; [k: string]: unknown }>[]
+    for (const f of siteFeatures) {
+      if (f.properties.kind === 'bridge') this.bridges.push(...this.polys(f.geometry as Geometry))
+    }
+    const underDeck = (p: Pt) => this.bridges.some((b) => insidePoly(p, b))
+    for (const f of siteFeatures) {
+      const k = f.properties.kind
+      if (k === 'ground') for (const poly of this.polys(f.geometry as Geometry)) addSurface(ground, poly, 0)
+      else if (k === 'water') {
+        const polys = this.polys(f.geometry as Geometry)
+        this.water.push(...polys)
+        for (const poly of polys) addSurface(water, poly, waterZ)
+      } else if (k === 'quay' && f.geometry.type === 'LineString') {
+        addQuay(walls, f.geometry.coordinates.map(this.project), waterZ - 0.3, 0.9, -1.2, underDeck)
+      } else if (k === 'spire' && f.geometry.type === 'Point') {
+        const p = f.properties as unknown as { base_m: number; height_m: number; from: number; gap?: [number, number] }
+        const life: [number, number, number, number] = [p.from, OPEN, p.gap?.[0] ?? 0, p.gap?.[1] ?? 0]
+        addSpire(roofs, -1, this.project(f.geometry.coordinates), 3.0, p.base_m, p.base_m + 9, p.height_m, life)
+      }
+    }
+    for (const deck of this.bridges) addBridge(walls, ground, deck, waterZ - 0.3)
+
+    const material = (vertexShader: string, fragmentShader: string, order: number) => {
+      const m = new THREE.ShaderMaterial({ vertexShader, fragmentShader, uniforms: this.uniforms, side: THREE.DoubleSide, transparent: true })
+      return { m, order }
+    }
+    const meshes: [MeshData, ReturnType<typeof material>, boolean][] = [
+      [water, material(S.groundVertex, S.waterFragment, 0), true],
+      [ground, material(S.groundVertex, S.groundFragment, 1), true],
+      [walls, material(S.wallVertex, S.wallFragment, 2), true],
+      [roofs, material(S.roofVertex, S.roofFragment, 3), true]
+    ]
+    for (const [data, { m, order }, pickable] of meshes) {
+      if (!data.triangles) continue
+      const mesh = new THREE.Mesh(geometry(data), m)
+      mesh.renderOrder = order
+      mesh.frustumCulled = false
+      this.scene.add(mesh)
+      if (pickable) this.pickables.push({ mesh, owner: Int32Array.from(data.owner) })
+    }
+    this.map?.triggerRepaint()
+  }
+
+  onAdd(map: MapLibreMap, gl: WebGLRenderingContext | WebGL2RenderingContext) {
+    this.map = map
+    this.renderer = new THREE.WebGLRenderer({ canvas: map.getCanvas(), context: gl as WebGL2RenderingContext, antialias: true })
+    this.renderer.autoClear = false
+  }
+
+  onRemove() {
+    for (const { mesh } of this.pickables) {
+      mesh.geometry.dispose()
+      ;(mesh.material as THREE.Material).dispose()
+    }
+  }
+
+  setYear(year: number) {
+    this.uniforms.u_year.value = year
+    this.map?.triggerRepaint()
+  }
+
+  setVisible(v: boolean) {
+    this.visible = v
+    this.map?.triggerRepaint()
+  }
+
+  render(_gl: WebGLRenderingContext | WebGL2RenderingContext, args: CustomRenderMethodInput) {
+    if (!this.visible || !this.renderer || !this.pickables.length) return
+    const m = new THREE.Matrix4().fromArray(args.defaultProjectionData.mainMatrix as unknown as number[])
+    const l = new THREE.Matrix4().makeTranslation(this.origin.x, this.origin.y, this.origin.z).scale(new THREE.Vector3(this.meter, -this.meter, this.meter))
+    this.matrix.copy(m.multiply(l))
+    this.camera.projectionMatrix.copy(this.matrix)
+    this.inverse.copy(this.matrix).invert()
+    // The camera sits where clip space has x = y = w = 0.
+    const c = new THREE.Vector4(0, 0, 1, 0).applyMatrix4(this.inverse)
+    if (Math.abs(c.w) > 1e-12) this.uniforms.u_camera.value.set(c.x / c.w, c.y / c.w, c.z / c.w)
+    this.renderer.resetState()
+    this.renderer.render(this.scene, this.camera)
+  }
+
+  /** The building under a screen point, if a detailed one is visible there. */
+  pick(point: { x: number; y: number }): CityProps | undefined {
+    if (!this.map || !this.visible) return undefined
+    const canvas = this.map.getCanvas()
+    const x = (point.x / canvas.clientWidth) * 2 - 1
+    const y = 1 - (point.y / canvas.clientHeight) * 2
+    const near = new THREE.Vector4(x, y, -1, 1).applyMatrix4(this.inverse)
+    const far = new THREE.Vector4(x, y, 1, 1).applyMatrix4(this.inverse)
+    const o = new THREE.Vector3(near.x / near.w, near.y / near.w, near.z / near.w)
+    const f = new THREE.Vector3(far.x / far.w, far.y / far.w, far.z / far.w)
+    const ray = new THREE.Raycaster(o, f.sub(o).normalize())
+    const year = this.uniforms.u_year.value
+    const hits = ray.intersectObjects(
+      this.pickables.map((p) => p.mesh),
+      false
+    )
+    for (const h of hits) {
+      const owners = this.pickables.find((p) => p.mesh === h.object)?.owner
+      const owner = owners && h.faceIndex !== undefined && h.faceIndex !== null ? owners[h.faceIndex] : -1
+      if (owner < 0) {
+        // Ground, water, bridges and the spire: stop if they stand this year.
+        const life = (h.object as THREE.Mesh).geometry.getAttribute('a_life')
+        const v = h.face ? h.face.a : 0
+        if (aliveIn([life.getX(v), life.getY(v), life.getZ(v), life.getW(v)], year)) return undefined
+        continue
+      }
+      if (aliveIn(this.specs[owner].life, year)) return this.props[owner]
+    }
+    return undefined
+  }
+
+  /** True if a point (longitude, latitude) is on the river and not on a bridge. */
+  inWater(lonlat: [number, number]): boolean {
+    const p = this.project(lonlat)
+    return this.water.some((w) => insidePoly(p, w)) && !this.bridges.some((b) => insidePoly(p, b))
+  }
+}

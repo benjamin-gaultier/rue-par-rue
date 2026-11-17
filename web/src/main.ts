@@ -11,6 +11,7 @@ import {
 import { BASEMAPS, basemapForYear, YEAR_MAX } from './timeline'
 import { CITE_BOUNDS, CITE_VIEW, describeBuilding, Model3D, MODEL_COLORS, MODEL_LABELS, MODEL_URL, type ModelProps } from './model3d'
 import type { PhotoFrames } from './frames3d'
+import type { City3D } from './city3d'
 import type { DepthIndex } from './depth'
 import { Walker } from './walk'
 import { clampYear, formatHash, parseHash, type ViewState } from './state'
@@ -85,6 +86,7 @@ function setYear(y: number) {
   if (ready) {
     void basemaps.show(basemap)
     model.setYear(year)
+    city?.setYear(year)
     refreshFrames()
     walker.ensureFree()
     styleCadastre(map, year, controls.cadastre)
@@ -278,6 +280,29 @@ async function ensureFrames() {
   map.addLayer(frames)
 }
 
+/* The detailed focus area around Notre-Dame (city3d.ts, loaded on demand). */
+let city: City3D | undefined
+let cityLoading: Promise<void> | undefined
+
+function ensureCity(): Promise<void> {
+  cityLoading ??= (async () => {
+    try {
+      const { City3D, SITE_URL } = await import('./city3d')
+      const layer = new City3D(CITE_CENTER)
+      await layer.load(BASE + MODEL_URL, BASE + SITE_URL)
+      map.addLayer(layer, map.getLayer('photo-frames') ? 'photo-frames' : undefined)
+      city = layer
+      city.setYear(state.year)
+      city.setVisible(model.active)
+      model.setHideFocus(true)
+      walker.extraBlock = (p) => city?.inWater(p) ?? false
+    } catch (err) {
+      console.warn('Detailed 3D area unavailable:', err)
+    }
+  })()
+  return cityLoading
+}
+
 function refreshFrames() {
   if (!frames || !framesModule) return
   if (!model.active || !controls.photos) return frames.setGroups([])
@@ -300,6 +325,8 @@ function enter3D(fly = true) {
   btn3d.setAttribute('aria-pressed', 'true')
   setYear(state.year) // reapply the basemap rule for 3D
   photoDotsVisible()
+  city?.setVisible(true)
+  void ensureCity()
   void ensureFrames().then(refreshFrames)
 }
 
@@ -310,6 +337,7 @@ function exit3D() {
   banner3d.hidden = true
   btn3d.setAttribute('aria-pressed', 'false')
   frames?.setGroups([])
+  city?.setVisible(false)
   setYear(state.year)
   photoDotsVisible()
 }
@@ -317,14 +345,15 @@ function exit3D() {
 /* Walking at street level (walk.ts). */
 const walker = new Walker(map, BASE + MODEL_URL, () => state.year)
 const walkUi = $('#walk-ui')
-const DEFAULT_WALK_START: [number, number] = [2.34865, 48.85318] // on the parvis, facing Notre-Dame
+const DEFAULT_WALK_START: [number, number] = [2.34838, 48.85336] // on the parvis, facing Notre-Dame
 
 async function startWalk() {
   if (!model.active) enter3D(false)
+  await ensureCity() // so the river blocks the way from the first step
   const c = map.getCenter()
   const inside = c.lng > CITE_BOUNDS[0] && c.lng < CITE_BOUNDS[2] && c.lat > CITE_BOUNDS[1] && c.lat < CITE_BOUNDS[3]
   const start: [number, number] = inside ? [c.lng, c.lat] : DEFAULT_WALK_START
-  await walker.start(start, inside ? map.getBearing() : 95)
+  await walker.start(start, inside ? map.getBearing() : 115)
   basemaps.setDimmed(true)
   walkUi.hidden = false
   banner3d.classList.add('is-walking')
@@ -413,6 +442,8 @@ map.on('load', async () => {
     if (!model.active || !map.getLayer('model')) return
     const framed = frames?.pick(e.point)
     if (framed) return select(framed.properties.id)
+    const detailed = city?.pick(e.point)
+    if (detailed) return showBuilding(detailed, [e.lngLat.lng, e.lngLat.lat])
     const f = map.queryRenderedFeatures(e.point, { layers: ['model'] })[0]
     if (f) showBuilding(f.properties as unknown as ModelProps, [e.lngLat.lng, e.lngLat.lat])
   })
@@ -425,7 +456,8 @@ map.on('moveend', () => {
   writeHash()
   if (model.active) refreshFrames()
 })
-if (new URLSearchParams(location.search).has('debug')) Object.assign(window, { rpr: { map, basemaps, state, setPhotos, select, openCompare } })
+if (new URLSearchParams(location.search).has('debug'))
+  Object.assign(window, { rpr: { map, basemaps, state, setPhotos, select, openCompare, setYear, startWalk, city: () => city, walker } })
 
 window.addEventListener('hashchange', () => {
   const next = parseHash(location.hash)

@@ -80,6 +80,12 @@ def cmd_depth(args: argparse.Namespace) -> None:
     _update_manifest(f"depth_{args.set.replace('-', '_')}", depth.build(args.set))
 
 
+def cmd_site(args: argparse.Namespace) -> None:
+    from rpr.sources import site
+
+    _update_manifest(f"site_{args.area}", site.build(args.area))
+
+
 def cmd_index(args: argparse.Namespace) -> None:
     manifest = build_index()
     print(f"index: {manifest['photos']['count']} photos from {len(manifest['photos']['sources'])} sources")
@@ -121,6 +127,10 @@ def main(argv: list[str] | None = None) -> int:
     p = sub.add_parser("depth", help="AI depth maps for a set of photos (needs onnxruntime, numpy, Pillow)")
     p.add_argument("--set", choices=["notre-dame"], default="notre-dame")
     p.set_defaults(func=cmd_depth)
+
+    p = sub.add_parser("site", help="the Seine, bridges and landmark details of a model area (IGN BD TOPO, needs shapely)")
+    p.add_argument("--area", choices=["cite"], default="cite")
+    p.set_defaults(func=cmd_site)
 
     p = sub.add_parser("index", help="rebuild photos.geojson and manifest.json")
     p.set_defaults(func=cmd_index)

@@ -39,10 +39,23 @@ Choose **Île de la Cité in 3D** to fly over the island in 1836, then drag the 
 | Shown as | Source | Years shown |
 | --- | --- | --- |
 | Cream: standing in 1836 and still standing | APUR building footprints dated before 1851, with their measured median heights (Notre-Dame's towers come out at about 70 m) | always |
-| Ochre: standing in 1836, demolished since | Vasserot cadastre parcels not covered by a surviving building. No 1836 building footprints exist, so parcels over 400 m² become a 9 m-deep ring around a courtyard, open spaces (parvis, squares, markets) are left out, and heights are estimated at 12–19 m | until 1860 |
+| Ochre: standing in 1836, demolished since | Vasserot cadastre parcels, cut back where a surviving building stands. No 1836 building footprints exist, so parcels over 400 m² become a 9 m-deep ring around a courtyard, parcels over 160 m² are split into lots of about 9 m (one house each, each with its own height), open spaces (parvis, squares, markets) are left out, and heights are estimated at 12–19 m | until 1860 |
 | Grey: built later | APUR footprints and heights, appearing from their construction period | from that period |
 
 It is a massing model to judge scale and density, labelled as a reconstruction in the app. Drag past 1860 to see Haussmann clear the island, and click any building for its sources.
+
+#### The detailed area around Notre-Dame
+
+About 600 m around the cathedral (`focus` in `AREAS`, about 2,000 buildings across all years) is drawn by `web/src/city3d.ts` instead of plain blocks: a three.js layer in the map's WebGL context, with geometry from `web/src/citygen.ts` and procedural shaders in `web/src/cityshaders.ts`. Nothing is downloaded beyond the model: storeys, windows, shutters, shopfronts, balconies, dormers, tiles and zinc are drawn by the shaders, and fade to an average colour with distance.
+
+- **Facades by age.** Houses standing in 1836 get plaster in varied colours, narrow window bays, shutters and painted wooden shopfronts. Buildings of 1851–1914 get cut stone, a rusticated ground floor with arched openings, and balconies on the second and fifth floors. Later buildings get plainer, wider windows. Walls that touch a neighbour standing at the same time are left blind, as Paris gable walls are.
+- **Roofs from APUR.** `c_forme_toit` gives the shape: brisis-terrasson becomes a mansard with dormers lined up on the windows below, two-pitch roofs a ridge along the footprint's long axis, flat roofs a terrace. `c_toiture_mat` gives tile, zinc, stone or planting. Demolished houses get tile roofs with gables; chimney stacks rise from party walls.
+- **Notre-Dame.** Towers come from APUR (about 67 m). The west front is laid out along the line across the cathedral's westernmost points: three portals, the gallery of kings, the rose window between two traceried windows, the great gallery and the belfries. The spire stands from 1860 (Viollet-le-Duc), is missing from April 2019 and back in 2024.
+- **The river.** `python -m rpr site --area cite` fetches the Seine from IGN BD TOPO with its water level (27 m, against 34 m in the streets), so the river sits 7 m down between stone quays. Bridge decks come from the BD TOPO road segments marked as bridges; their side walls are pierced by arches. Streets and squares are paved with sandstone setts.
+- **Walking.** The river blocks the way except on the bridges.
+- **The year is a shader uniform**, so dragging the slider costs nothing: buildings that do not stand that year are dropped on the GPU.
+
+Facades are generated, not surveyed: they show the character of each period, not the real windows of each house.
 
 #### Photos in 3D and walking the streets
 
@@ -125,7 +138,7 @@ For Paris Musées, create a free token at <https://apicollections.parismusees.pa
 1. **Phase 1, time-slider map** (this release): basemap timeline, cadastre, Panoramax "today" view, photo pipeline.
 2. **Phase 2, then-and-now viewer** (this release): archive photo over the nearest Panoramax panorama, with alignment saved in the URL.
 3. **Phase 3, pose refinement**: geocode Marville and Atget captions against historical street names and the 1836/1888 street networks; infer headings (Kahn records have positions but no direction, so the viewer cannot yet face the subject automatically); refine poses by matching against Panoramax imagery; let people submit the alignments they make in the viewer.
-4. **Phase 4, 3D**: a prototype over the Île de la Cité is in place (see above). Next: building footprints traced from the Vasserot block plans, roof shapes, facade textures, an eye-level walk, then more quarters.
+4. **Phase 4, 3D**: the Île de la Cité as a massing model, with footprints traced from Vasserot's plans, photos in the streets, an eye-level walk, and a detailed area around Notre-Dame (see above). Next: gardens and trees, the Hôtel-Dieu and the bishop's palace of 1836, photo-textured landmark facades, then more quarters.
 
 ## Licences
 

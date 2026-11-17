@@ -25,9 +25,20 @@ from typing import Any, Callable
 from rpr import net, paths
 
 AREAS = {
-    # Île de la Cité and the quays facing it.
-    "cite": {"name": "Île de la Cité", "bbox": (2.3395, 48.8505, 2.3565, 48.8590)},
+    # Île de la Cité and the quays facing it. `focus` is the showcase rendered
+    # with detailed buildings (facades, roofs) in the app.
+    "cite": {
+        "name": "Île de la Cité",
+        "bbox": (2.3395, 48.8505, 2.3565, 48.8590),
+        "focus": (2.3450, 48.8512, 2.3535, 48.8560),
+    },
 }
+
+# APUR roof codes (c_forme_toit): 1 flat, 2 two-pitch tile, 3 two-pitch small-scale,
+# 4 brisis-terrasson (the Paris mansard). Materials (c_toiture_mat): T tile,
+# M mineral, V planted, A other (mostly zinc).
+ROOF_SHAPES = {1: "flat", 2: "gable", 3: "gable", 4: "mansard"}
+ROOF_MATERIALS = {"T": "tile", "M": "mineral", "V": "planted", "A": "zinc"}
 
 VASSEROT_DRUID = "qr091wq2775"
 VASSEROT_STEM = "Vasserots_parcelles2_v"
@@ -54,6 +65,9 @@ STANDING_IN_1836 = {1, 2}
 PERIOD_FROM = {1: 1700, 2: 1801, 3: 1851, 5: 1915, 6: 1940, 7: 1968, 8: 1976, 9: 1982, 10: 1990, 11: 2000, 12: 2008}
 # Most of the medieval Cité was cleared in the 1860s.
 DEMOLISHED_BY = 1860
+# A tall, compact building is a tower: flat top, landmark style.
+TOWER_M = 40.0
+TOWER_MAX_M2 = 600.0
 
 # A parcel counts as still built if surviving buildings cover this share of it.
 SURVIVOR_COVERAGE = 0.35
@@ -64,6 +78,8 @@ MIN_PARCEL_M2 = 12
 # street-facing buildings this deep instead of a solid block.
 RING_ABOVE_M2 = 400
 RING_DEPTH_M = 9
+HOUSE_M = 9.0  # typical frontage and depth of an old Paris house lot
+SPLIT_ABOVE_M2 = 160.0
 # Shrink every footprint a little so neighbouring buildings read separately.
 INSET_M = 0.3
 OPEN_SPACE_CODES = ("2P", "2M")  # Vasserot reliability codes used for squares and markets
@@ -128,6 +144,52 @@ def load_traced(area: str, to_metric) -> dict[str, dict]:
     return out
 
 
+def split_houses(footprint, size: float = HOUSE_M, min_area: float = 8.0) -> list:
+    """Cut a metric footprint into lots of about `size` metres along its own axes.
+
+    Footprints under SPLIT_ABOVE_M2 stay whole. Slivers smaller than
+    `min_area` join the neighbouring lot they touch most.
+    """
+    import math
+
+    from shapely import affinity
+    from shapely.geometry import Polygon, box
+
+    if footprint.area < SPLIT_ABOVE_M2:
+        return [footprint]
+    rect = footprint.minimum_rotated_rectangle
+    xy = list(rect.exterior.coords)
+    edges = [(xy[i], xy[i + 1]) for i in range(4)]
+    (ax, ay), (bx, by) = max(edges, key=lambda e: math.dist(*e))
+    angle = math.degrees(math.atan2(by - ay, bx - ax))
+    c = footprint.centroid
+    flat = affinity.rotate(footprint, -angle, origin=c)
+    x0, y0, x1, y1 = flat.bounds
+    nx = max(1, round((x1 - x0) / size))
+    ny = max(1, round((y1 - y0) / size))
+    sx, sy = (x1 - x0) / nx, (y1 - y0) / ny
+    lots, slivers = [], []
+    for i in range(nx):
+        for j in range(ny):
+            cell = flat.intersection(box(x0 + i * sx, y0 + j * sy, x0 + (i + 1) * sx, y0 + (j + 1) * sy))
+            for part in getattr(cell, "geoms", [cell]):
+                if isinstance(part, Polygon) and not part.is_empty:
+                    (lots if part.area >= min_area else slivers).append(part)
+    for s in slivers:
+        best = max(range(len(lots)), key=lambda k: lots[k].buffer(0.01).intersection(s).area, default=None)
+        if best is not None and lots[best].buffer(0.01).intersects(s):
+            merged = lots[best].union(s.buffer(0.01)).buffer(-0.01)
+            if merged.geom_type == "Polygon":
+                lots[best] = merged
+    # Each lot is inset a little so neighbouring houses read apart.
+    out = []
+    for lot in lots:
+        lot = affinity.rotate(lot, angle, origin=c).buffer(-0.1, join_style="mitre").simplify(0.1, preserve_topology=True)
+        if lot.geom_type == "Polygon" and lot.area >= min_area:
+            out.append(lot)
+    return out or [footprint]
+
+
 def download_vasserot(cache: Path, log: Callable[[str], Any]) -> Path:
     cache.mkdir(parents=True, exist_ok=True)
     for ext in ("shp", "shx", "dbf", "prj"):
@@ -145,7 +207,7 @@ def fetch_apur(bbox: tuple[float, float, float, float]) -> list[dict]:
         "geometryType": "esriGeometryEnvelope",
         "inSR": "4326",
         "spatialRel": "esriSpatialRelIntersects",
-        "outFields": "n_sq_eb,c_perconst,an_const,h_med,h_max,c_forme_toit",
+        "outFields": "n_sq_eb,c_perconst,an_const,h_med,h_max,c_forme_toit,c_toiture_mat,c_tissu",
         "outSR": "4326",
         "f": "geojson",
         "resultRecordCount": "3000",
@@ -167,13 +229,14 @@ def build(area: str, log: Callable[[str], Any] = print) -> dict:
     cfg = AREAS[area]
     bbox = cfg["bbox"]
     area_box = box(*bbox)
+    focus_box = box(*cfg["focus"]) if cfg.get("focus") else None
 
     # Equal-area metres for coverage maths: Lambert 93.
     to_l93 = Transformer.from_crs(4326, 2154, always_xy=True).transform
     from_vasserot = Transformer.from_crs(VASSEROT_EPSG, 4326, always_xy=True).transform
 
     # 1. Today's buildings (APUR). Those built before 1851 were standing in 1836.
-    survivors, later, survivor_shapes = [], [], []
+    survivors, later, survivor_shapes, later_shapes = [], [], [], []
     for f in fetch_apur(bbox):
         p = f["properties"]
         if not f.get("geometry"):
@@ -203,14 +266,22 @@ def build(area: str, log: Callable[[str], Any] = print) -> dict:
                 "from": start if start else 1851,
                 "source": "APUR building footprint and median height",
                 "id": f"apur:{p.get('n_sq_eb')}",
+                "roof": ROOF_SHAPES.get(p.get("c_forme_toit"), "flat"),
+                "roof_material": ROOF_MATERIALS.get(p.get("c_toiture_mat"), "zinc"),
+                # Remarkable buildings, and towers (Notre-Dame's are not tagged ER).
+                "landmark": p.get("c_tissu") == "ER" or float(height) >= TOWER_M,
+                "focus": bool(focus_box is not None and geom.intersects(focus_box)),
             },
             "geometry": mapping(geom),
         }
+        if float(height) >= TOWER_M and metric_geom.area < TOWER_MAX_M2:
+            feature["properties"]["roof"] = "flat"  # tower tops: terraces behind a balustrade
         if standing:
             survivors.append(feature)
             survivor_shapes.append(metric_geom)
         else:
             later.append(feature)
+            later_shapes.append(metric_geom)
     survivor_union = unary_union(survivor_shapes) if survivor_shapes else None
     log(f"model3d: {len(survivors)} buildings standing in 1836 survive; {len(later)} were built later (APUR)")
 
@@ -218,6 +289,7 @@ def build(area: str, log: Callable[[str], Any] = print) -> dict:
     shp = download_vasserot(paths.REPO_ROOT / "pipeline" / "cache" / "vasserot", log)
     reader = shapefile.Reader(str(shp), encoding="latin-1")
     fields = [f[0] for f in reader.fields[1:]]
+    reconstructed_shapes: list = []
     reconstructed, skipped = [], {"covered by a surviving building": 0, "too small": 0, "open space": 0}
     traced = load_traced(area, to_l93)
     used_traced = 0
@@ -258,33 +330,54 @@ def build(area: str, log: Callable[[str], Any] = print) -> dict:
             if not inner.is_empty and inner.area > 0.15 * metric.area:
                 footprint = footprint.difference(inner)
                 ring = True
+        # Leave room for the surviving buildings that share the parcel.
+        if survivor_union is not None:
+            footprint = footprint.difference(survivor_union.buffer(INSET_M))
         footprint = footprint.simplify(0.15, preserve_topology=True)
         if footprint.is_empty:
             continue
-        geom = transform(from_l93, footprint)
-        reconstructed.append(
-            {
-                "type": "Feature",
-                "properties": {
-                    "kind": "reconstructed",
-                    "height": estimated_height(key),
-                    "period": "standing in 1836, since demolished",
-                    "until": DEMOLISHED_BY,
-                    "source": (
-                        "Footprint traced from Vasserot's plan of the building; height estimated"
-                        if trace is not None
-                        else "Vasserot cadastre parcel (1810–1836); height estimated"
-                    ),
-                    "id": f"vasserot:{key}",
-                    "quartier": rec.get("QUARTIER") or None,
-                    "name": fix_text(rec.get("NOM_CODE2")) or None,
-                    "ring": ring,
-                    "traced": trace is not None,
-                    **({k: trace[k] for k in ("address", "plan_url", "iou")} if trace else {}),
-                },
-                "geometry": mapping(geom),
-            }
-        )
+        # A big parcel held several houses: split it into house-sized lots,
+        # each with its own height, so streets do not read as one long wall.
+        pieces = [footprint] if trace is not None else split_houses(footprint)
+        for n, piece in enumerate(pieces):
+            geom = transform(from_l93, piece)
+            house = key if len(pieces) == 1 else f"{key}:{n}"
+            reconstructed.append(
+              {
+                  "type": "Feature",
+                  "properties": {
+                      "kind": "reconstructed",
+                      "height": estimated_height(house),
+                      "period": "standing in 1836, since demolished",
+                      "until": DEMOLISHED_BY,
+                      "source": (
+                          "Footprint traced from Vasserot's plan of the building; height estimated"
+                          if trace is not None
+                          else "Vasserot cadastre parcel (1810–1836); height estimated"
+                      ),
+                      "id": f"vasserot:{house}",
+                      "quartier": rec.get("QUARTIER") or None,
+                      "name": fix_text(rec.get("NOM_CODE2")) or None,
+                      "ring": ring,
+                      "traced": trace is not None,
+                      # Pre-Haussmann houses: pitched roofs, mostly tile.
+                      "roof": "gable",
+                      "roof_material": "tile",
+                      "landmark": False,
+                      "focus": bool(focus_box is not None and geom.intersects(focus_box)),
+                      **({k: trace[k] for k in ("address", "plan_url", "iou")} if trace else {}),
+                  },
+                  "geometry": mapping(geom),
+              }
+            )
+        reconstructed_shapes.append(footprint)
+    # A building of 1851-1859 on the site of a house that stands until 1860
+    # would overlap it for a few years: start it when the house goes.
+    if reconstructed_shapes:
+        gone = unary_union(reconstructed_shapes)
+        for f, g in zip(later, later_shapes):
+            if f["properties"]["from"] < DEMOLISHED_BY and g.area and g.intersection(gone).area / g.area > 0.2:
+                f["properties"]["from"] = DEMOLISHED_BY
     log(f"model3d: {len(reconstructed)} demolished buildings reconstructed ({used_traced} with traced footprints); skipped {skipped}")
 
     features = survivors + later + reconstructed
@@ -300,6 +393,7 @@ def build(area: str, log: Callable[[str], Any] = print) -> dict:
             "later": len(later),
             "reconstructed": len(reconstructed),
             "traced": used_traced,
+            "focus": cfg.get("focus"),
             "notes": "Reconstructed buildings use whole parcels (courtyards included), estimated heights, and disappear in 1860. Later buildings appear from their APUR construction period.",
         },
         "features": features,
