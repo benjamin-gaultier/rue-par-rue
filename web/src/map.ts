@@ -69,6 +69,16 @@ export class BasemapSwitcher {
   private warpedLoading?: Promise<void>
   private activeId?: string
   private hideTimers = new Map<string, number>()
+  private opacity: 0.2 | 1 = 1
+
+  /** Fade the basemap (street level, where an overzoomed map is just a blur). */
+  setDimmed(dim: boolean) {
+    this.opacity = dim ? 0.2 : 1
+    if (this.activeId && this.map.getLayer(this.activeId) && this.map.getLayer(this.activeId)!.type === 'raster') {
+      this.map.setPaintProperty(this.activeId, 'raster-opacity', this.opacity)
+    }
+    this.map.setPaintProperty('paper', 'background-color', dim ? '#c9c1b2' : PAPER)
+  }
 
   constructor(
     private map: MapLibreMap,
@@ -129,12 +139,13 @@ export class BasemapSwitcher {
   }
 
   private fadeRaster(id: string, opacity: 0 | 1) {
+    // `1` means "shown": at the current dimming level.
     const timer = this.hideTimers.get(id)
     if (timer) window.clearTimeout(timer)
     if (opacity === 1) {
       this.map.setLayoutProperty(id, 'visibility', 'visible')
       // Let the layer become visible before the opacity transition starts.
-      requestAnimationFrame(() => this.map.setPaintProperty(id, 'raster-opacity', 1))
+      requestAnimationFrame(() => this.map.setPaintProperty(id, 'raster-opacity', this.opacity))
     } else {
       this.map.setPaintProperty(id, 'raster-opacity', 0)
       this.hideTimers.set(

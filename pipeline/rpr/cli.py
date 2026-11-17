@@ -68,6 +68,12 @@ def cmd_trace(args: argparse.Namespace) -> None:
     _update_manifest(f"traced_{args.area}", vasserot_plans.trace(args.area, limit=args.limit))
 
 
+def cmd_thumbs(args: argparse.Namespace) -> None:
+    from rpr.sources import thumbs
+
+    _update_manifest(f"thumbs_{args.area}", thumbs.build(args.area))
+
+
 def cmd_index(args: argparse.Namespace) -> None:
     manifest = build_index()
     print(f"index: {manifest['photos']['count']} photos from {len(manifest['photos']['sources'])} sources")
@@ -100,6 +106,10 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--area", choices=["cite"], default="cite")
     p.add_argument("--limit", type=int, default=None)
     p.set_defaults(func=cmd_trace)
+
+    p = sub.add_parser("thumbs", help="same-origin thumbnails for photo frames in the 3D view (needs Pillow)")
+    p.add_argument("--area", choices=["cite"], default="cite")
+    p.set_defaults(func=cmd_thumbs)
 
     p = sub.add_parser("index", help="rebuild photos.geojson and manifest.json")
     p.set_defaults(func=cmd_index)

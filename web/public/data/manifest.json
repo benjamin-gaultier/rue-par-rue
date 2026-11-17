@@ -80,5 +80,12 @@
     "image missing": 0,
     "file": "3d/vasserot-traced-cite.geojson",
     "updated_at": "2026-11-17T18:55:37Z"
+  },
+  "thumbs_cite": {
+    "area": "cite",
+    "count": 682,
+    "bytes": 4480067,
+    "failed": 1,
+    "updated_at": "2026-11-17T19:37:23Z"
   }
 }

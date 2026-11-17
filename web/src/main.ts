@@ -9,7 +9,9 @@ import {
   type MapGeoJSONFeature
 } from 'maplibre-gl'
 import { BASEMAPS, basemapForYear, YEAR_MAX } from './timeline'
-import { CITE_VIEW, describeBuilding, Model3D, MODEL_COLORS, MODEL_LABELS, type ModelProps } from './model3d'
+import { CITE_BOUNDS, CITE_VIEW, describeBuilding, Model3D, MODEL_COLORS, MODEL_LABELS, MODEL_URL, type ModelProps } from './model3d'
+import type { PhotoFrames } from './frames3d'
+import { Walker } from './walk'
 import { clampYear, formatHash, parseHash, type ViewState } from './state'
 import { histogram, inWindow, loadPhotos, type PhotoCollection, type PhotoFeature, type PhotoProps } from './photos'
 import { picturesOf, type TodayPicture } from './panoramax'
@@ -82,6 +84,8 @@ function setYear(y: number) {
   if (ready) {
     void basemaps.show(basemap)
     model.setYear(year)
+    refreshFrames()
+    walker.ensureFree()
     styleCadastre(map, year, controls.cadastre)
     filterPhotos(map, year, controls.allYears)
   }
@@ -197,7 +201,8 @@ buildControls(
   (s) => {
     Object.assign(controls, s)
     styleCadastre(map, state.year, controls.cadastre)
-    if (map.getLayer('photos')) map.setLayoutProperty('photos', 'visibility', controls.photos ? 'visible' : 'none')
+    photoDotsVisible()
+    refreshFrames()
     if (map.getLayer('panoramax-sequences'))
       map.setLayoutProperty('panoramax-sequences', 'visibility', controls.panoramax ? 'visible' : 'none')
     filterPhotos(map, state.year, controls.allYears)
@@ -220,6 +225,43 @@ for (const kind of ['standing', 'traced', 'reconstructed', 'later'] as const) {
   legend3d.append(chip)
 }
 
+/* Photos as frames in the 3D streets (frames3d.ts, loaded on demand). */
+const CITE_CENTER: [number, number] = [(CITE_BOUNDS[0] + CITE_BOUNDS[2]) / 2, (CITE_BOUNDS[1] + CITE_BOUNDS[3]) / 2]
+let frames: PhotoFrames | undefined
+let framesModule: typeof import('./frames3d') | undefined
+let thumbIndex: Record<string, string> = {}
+
+async function ensureFrames() {
+  if (frames) return
+  framesModule = await import('./frames3d')
+  try {
+    thumbIndex = await (await fetch(`${BASE}data/3d/thumbs/index.json`)).json()
+  } catch {
+    thumbIndex = {}
+  }
+  frames = new framesModule.PhotoFrames(CITE_CENTER, (f) => {
+    const thumb = thumbIndex[f.properties.id]
+    if (thumb) return `${BASE}data/3d/thumbs/${thumb}`
+    // The Albert-Kahn portal serves its images with CORS headers.
+    if (f.properties.source === 'kahn') return f.properties.image
+    return undefined
+  })
+  map.addLayer(frames)
+}
+
+function refreshFrames() {
+  if (!frames || !framesModule) return
+  if (!model.active || !controls.photos) return frames.setGroups([])
+  const groups = framesModule.groupPhotos(photos, state.year, controls.allYears, CITE_BOUNDS)
+  const c = map.getCenter()
+  frames.setGroups(framesModule.nearestGroups(groups, [c.lng, c.lat], 120))
+}
+
+function photoDotsVisible() {
+  const show = controls.photos && !model.active
+  if (map.getLayer('photos')) map.setLayoutProperty('photos', 'visibility', show ? 'visible' : 'none')
+}
+
 function enter3D(fly = true) {
   if (!ready) return
   if (fly && (state.year < 1810 || state.year >= 1860)) setYear(1836)
@@ -228,14 +270,59 @@ function enter3D(fly = true) {
   banner3d.hidden = false
   btn3d.setAttribute('aria-pressed', 'true')
   setYear(state.year) // reapply the basemap rule for 3D
+  photoDotsVisible()
+  void ensureFrames().then(refreshFrames)
 }
 
 function exit3D() {
+  stopWalk(false)
   model.exit()
   state.view3d = false
   banner3d.hidden = true
   btn3d.setAttribute('aria-pressed', 'false')
+  frames?.setGroups([])
   setYear(state.year)
+  photoDotsVisible()
+}
+
+/* Walking at street level (walk.ts). */
+const walker = new Walker(map, BASE + MODEL_URL, () => state.year)
+const walkUi = $('#walk-ui')
+const DEFAULT_WALK_START: [number, number] = [2.34865, 48.85318] // on the parvis, facing Notre-Dame
+
+async function startWalk() {
+  if (!model.active) enter3D(false)
+  const c = map.getCenter()
+  const inside = c.lng > CITE_BOUNDS[0] && c.lng < CITE_BOUNDS[2] && c.lat > CITE_BOUNDS[1] && c.lat < CITE_BOUNDS[3]
+  const start: [number, number] = inside ? [c.lng, c.lat] : DEFAULT_WALK_START
+  await walker.start(start, inside ? map.getBearing() : 95)
+  basemaps.setDimmed(true)
+  walkUi.hidden = false
+  banner3d.classList.add('is-walking')
+  refreshFrames()
+}
+
+function stopWalk(rise = true) {
+  if (!walker.active) return
+  walker.stop()
+  basemaps.setDimmed(false)
+  walkUi.hidden = true
+  banner3d.classList.remove('is-walking')
+  if (rise) map.easeTo({ zoom: 18, pitch: 62, duration: 900 })
+}
+
+$('#walk-3d').addEventListener('click', () => void startWalk())
+$('#walk-stop').addEventListener('click', () => stopWalk())
+for (const b of walkUi.querySelectorAll<HTMLButtonElement>('[data-key]')) {
+  const key = b.dataset.key!
+  const up = () => walker.press(key, false)
+  b.addEventListener('pointerdown', (e) => {
+    e.preventDefault()
+    walker.press(key, true)
+  })
+  b.addEventListener('pointerup', up)
+  b.addEventListener('pointerleave', up)
+  b.addEventListener('pointercancel', up)
 }
 
 btn3d.addEventListener('click', () => (model.active ? exit3D() : enter3D()))
@@ -289,7 +376,8 @@ map.on('load', async () => {
   })
   map.on('click', (e) => {
     if (!model.active || !map.getLayer('model')) return
-    if (map.queryRenderedFeatures(e.point, { layers: ['photos'] }).length) return
+    const framed = frames?.pick(e.point)
+    if (framed) return select(framed.properties.id)
     const f = map.queryRenderedFeatures(e.point, { layers: ['model'] })[0]
     if (f) showBuilding(f.properties as unknown as ModelProps, [e.lngLat.lng, e.lngLat.lat])
   })
@@ -297,7 +385,10 @@ map.on('load', async () => {
   map.on('mouseleave', 'photos', () => (map.getCanvas().style.cursor = ''))
   if (initial.photo) select(initial.photo, true, initial.align)
 })
-map.on('moveend', writeHash)
+map.on('moveend', () => {
+  writeHash()
+  if (model.active) refreshFrames()
+})
 if (new URLSearchParams(location.search).has('debug')) Object.assign(window, { rpr: { map, basemaps, state, setPhotos, select, openCompare } })
 
 window.addEventListener('hashchange', () => {
@@ -307,5 +398,6 @@ window.addEventListener('hashchange', () => {
 })
 window.addEventListener('keydown', (e) => {
   if (e.target instanceof HTMLInputElement && e.target.type !== 'range') return
+  if (e.key === 'Escape' && walker.active && !state.photo) return stopWalk()
   if (e.key === 'Escape' && state.photo && !compare) select(undefined)
 })
