@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>Rue par Rue · Paris through time</title>
+    <meta name="description" content="Scroll through Paris from 1790 to today: historical maps, aerial photographs and archive photographs placed where they were taken." />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap" />
+  </head>
+  <body>
+    <div class="app">
+      <div class="stage">
+      <header class="brand">
+        <div class="plaque" aria-label="Rue par Rue">
+          <span class="plaque-arr">Paris · 1790 → today</span>
+          <span class="plaque-name">Rue par Rue</span>
+        </div>
+      </header>
+
+      <main id="map" class="map" aria-label="Map of Paris"></main>
+
+      <div class="side">
+        <div id="controls" class="controls" role="group" aria-label="Map layers"></div>
+        <p id="photo-status" class="photo-status"></p>
+      </div>
+
+      <aside id="panel" class="panel" hidden aria-label="Selected photograph" tabindex="-1"></aside>
+      </div>
+
+      <section id="timebar" class="timebar" aria-label="Choose a year"></section>
+    </div>
+
+    <dialog id="about" class="about" aria-labelledby="about-h">
+      <div class="about-head">
+        <h2 id="about-h">Sources &amp; licences</h2>
+        <button id="about-close" type="button" class="panel-close" aria-label="Close">×</button>
+      </div>
+      <p>Rue par Rue shows Paris as the archives record it. Maps and photographs are loaded from the institutions that hold them. Nothing on the map is generated.</p>
+      <h3>Maps</h3>
+      <ul>
+        <li><b>Verniquet, Plan de la ville de Paris (1785–1791).</b> Scans: David Rumsey Map Collection. Georeferencing: SoDUCo project, Harvard Dataverse doi:10.7910/DVN/ZKRJFA (CC0). Displayed with Allmaps.</li>
+        <li><b>Vasserot cadastre (1810–1836).</b> Vector data by the ALPAGE project, from Arch. nat. F31 73-96 and Arch. Paris. Hosted by Stanford Libraries. Licence: ODbL.</li>
+        <li><b>Carte de l'état-major (1820–1866), carte topographique (1906), aerial photographs (1949–2023), Plan IGN.</b> © IGN, served by the Géoplateforme.</li>
+      </ul>
+      <h3>Photographs</h3>
+      <ul>
+        <li><b>Albert-Kahn, Archives de la Planète.</b> Musée départemental Albert-Kahn, Département des Hauts-de-Seine. Positions recorded by the museum.</li>
+        <li><b>Paris Musées.</b> Open content released under CC0.</li>
+        <li><b>Today's street imagery.</b> Panoramax contributors, under CC BY-SA 4.0 or Etalab 2.0 per photo.</li>
+      </ul>
+      <p class="muted">Code: MIT licence. Derived databases that include ODbL data are shared under the ODbL.</p>
+    </dialog>
+
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>

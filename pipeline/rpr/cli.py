@@ -1,0 +1,87 @@
+"""Command line entry point: `python -m rpr <command>`."""
+
+from __future__ import annotations
+
+import argparse
+import json
+from datetime import datetime, timezone
+
+from rpr import paths
+from rpr.photo import build_index, write_source
+
+
+def _update_manifest(key: str, value: dict) -> None:
+    path = paths.DATA_DIR / "manifest.json"
+    manifest = json.loads(path.read_text()) if path.exists() else {}
+    value = {**value, "updated_at": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")}
+    manifest[key] = value
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(manifest, ensure_ascii=False, indent=2) + "\n")
+
+
+def cmd_verniquet(args: argparse.Namespace) -> None:
+    from rpr.sources import verniquet
+
+    _update_manifest("verniquet", verniquet.harvest(args.images))
+
+
+def cmd_vasserot(args: argparse.Namespace) -> None:
+    from rpr.sources import vasserot
+
+    _update_manifest("vasserot", vasserot.harvest())
+
+
+def cmd_kahn(args: argparse.Namespace) -> None:
+    from rpr.sources import kahn
+
+    if args.inspect:
+        kahn.inspect()
+        return
+    info, photos = kahn.harvest()
+    summary = write_source(info, photos)
+    print(f"kahn: kept {summary['count']}, rejected {summary['rejected']}")
+    build_index()
+
+
+def cmd_parismusees(args: argparse.Namespace) -> None:
+    from rpr.sources import parismusees
+
+    if args.introspect:
+        parismusees.introspect()
+        return
+    info, photos = parismusees.harvest()
+    summary = write_source(info, photos)
+    print(f"parismusees: kept {summary['count']}, rejected {summary['rejected']}")
+    build_index()
+
+
+def cmd_index(args: argparse.Namespace) -> None:
+    manifest = build_index()
+    print(f"index: {manifest['photos']['count']} photos from {len(manifest['photos']['sources'])} sources")
+
+
+def main(argv: list[str] | None = None) -> int:
+    parser = argparse.ArgumentParser(prog="rpr", description="Rue par Rue data pipeline")
+    sub = parser.add_subparsers(dest="command", required=True)
+
+    p = sub.add_parser("verniquet", help="Verniquet atlas (1790) georeference annotations")
+    p.add_argument("--images", choices=["rumsey", "bnf"], default="rumsey")
+    p.set_defaults(func=cmd_verniquet)
+
+    p = sub.add_parser("vasserot", help="Vasserot cadastre (1810-1836) vector tiles")
+    p.set_defaults(func=cmd_vasserot)
+
+    p = sub.add_parser("kahn", help="Albert-Kahn autochromes of Paris")
+    p.add_argument("--inspect", action="store_true", help="print the live field list and stop")
+    p.set_defaults(func=cmd_kahn)
+
+    p = sub.add_parser("parismusees", help="Paris Musées photographs (needs PARISMUSEES_TOKEN)")
+    p.add_argument("--inspect", "--introspect", dest="introspect", action="store_true", help="print the GraphQL query fields and stop")
+    p.set_defaults(func=cmd_parismusees)
+
+    p = sub.add_parser("index", help="rebuild photos.geojson and manifest.json")
+    p.set_defaults(func=cmd_index)
+
+    args = parser.parse_args(argv)
+    args.func(args)
+    return 0

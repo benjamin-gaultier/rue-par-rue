@@ -1,0 +1,37 @@
+{
+  "verniquet": {
+    "file": "verniquet.json",
+    "sheets": 72,
+    "images": "rumsey",
+    "georeferencing": "SoDUCo, doi:10.7910/DVN/ZKRJFA (CC0 1.0)",
+    "updated_at": "2026-11-17T12:39:56Z"
+  },
+  "vasserot": {
+    "layers": {
+      "voirie": {
+        "file": "vasserot/voirie.pmtiles",
+        "label": "Street space (road network footprint)",
+        "source_layer": "Vasserot_Emprise_de_la_voiriefgb",
+        "druid": "gy980ch3900",
+        "bytes": 148309
+      },
+      "ilots": {
+        "file": "vasserot/ilots.pmtiles",
+        "label": "City blocks",
+        "source_layer": "Vasserot_Ilotsfgb",
+        "druid": "bz020fp6123",
+        "bytes": 795994
+      },
+      "parcelles": {
+        "file": "vasserot/parcelles.pmtiles",
+        "label": "Parcels",
+        "source_layer": "Vasserots_parcelles2_vfgb",
+        "druid": "qr091wq2775",
+        "bytes": 9288907
+      }
+    },
+    "license": "ODbL-1.0",
+    "attribution": "Vasserot cadastre: Arch. nat. F31 73-96, Arch. Paris, © ALPAGE (ODbL)",
+    "updated_at": "2026-11-17T12:40:03Z"
+  }
+}
