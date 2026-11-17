@@ -66,10 +66,10 @@
     "area": "Île de la Cité",
     "standing": 1443,
     "later": 779,
-    "reconstructed": 2387,
+    "reconstructed": 6242,
     "traced": 48,
     "license": "Vasserot parcels: ODbL (ALPAGE). APUR buildings: ODbL.",
-    "updated_at": "2026-11-17T18:55:52Z"
+    "updated_at": "2026-11-17T22:44:01Z"
   },
   "traced_cite": {
     "area": "cite",
@@ -95,5 +95,12 @@
     "bytes": 1486009,
     "model": "Depth Anything V2 Small (Apache 2.0)",
     "updated_at": "2026-11-17T20:34:49Z"
+  },
+  "site_cite": {
+    "area": "cite",
+    "file": "3d/site-cite.geojson",
+    "water_level_m": 27.0,
+    "bridges": 11,
+    "updated_at": "2026-11-17T22:45:25Z"
   }
 }

@@ -84,6 +84,8 @@ export class Walker {
   private last = 0
   private drag?: { x: number; y: number; heading: number; lookUp: number }
   private obstacles: Obstacle[] = []
+  /** More places you cannot walk, such as the river (set by the detailed layer). */
+  extraBlock?: (p: [number, number]) => boolean
 
   constructor(
     private map: MapLibreMap,
@@ -167,13 +169,16 @@ export class Walker {
     else this.keys.delete(key)
   }
 
+  private isBlocked(p: [number, number]): boolean {
+    return blocked(p, this.year(), this.obstacles) || (this.extraBlock?.(p) ?? false)
+  }
+
   private freeSpotNear(at: [number, number]): [number, number] {
-    const year = this.year()
-    if (!blocked(at, year, this.obstacles)) return at
-    for (let r = 2; r <= 60; r += 2)
+    if (!this.isBlocked(at)) return at
+    for (let r = 2; r <= 80; r += 2)
       for (let a = 0; a < 360; a += 30) {
         const p = offset(at, a, r)
-        if (!blocked(p, year, this.obstacles)) return p
+        if (!this.isBlocked(p)) return p
       }
     return at
   }
@@ -204,7 +209,7 @@ export class Walker {
       const speed = k.has('shift') ? RUN_SPEED : WALK_SPEED
       let next = offset(this.pos, this.heading, forward * speed * dt)
       if (side) next = offset(next, this.heading + 90, side * speed * dt)
-      if (!blocked(next, this.year(), this.obstacles)) this.pos = next
+      if (!this.isBlocked(next)) this.pos = next
       this.place()
     }
     this.raf = requestAnimationFrame(this.tick)

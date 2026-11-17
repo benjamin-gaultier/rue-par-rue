@@ -97,6 +97,9 @@ const SKY = {
 export class Model3D {
   active = false
   private added = false
+  private year = 1836
+  /** Buildings drawn in detail by city3d.ts are left out of the plain blocks. */
+  private hideFocus = false
 
   constructor(
     private map: MapLibreMap,
@@ -107,7 +110,7 @@ export class Model3D {
   enter(year: number, fly = true) {
     const map = this.map
     if (!this.added) {
-      map.addSource('model', { type: 'geojson', data: this.base + MODEL_URL, attribution: 'Massing model: APUR (ODbL), Vasserot cadastre/ALPAGE (ODbL)' })
+      map.addSource('model', { type: 'geojson', data: this.base + MODEL_URL, attribution: 'Massing model: APUR (ODbL), Vasserot cadastre/ALPAGE (ODbL); river and bridges: IGN BD TOPO' })
       map.addLayer(
         {
           id: 'model',
@@ -154,7 +157,15 @@ export class Model3D {
   }
 
   setYear(year: number) {
-    if (this.added) this.map.setFilter('model', modelFilter(year))
+    this.year = year
+    if (!this.added) return
+    const filter = modelFilter(year)
+    this.map.setFilter('model', this.hideFocus ? (['all', filter, ['!=', ['get', 'focus'], true]] as FilterSpecification) : filter)
+  }
+
+  setHideFocus(hide: boolean) {
+    this.hideFocus = hide
+    this.setYear(this.year)
   }
 
   exit() {
