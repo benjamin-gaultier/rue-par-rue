@@ -10,7 +10,9 @@ import {
 import { basemapForYear, YEAR_MAX } from './timeline'
 import { clampYear, formatHash, parseHash, type ViewState } from './state'
 import { histogram, inWindow, loadPhotos, type PhotoCollection, type PhotoFeature, type PhotoProps } from './photos'
-import { picturesOf } from './panoramax'
+import { picturesOf, type TodayPicture } from './panoramax'
+import { formatAlignment, lookTarget, parseAlignment } from './alignment'
+import type { ThenNow } from './thennow'
 import {
   addCadastre,
   addPanoramaxCoverage,
@@ -98,17 +100,22 @@ function stopPlaying() {
 /* ------------------------------------------------------------------ photos */
 
 const panelRoot = $('#panel')
-const panel = buildPanel(panelRoot, () => select(undefined))
+const panel = buildPanel(panelRoot, () => select(undefined), (pic) => openCompare(pic))
 let todayAbort: AbortController | undefined
+let todayPictures: TodayPicture[] = []
+let compare: ThenNow | undefined
 
 function updatePhotoStatus() {
   const visible = controls.allYears ? photos.length : photos.filter((f) => inWindow(f.properties, state.year)).length
   setPhotoStatus($('#photo-status'), photos.length, visible)
 }
 
-function select(id: string | undefined, fly = false) {
+function select(id: string | undefined, fly = false, resume?: string) {
   todayAbort?.abort()
+  compare?.close()
+  todayPictures = []
   state.photo = id
+  state.align = undefined
   writeHash()
   const f = id ? byId.get(id) : undefined
   if (!f) {
@@ -121,7 +128,7 @@ function select(id: string | undefined, fly = false) {
   setSelection(map, selectionGeometry(lonlat, p.heading, p.fov))
   panel.show(p)
   if (fly) map.flyTo({ center: lonlat, zoom: Math.max(map.getZoom(), 17), speed: 1.4 })
-  loadToday(p, lonlat)
+  loadToday(p, lonlat, resume)
 }
 
 function setPhotos(data: PhotoCollection) {
@@ -133,26 +140,44 @@ function setPhotos(data: PhotoCollection) {
   updatePhotoStatus()
 }
 
-/** Where the photographer was looking: a little ahead when the heading is known. */
-function lookTarget(p: PhotoProps, lonlat: [number, number]): [number, number] {
-  if (p.heading === undefined) return lonlat
-  const d = 20
-  const r = (p.heading * Math.PI) / 180
-  return [
-    lonlat[0] + (Math.sin(r) * d) / (111320 * Math.cos((lonlat[1] * Math.PI) / 180)),
-    lonlat[1] + (Math.cos(r) * d) / 111320
-  ]
-}
-
-async function loadToday(p: PhotoProps, lonlat: [number, number]) {
+async function loadToday(p: PhotoProps, lonlat: [number, number], resume?: string) {
   todayAbort = new AbortController()
   panel.setToday({ loading: true })
   try {
-    const pictures = await picturesOf(lookTarget(p, lonlat), { signal: todayAbort.signal })
-    panel.setToday({ pictures })
+    todayPictures = await picturesOf(lookTarget(lonlat, p.heading), { signal: todayAbort.signal })
+    panel.setToday({ pictures: todayPictures })
+    const saved = parseAlignment(resume)
+    const pic = saved && todayPictures.find((x) => x.id === saved.pic)
+    if (pic) openCompare(pic, saved)
   } catch (err) {
     if ((err as Error).name !== 'AbortError') panel.setToday({ error: (err as Error).message })
   }
+}
+
+/* ------------------------------------------------------------ then & now */
+
+async function openCompare(pic: TodayPicture, saved = parseAlignment(state.align)) {
+  const f = state.photo ? byId.get(state.photo) : undefined
+  if (!f) return
+  const { openThenNow } = await import('./thennow')
+  compare?.close()
+  compare = openThenNow($('#thennow'), {
+    photo: f.properties,
+    lonlat: f.geometry.coordinates,
+    pictures: todayPictures,
+    picture: pic,
+    alignment: saved,
+    onAlign: (a) => {
+      state.align = formatAlignment(a)
+      writeHash()
+    },
+    onClose: () => {
+      compare = undefined
+      state.align = undefined
+      writeHash()
+      panelRoot.focus({ preventScroll: true })
+    }
+  })
 }
 
 /* ---------------------------------------------------------------- controls */
@@ -193,10 +218,10 @@ map.on('load', async () => {
   })
   map.on('mouseenter', 'photos', () => (map.getCanvas().style.cursor = 'pointer'))
   map.on('mouseleave', 'photos', () => (map.getCanvas().style.cursor = ''))
-  if (initial.photo) select(initial.photo, true)
+  if (initial.photo) select(initial.photo, true, initial.align)
 })
 map.on('moveend', writeHash)
-if (new URLSearchParams(location.search).has('debug')) Object.assign(window, { rpr: { map, basemaps, state, setPhotos, select } })
+if (new URLSearchParams(location.search).has('debug')) Object.assign(window, { rpr: { map, basemaps, state, setPhotos, select, openCompare } })
 
 window.addEventListener('hashchange', () => {
   const next = parseHash(location.hash)
@@ -205,5 +230,5 @@ window.addEventListener('hashchange', () => {
 })
 window.addEventListener('keydown', (e) => {
   if (e.target instanceof HTMLInputElement && e.target.type !== 'range') return
-  if (e.key === 'Escape' && state.photo) select(undefined)
+  if (e.key === 'Escape' && state.photo && !compare) select(undefined)
 })

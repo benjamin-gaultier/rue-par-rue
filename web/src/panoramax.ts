@@ -19,6 +19,7 @@ export interface TodayPicture {
   is360: boolean
   thumb: string
   sd: string
+  hd: string
   license: string
   producer?: string
   distance: number
@@ -64,7 +65,8 @@ export function parsePictures(json: { features?: StacFeature[] }, origin: [numbe
     const [lon, lat] = f.geometry.coordinates
     const thumb = f.assets.thumb?.href
     const sd = f.assets.sd?.href ?? thumb
-    if (!thumb || !sd) continue
+    const hd = f.assets.hd?.href ?? sd
+    if (!thumb || !sd || !hd) continue
     out.push({
       id: f.id,
       lon,
@@ -75,6 +77,7 @@ export function parsePictures(json: { features?: StacFeature[] }, origin: [numbe
       is360: io.field_of_view === 360,
       thumb,
       sd,
+      hd,
       license: String(p.license ?? 'see Panoramax'),
       producer: f.providers?.find((x) => x.roles?.includes('producer'))?.name,
       distance: distanceMeters(origin, [lon, lat]),

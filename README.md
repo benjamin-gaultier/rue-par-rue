@@ -4,7 +4,7 @@ A street view of Paris through time. Drag a year slider from 1790 to today: the 
 
 Everything shown comes from public archives. Nothing on the map is generated.
 
-## What works now (phase 1)
+## What works now (phases 1 and 2)
 
 | Layer | Years | Source |
 | --- | --- | --- |
@@ -20,6 +20,17 @@ Everything shown comes from public archives. Nothing on the map is generated.
 | Archive photographs: Albert-Kahn autochromes | 1910s–1930s | Pipeline ready; run the harvest workflow (see below) |
 
 After 1860 the cadastre turns into an orange ghost over later maps, so streets cut by Haussmann's works stay visible. The URL hash keeps the year, view and selected photo, so any view can be shared.
+
+### Then and now
+
+Select a photograph and choose **Compare then and now**. The archive photo opens over a Panoramax picture of the same place:
+
+- **360° panoramas** (Photo Sphere Viewer): the archive photo stays at the centre of the screen and you turn the panorama underneath it until the two line up. Its width follows the zoom, using the rectilinear field of view, so alignment holds while zooming.
+- **Flat street photos**: drag the archive photo over today's picture.
+- A **Now ↔ Then** slider blends the two, **Hold to see then** shows the archive alone, and **Size** sets the archive photo's field of view.
+- The alignment (Panoramax picture, bearing, pitch, field of view) is saved in the URL as `a=…`, so **Copy link** shares exactly what you lined up.
+
+The archive photo is drawn as a plain image above the panorama, not as a WebGL texture, so it works with archives that send no CORS headers (Paris Musées). The viewer and three.js load only when it is first opened.
 
 ## Repository layout
 
@@ -72,8 +83,8 @@ For Paris Musées, create a free token at <https://apicollections.parismusees.pa
 ## Roadmap
 
 1. **Phase 1, time-slider map** (this release): basemap timeline, cadastre, Panoramax "today" view, photo pipeline.
-2. **Phase 2, then-and-now viewer**: open the nearest 360° Panoramax panorama turned to the photo's heading, with the archive photo overlaid and an opacity slider.
-3. **Phase 3, pose refinement**: geocode Marville and Atget captions against historical street names and the 1836/1888 street networks; refine headings by matching against Panoramax imagery; a volunteer tool for demolished streets.
+2. **Phase 2, then-and-now viewer** (this release): archive photo over the nearest Panoramax panorama, with alignment saved in the URL.
+3. **Phase 3, pose refinement**: geocode Marville and Atget captions against historical street names and the 1836/1888 street networks; infer headings (Kahn records have positions but no direction, so the viewer cannot yet face the subject automatically); refine poses by matching against Panoramax imagery; let people submit the alignments they make in the viewer.
 4. **Phase 4, walkable 1836**: extrude the Vasserot parcels into 3D and walk them at eye level, clearly labelled as a reconstruction.
 
 ## Licences

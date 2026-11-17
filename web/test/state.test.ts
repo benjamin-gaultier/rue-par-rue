@@ -17,6 +17,13 @@ describe('URL hash state', () => {
     )
   })
 
+  it('keeps a then-and-now alignment only with a selected photo', () => {
+    const h = formatHash({ year: 1918, zoom: 17, lat: 48.853, lon: 2.35, photo: 'kahn:A 13 998', align: 'abcdef12-34,105.0,8.0,55' })
+    expect(h).toContain('&a=abcdef12-34,105.0,8.0,55')
+    expect(parseHash(h).align).toBe('abcdef12-34,105.0,8.0,55')
+    expect(parseHash('#y=1918&a=abcdef12-34,1,2,55').align).toBeUndefined()
+  })
+
   it('clamps years and ignores junk', () => {
     expect(parseHash('#y=1500').year).toBe(1780)
     expect(parseHash('#y=3000').year).toBe(2026)

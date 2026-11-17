@@ -10,6 +10,8 @@ export interface ViewState {
   lat?: number
   lon?: number
   photo?: string
+  /** Then-and-now alignment, see alignment.ts */
+  align?: string
 }
 
 export const DEFAULT_STATE: ViewState = { year: 1900, zoom: 14.2, lat: 48.8566, lon: 2.3475 }
@@ -30,6 +32,8 @@ export function parseHash(hash: string): ViewState {
   }
   const p = params.get('p')
   if (p) state.photo = p
+  const a = params.get('a')
+  if (a && p) state.align = a
   return state
 }
 
@@ -40,5 +44,6 @@ export function formatHash(s: ViewState): string {
     params.set('m', `${s.zoom.toFixed(2)}/${s.lat.toFixed(5)}/${s.lon.toFixed(5)}`)
   }
   if (s.photo) params.set('p', s.photo)
-  return '#' + params.toString().replace(/%2F/g, '/').replace(/%3A/g, ':')
+  if (s.photo && s.align) params.set('a', s.align)
+  return '#' + params.toString().replace(/%2F/g, '/').replace(/%3A/g, ':').replace(/%2C/g, ',')
 }

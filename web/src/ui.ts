@@ -6,6 +6,7 @@
 import { type Basemap, BASEMAPS, YEAR_MAX, YEAR_MIN } from './timeline'
 import { type Bin, dateLabel, positionLabel, type PhotoProps, SOURCE_COLORS, SOURCE_NAMES, FALLBACK_COLOR } from './photos'
 import type { TodayPicture } from './panoramax'
+import { bestPicture } from './alignment'
 
 export function el<K extends keyof HTMLElementTagNameMap>(
   tag: K,
@@ -137,7 +138,7 @@ export interface Panel {
   setToday(state: { loading: true } | { error: string } | { pictures: TodayPicture[] }): void
 }
 
-export function buildPanel(root: HTMLElement, onClose: () => void): Panel {
+export function buildPanel(root: HTMLElement, onClose: () => void, onCompare: (pic: TodayPicture) => void): Panel {
   const close = el('button', { class: 'panel-close', type: 'button', 'aria-label': 'Close', text: '×' })
   const body = el('div', { class: 'panel-body' })
   const today = el('div', { class: 'today-list' })
@@ -206,18 +207,25 @@ export function buildPanel(root: HTMLElement, onClose: () => void): Panel {
         )
         return
       }
-      today.replaceChildren(
-        ...state.pictures.slice(0, 6).map((pic) =>
-          el('a', { class: 'today-item', href: pic.viewerUrl, target: '_blank', rel: 'noopener', title: `Open in Panoramax (${pic.license})` }, [
-            el('img', { src: pic.thumb, alt: `Street view taken ${pic.date}`, loading: 'lazy' }),
-            el('span', { class: 'today-meta' }, [
-              el('span', { text: pic.date || 'undated' }),
-              el('span', { text: `${Math.round(pic.distance)} m` }),
-              pic.is360 ? el('b', { text: '360°' }) : null
-            ])
+      const best = bestPicture(state.pictures)!
+      const compare = el('button', { class: 'compare-btn', type: 'button' }, [
+        el('span', { text: 'Compare then and now' }),
+        el('small', { text: best.is360 ? '360° panorama' : 'street photo' })
+      ])
+      compare.addEventListener('click', () => onCompare(best))
+      const items = state.pictures.slice(0, 6).map((pic) => {
+        const b = el('button', { class: 'today-item', type: 'button', title: `Compare with this photo (${pic.license})` }, [
+          el('img', { src: pic.thumb, alt: `Street view taken ${pic.date}`, loading: 'lazy' }),
+          el('span', { class: 'today-meta' }, [
+            el('span', { text: pic.date || 'undated' }),
+            el('span', { text: `${Math.round(pic.distance)} m` }),
+            pic.is360 ? el('b', { text: '360°' }) : null
           ])
-        )
-      )
+        ])
+        b.addEventListener('click', () => onCompare(pic))
+        return b
+      })
+      today.replaceChildren(compare, ...items)
     }
   }
 }

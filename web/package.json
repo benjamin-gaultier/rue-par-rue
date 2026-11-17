@@ -13,6 +13,7 @@
   "dependencies": {
     "@allmaps/annotation": "1.0.0-beta.38",
     "@allmaps/maplibre": "1.0.0-beta.44",
+    "@photo-sphere-viewer/core": "5.15.1",
     "maplibre-gl": "6.16.0",
     "pmtiles": "4.5.0"
   },
