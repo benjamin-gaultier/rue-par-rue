@@ -126,6 +126,16 @@ def text(value: Any) -> str | None:
     return value or None
 
 
+UNKNOWN_CREATOR = {"operateur non mentionne", "inconnu", "anonyme", "non identifie"}
+
+
+def creator_of(value: Any) -> str | None:
+    name = text(value)
+    if name and norm(name).replace("_", " ") in UNKNOWN_CREATOR:
+        return None
+    return name
+
+
 def license_of(value: Any) -> str:
     v = (text(value) or "").lower()
     if v in ("oui", "yes", "true", "1", "libre de droits"):
@@ -159,7 +169,7 @@ def to_photo(record: dict) -> Photo | None:
         year=year,
         year_end=year_end,
         date_text=date_text,
-        creator=text(pick(record, "creator")),
+        creator=creator_of(pick(record, "creator")),
         thumb=image,
         image=image,
         url=url,

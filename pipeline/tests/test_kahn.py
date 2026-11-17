@@ -90,3 +90,8 @@ def test_live_record_shape():
 def test_rights_flag():
     assert kahn.license_of("Oui").startswith("Libre de droits")
     assert kahn.license_of(None) == kahn.INFO.license
+
+
+def test_unknown_operator_is_blank():
+    assert kahn.creator_of("opérateur non mentionné") is None
+    assert kahn.creator_of(["Stéphane Passet"]) == "Stéphane Passet"
