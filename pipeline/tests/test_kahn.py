@@ -50,3 +50,43 @@ def test_record_to_photo():
 
 def test_record_without_position_is_skipped():
     assert kahn.to_photo({"Cote": "X", "Légende": "Paris"}) is None
+
+
+# A live record as printed by `rpr kahn --inspect` on GitHub Actions (trimmed).
+LIVE = {
+    "identifiant_fakir": "IF36953",
+    "numero_d_inventaire": "A 7 479",
+    "legende_originale_titre": "France, Paris, Passage du Caire",
+    "legende_revisee": "L' entrée du passage du Caire au n°33 de la rue d'Alexandrie",
+    "lieu": "Paris (IIe arr.), France",
+    "date_de_prise_de_vue": "18 juillet 1914",
+    "operateur": ["Georges Chevalier"],
+    "procede_technique": "Autochrome",
+    "droits_cessibles": None,
+    "photo": {
+        "thumbnail": True,
+        "filename": "a007479.jpg",
+        "format": "JPEG",
+        "width": 800,
+        "id": "96fb09c7a7e5acf0fba8a09d556c63ae",
+        "height": 593,
+        "url": "https://opendata.hauts-de-seine.fr/api/explore/v2.1/catalog/datasets/archives-de-la-planete-paris/files/96fb09c7a7e5acf0fba8a09d556c63ae",
+    },
+    "geo_point": {"lon": 2.349735, "lat": 48.8687},
+}
+
+
+def test_live_record_shape():
+    p = kahn.to_photo(LIVE)
+    assert p.id == "kahn:A 7 479"
+    assert p.title.startswith("L' entrée du passage du Caire")
+    assert p.creator == "Georges Chevalier"
+    assert (p.year, p.media, p.pose) == (1914, "autochrome", "recorded")
+    assert p.image.endswith("/files/96fb09c7a7e5acf0fba8a09d556c63ae")
+    assert p.url.startswith("https://opendata.hauts-de-seine.fr/explore/dataset/archives-de-la-planete-paris/")
+    assert p.problems() == []
+
+
+def test_rights_flag():
+    assert kahn.license_of("Oui").startswith("Libre de droits")
+    assert kahn.license_of(None) == kahn.INFO.license

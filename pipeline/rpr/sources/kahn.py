@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import re
 import unicodedata
+import urllib.parse
 from typing import Any, Callable, Iterable
 
 from rpr import net
@@ -36,7 +37,7 @@ INFO = SourceInfo(
 # non-alphanumerics to underscores). First match wins.
 FIELDS = {
     "id": ["cote", "numero_inventaire", "numero_d_inventaire", "n_inventaire", "inventaire", "identifiant", "reference", "id"],
-    "title": ["legende", "legende_revisee", "titre", "title", "sujet", "description"],
+    "title": ["legende_revisee", "legende", "legende_originale_titre", "titre", "title", "sujet", "description"],
     "date": ["date_de_prise_de_vue", "date_prise_de_vue", "date_de_prise_vue", "date", "date_de_tournage", "annee"],
     "creator": ["operateur", "operatrice", "photographe", "auteur", "createur"],
     "geo": ["geo_point_2d", "geopoint", "geo_point", "coordonnees", "coordonnees_gps", "localisation", "position"],
@@ -44,10 +45,12 @@ FIELDS = {
     "lon": ["longitude", "lon", "lng"],
     "image": ["image", "visuel", "photo", "media", "fichier", "url_image", "lien_image", "vignette"],
     "url": ["lien", "url", "permalien", "notice", "lien_notice", "url_notice"],
-    "media": ["type", "nature", "support", "type_de_document", "procede"],
-    "license": ["licence", "license", "droits", "conditions_d_utilisation"],
+    "media": ["procede_technique", "procede", "type", "nature", "support", "type_de_document"],
+    "license": ["droits_cessibles", "licence", "license", "droits", "conditions_d_utilisation"],
     "heading": ["orientation", "azimut", "direction"],
 }
+
+RECORD_URL = "https://opendata.hauts-de-seine.fr/explore/dataset/" + DATASET + "/table/?q={q}"
 
 YEAR_RE = re.compile(r"\b(18[5-9]\d|19[0-4]\d)\b")
 
@@ -113,6 +116,23 @@ def image_url(value: Any) -> str | None:
     return None
 
 
+def text(value: Any) -> str | None:
+    """Opendatasoft multivalued fields arrive as lists; join them."""
+    if value is None:
+        return None
+    if isinstance(value, list):
+        value = ", ".join(str(v).strip() for v in value if v)
+    value = str(value).strip()
+    return value or None
+
+
+def license_of(value: Any) -> str:
+    v = (text(value) or "").lower()
+    if v in ("oui", "yes", "true", "1", "libre de droits"):
+        return "Libre de droits (Musée départemental Albert-Kahn)"
+    return INFO.license
+
+
 def to_photo(record: dict) -> Photo | None:
     pos = parse_geo(record)
     ident = pick(record, "id")
@@ -120,16 +140,16 @@ def to_photo(record: dict) -> Photo | None:
         return None
     lon, lat = pos
     year, year_end, date_text = parse_years(pick(record, "date"))
-    title = str(pick(record, "title") or "").strip()
+    title = text(pick(record, "title")) or ""
     image = image_url(pick(record, "image"))
-    media_raw = str(pick(record, "media") or "").lower()
+    media_raw = (text(pick(record, "media")) or "").lower()
     media = "film" if ("film" in media_raw or "video" in media_raw) else "autochrome" if "autochrome" in media_raw else "photo"
     heading = pick(record, "heading")
     try:
         heading = float(heading) % 360 if heading is not None else None
     except (TypeError, ValueError):
         heading = None
-    license_value = pick(record, "license")
+    url = image_url(pick(record, "url")) or RECORD_URL.format(q=urllib.parse.quote(f'"{ident}"'))
     return Photo(
         source=INFO.key,
         source_id=str(ident).strip(),
@@ -139,11 +159,11 @@ def to_photo(record: dict) -> Photo | None:
         year=year,
         year_end=year_end,
         date_text=date_text,
-        creator=(str(pick(record, "creator")).strip() or None) if pick(record, "creator") else None,
+        creator=text(pick(record, "creator")),
         thumb=image,
         image=image,
-        url=image_url(pick(record, "url")),
-        license=str(license_value) if license_value else INFO.license,
+        url=url,
+        license=license_of(pick(record, "license")),
         credit=INFO.attribution,
         media=media,
         pose="recorded",
