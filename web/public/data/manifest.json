@@ -84,8 +84,16 @@
   "thumbs_cite": {
     "area": "cite",
     "count": 682,
-    "bytes": 4480067,
+    "bytes": 4830733,
     "failed": 1,
-    "updated_at": "2026-11-17T19:37:23Z"
+    "updated_at": "2026-11-17T20:48:08Z"
+  },
+  "depth_notre_dame": {
+    "set": "notre-dame",
+    "count": 89,
+    "failed": 0,
+    "bytes": 1486009,
+    "model": "Depth Anything V2 Small (Apache 2.0)",
+    "updated_at": "2026-11-17T20:34:49Z"
   }
 }

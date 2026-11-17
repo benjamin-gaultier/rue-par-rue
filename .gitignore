@@ -7,3 +7,4 @@ __pycache__/
 *.part
 .DS_Store
 pipeline/cache/vasserot/
+pipeline/cache/models/

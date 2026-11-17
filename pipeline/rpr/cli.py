@@ -71,7 +71,13 @@ def cmd_trace(args: argparse.Namespace) -> None:
 def cmd_thumbs(args: argparse.Namespace) -> None:
     from rpr.sources import thumbs
 
-    _update_manifest(f"thumbs_{args.area}", thumbs.build(args.area))
+    _update_manifest(f"thumbs_{args.area}", thumbs.build(args.area, rebuild=args.rebuild))
+
+
+def cmd_depth(args: argparse.Namespace) -> None:
+    from rpr.sources import depth
+
+    _update_manifest(f"depth_{args.set.replace('-', '_')}", depth.build(args.set))
 
 
 def cmd_index(args: argparse.Namespace) -> None:
@@ -107,9 +113,14 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--limit", type=int, default=None)
     p.set_defaults(func=cmd_trace)
 
-    p = sub.add_parser("thumbs", help="same-origin thumbnails for photo frames in the 3D view (needs Pillow)")
+    p = sub.add_parser("thumbs", help="same-origin thumbnails for photo frames in the 3D view (needs Pillow, OpenCV)")
     p.add_argument("--area", choices=["cite"], default="cite")
+    p.add_argument("--rebuild", action="store_true", help="redo existing thumbnails")
     p.set_defaults(func=cmd_thumbs)
+
+    p = sub.add_parser("depth", help="AI depth maps for a set of photos (needs onnxruntime, numpy, Pillow)")
+    p.add_argument("--set", choices=["notre-dame"], default="notre-dame")
+    p.set_defaults(func=cmd_depth)
 
     p = sub.add_parser("index", help="rebuild photos.geojson and manifest.json")
     p.set_defaults(func=cmd_index)

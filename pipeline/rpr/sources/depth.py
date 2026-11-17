@@ -1,0 +1,147 @@
+"""AI depth maps for archive photographs (prototype on Notre-Dame).
+
+Depth Anything V2 Small (Apache 2.0, ONNX export by onnx-community) estimates
+relative depth from a single photo. The app turns each photo into a relief
+you can move around a little: a "3D photo", not a measured reconstruction.
+
+Output in web/public/data/3d/depth/:
+  <source>-<id>.png   8-bit depth, white = near, at most 256 px on the long side
+  <source>-<id>.jpg   same-origin copy of the photo (only where the archive
+                      sends no CORS headers: Paris Musées)
+  index.json          photo id -> files and sizes
+"""
+
+from __future__ import annotations
+
+import io
+import json
+import math
+import re
+from typing import Any, Callable
+
+from rpr import net, paths
+
+MODEL_URL = "https://huggingface.co/onnx-community/depth-anything-v2-small/resolve/main/onnx/model.onnx"
+MODEL = paths.REPO_ROOT / "pipeline" / "cache" / "models" / "depth-anything-v2-small.onnx"
+MEAN = (0.485, 0.456, 0.406)
+STD = (0.229, 0.224, 0.225)
+SHORT_SIDE = 518
+DEPTH_MAX_SIDE = 256
+IMAGE_MAX_SIDE = 900
+NEEDS_COPY = {"parismusees"}
+
+SETS = {
+    "notre-dame": {"title": r"notre.?dame", "center": (2.3499, 48.8530), "radius_m": 350},
+}
+
+
+def selected(photos: list[dict], name: str) -> list[dict]:
+    cfg = SETS[name]
+    cx, cy = cfg["center"]
+    out = []
+    for f in photos:
+        x, y = f["geometry"]["coordinates"]
+        d = math.hypot((x - cx) * 111320 * math.cos(math.radians(cy)), (y - cy) * 110574)
+        if d <= cfg["radius_m"] and re.search(cfg["title"], f["properties"]["title"], re.I):
+            out.append(f)
+    return out
+
+
+def input_size(w: int, h: int) -> tuple[int, int]:
+    """Scale the short side to 518, both sides to multiples of 14 (as DPTImageProcessor)."""
+    s = SHORT_SIDE / min(w, h)
+    return max(14, round(w * s / 14) * 14), max(14, round(h * s / 14) * 14)
+
+
+def normalise(depth, lo_pct: float = 2, hi_pct: float = 98):
+    """Relative inverse depth -> 0..1 (1 = near), robust to outliers."""
+    import numpy as np
+
+    lo, hi = np.percentile(depth, [lo_pct, hi_pct])
+    return np.clip((depth - lo) / max(hi - lo, 1e-6), 0, 1)
+
+
+def crop_mount(img):
+    """Cut a photographic print out of its mount (Paris Musées scans the whole card).
+
+    The card is the colour along the scan's border; the print is the largest
+    region that differs from it. Returns the image unchanged if nothing stands out.
+    """
+    import cv2
+    import numpy as np
+
+    a = np.asarray(img.convert("RGB"), dtype=np.int16)
+    h, w, _ = a.shape
+    border = np.concatenate([a[: h // 40].reshape(-1, 3), a[-h // 40 :].reshape(-1, 3), a[:, : w // 40].reshape(-1, 3), a[:, -w // 40 :].reshape(-1, 3)])
+    card = np.median(border, axis=0)
+    diff = np.abs(a - card).sum(axis=2)
+    mask = (diff > 60).astype(np.uint8) * 255
+    mask = cv2.morphologyEx(mask, cv2.MORPH_OPEN, np.ones((5, 5), np.uint8))
+    mask = cv2.morphologyEx(mask, cv2.MORPH_CLOSE, np.ones((15, 15), np.uint8))
+    n, _, stats, _ = cv2.connectedComponentsWithStats(mask, 8)
+    if n <= 1:
+        return img
+    k = 1 + int(np.argmax(stats[1:, cv2.CC_STAT_AREA]))
+    x, y, bw, bh = (int(v) for v in stats[k, :4])
+    if bw * bh < 0.08 * w * h or bw * bh > 0.97 * w * h:
+        return img  # nothing that looks like a print on a card
+    inset = max(2, int(0.01 * min(bw, bh)))
+    return img.crop((x + inset, y + inset, x + bw - inset, y + bh - inset))
+
+
+def build(name: str = "notre-dame", log: Callable[[str], Any] = print) -> dict:
+    import numpy as np
+    import onnxruntime as ort
+    from PIL import Image
+
+    if not MODEL.exists():
+        size = net.download(MODEL_URL, MODEL, timeout=600)
+        log(f"depth: downloaded model ({size / 1e6:.0f} MB)")
+    session = ort.InferenceSession(str(MODEL), providers=["CPUExecutionProvider"])
+
+    photos = json.loads((paths.DATA_DIR / "photos.geojson").read_text())["features"]
+    chosen = selected(photos, name)
+    out_dir = paths.DATA_DIR / "3d" / "depth"
+    out_dir.mkdir(parents=True, exist_ok=True)
+    index_path = out_dir / "index.json"
+    index: dict[str, dict] = json.loads(index_path.read_text()) if index_path.exists() else {}
+    made = failed = 0
+    for f in chosen:
+        p = f["properties"]
+        stem = f"{p['source']}-{re.sub(r'[^A-Za-z0-9]+', '_', p['source_id'])}"
+        if p["id"] in index and (out_dir / f"{stem}.png").exists():
+            continue
+        try:
+            raw = net.fetch_bytes(p.get("image") or p["thumb"], timeout=90, retries=5)
+            img = Image.open(io.BytesIO(raw)).convert("RGB")
+            if p["source"] in NEEDS_COPY:
+                img = crop_mount(img)
+        except Exception as err:
+            failed += 1
+            log(f"depth: {p['id']} image failed ({err})")
+            continue
+        w, h = img.size
+        iw, ih = input_size(w, h)
+        x = np.asarray(img.resize((iw, ih), Image.BICUBIC), dtype=np.float32) / 255.0
+        x = (x - np.array(MEAN, dtype=np.float32)) / np.array(STD, dtype=np.float32)
+        x = x.transpose(2, 0, 1)[None]
+        depth = session.run(None, {"pixel_values": x})[0][0]
+        d = normalise(depth)
+        dimg = Image.fromarray((d * 255).astype(np.uint8), "L")
+        dimg.thumbnail((DEPTH_MAX_SIDE, DEPTH_MAX_SIDE), Image.BILINEAR)
+        dimg.save(out_dir / f"{stem}.png", optimize=True)
+        entry = {"depth": f"{stem}.png", "width": w, "height": h}
+        if p["source"] in NEEDS_COPY:
+            copy = img.copy()
+            copy.thumbnail((IMAGE_MAX_SIDE, IMAGE_MAX_SIDE))
+            copy.save(out_dir / f"{stem}.jpg", "JPEG", quality=80, optimize=True, progressive=True)
+            entry["image"] = f"{stem}.jpg"
+        index[p["id"]] = entry
+        made += 1
+        if made % 10 == 0:
+            log(f"depth: {made} done")
+            index_path.write_text(json.dumps(index, sort_keys=True))
+    index_path.write_text(json.dumps(index, sort_keys=True))
+    size = sum(f.stat().st_size for f in out_dir.glob("*") if f.suffix in (".png", ".jpg"))
+    log(f"depth: {made} new, {failed} failed, {len(index)} total, {size / 1e6:.1f} MB")
+    return {"set": name, "count": len(index), "failed": failed, "bytes": size, "model": "Depth Anything V2 Small (Apache 2.0)"}

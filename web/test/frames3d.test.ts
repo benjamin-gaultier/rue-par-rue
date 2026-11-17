@@ -20,6 +20,12 @@ describe('grouping photos into frames', () => {
     const shared = groups.find((g) => g.count === 2)!
     expect(shared.photo.id).toBe(b.id)
   })
+  it('shows a preferred photo (one with a depth map) first at a shared spot', () => {
+    const a = photo(2.3499, 48.853, 1914)
+    const b = photo(2.34991, 48.85301, 1910) // further in date, but has a depth map
+    const [g] = groupPhotos([a, b], 1914, false, BOUNDS, undefined, (f) => f.id === b.id)
+    expect(g.photo.id).toBe(b.id)
+  })
   it('respects the year window, bounds and the all-years switch', () => {
     const old = photo(2.3499, 48.853, 1860)
     const outside = photo(2.30, 48.86, 1914)

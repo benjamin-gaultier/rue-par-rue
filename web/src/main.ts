@@ -11,6 +11,7 @@ import {
 import { BASEMAPS, basemapForYear, YEAR_MAX } from './timeline'
 import { CITE_BOUNDS, CITE_VIEW, describeBuilding, Model3D, MODEL_COLORS, MODEL_LABELS, MODEL_URL, type ModelProps } from './model3d'
 import type { PhotoFrames } from './frames3d'
+import type { DepthIndex } from './depth'
 import { Walker } from './walk'
 import { clampYear, formatHash, parseHash, type ViewState } from './state'
 import { histogram, inWindow, loadPhotos, type PhotoCollection, type PhotoFeature, type PhotoProps } from './photos'
@@ -113,7 +114,28 @@ function stopPlaying() {
 /* ------------------------------------------------------------------ photos */
 
 const panelRoot = $('#panel')
-const panel = buildPanel(panelRoot, () => select(undefined), (pic) => openCompare(pic))
+let depthIndex: DepthIndex = {}
+const panel = buildPanel(panelRoot, () => select(undefined), (pic) => openCompare(pic), {
+  has: (id) => id in depthIndex,
+  open: (p) => void openDepth(p)
+})
+
+/** Photos with an AI depth map open as 3D photos (depth.ts, loaded on demand). */
+async function openDepth(p: PhotoProps) {
+  const entry = depthIndex[p.id]
+  const f = byId.get(p.id)
+  if (!entry || !f) return
+  const { openDepthViewer, depthImageUrl } = await import('./depth')
+  const imageUrl = depthImageUrl(BASE, f, entry)
+  if (!imageUrl) return
+  await openDepthViewer($('#thennow'), {
+    title: p.title,
+    caption: `${p.credit ?? ''} · Depth estimated by Depth Anything V2 Small from this single photograph: a parallax effect, not a measured model.`,
+    imageUrl,
+    depthUrl: `${BASE}data/3d/depth/${entry.depth}`,
+    onClose: () => panelRoot.focus({ preventScroll: true })
+  })
+}
 let todayAbort: AbortController | undefined
 let todayPictures: TodayPicture[] = []
 let compare: ThenNow | undefined
@@ -239,20 +261,27 @@ async function ensureFrames() {
   } catch {
     thumbIndex = {}
   }
-  frames = new framesModule.PhotoFrames(CITE_CENTER, (f) => {
-    const thumb = thumbIndex[f.properties.id]
-    if (thumb) return `${BASE}data/3d/thumbs/${thumb}`
-    // The Albert-Kahn portal serves its images with CORS headers.
-    if (f.properties.source === 'kahn') return f.properties.image
-    return undefined
-  })
+  frames = new framesModule.PhotoFrames(
+    CITE_CENTER,
+    (f) => {
+      const thumb = thumbIndex[f.properties.id]
+      if (thumb) return `${BASE}data/3d/thumbs/${thumb}`
+      // The Albert-Kahn portal serves its images with CORS headers.
+      if (f.properties.source === 'kahn') return f.properties.image
+      return undefined
+    },
+    (f) => {
+      const e = depthIndex[f.properties.id]
+      return e ? { depth: `${BASE}data/3d/depth/${e.depth}`, image: e.image ? `${BASE}data/3d/depth/${e.image}` : undefined } : undefined
+    }
+  )
   map.addLayer(frames)
 }
 
 function refreshFrames() {
   if (!frames || !framesModule) return
   if (!model.active || !controls.photos) return frames.setGroups([])
-  const groups = framesModule.groupPhotos(photos, state.year, controls.allYears, CITE_BOUNDS)
+  const groups = framesModule.groupPhotos(photos, state.year, controls.allYears, CITE_BOUNDS, undefined, (f) => f.properties.id in depthIndex)
   const c = map.getCenter()
   frames.setGroups(framesModule.nearestGroups(groups, [c.lng, c.lat], 120))
 }
@@ -356,6 +385,12 @@ $('#exit-3d').addEventListener('click', exit3D)
 timebar.setYear(state.year)
 timebar.setBasemap(basemapForYear(state.year).basemap, basemapForYear(state.year).nearestOnly)
 
+const depthReady = import('./depth')
+  .then(async ({ loadDepthIndex }) => {
+    depthIndex = await loadDepthIndex(BASE)
+  })
+  .catch(() => undefined)
+
 map.on('load', async () => {
   addCadastre(map, BASE)
   addPanoramaxCoverage(map)
@@ -383,6 +418,7 @@ map.on('load', async () => {
   })
   map.on('mouseenter', 'photos', () => (map.getCanvas().style.cursor = 'pointer'))
   map.on('mouseleave', 'photos', () => (map.getCanvas().style.cursor = ''))
+  await depthReady // so a shared link's panel knows about its 3D photo
   if (initial.photo) select(initial.photo, true, initial.align)
 })
 map.on('moveend', () => {
