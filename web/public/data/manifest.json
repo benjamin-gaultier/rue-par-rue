@@ -1,0 +1,84 @@
+{
+  "verniquet": {
+    "file": "verniquet.json",
+    "sheets": 72,
+    "images": "rumsey",
+    "georeferencing": "SoDUCo, doi:10.7910/DVN/ZKRJFA (CC0 1.0)",
+    "updated_at": "2026-11-17T12:39:56Z"
+  },
+  "vasserot": {
+    "layers": {
+      "voirie": {
+        "file": "vasserot/voirie.pmtiles",
+        "label": "Street space (road network footprint)",
+        "source_layer": "Vasserot_Emprise_de_la_voiriefgb",
+        "druid": "gy980ch3900",
+        "bytes": 148309
+      },
+      "ilots": {
+        "file": "vasserot/ilots.pmtiles",
+        "label": "City blocks",
+        "source_layer": "Vasserot_Ilotsfgb",
+        "druid": "bz020fp6123",
+        "bytes": 795994
+      },
+      "parcelles": {
+        "file": "vasserot/parcelles.pmtiles",
+        "label": "Parcels",
+        "source_layer": "Vasserots_parcelles2_vfgb",
+        "druid": "qr091wq2775",
+        "bytes": 9288907
+      }
+    },
+    "license": "ODbL-1.0",
+    "attribution": "Vasserot cadastre: Arch. nat. F31 73-96, Arch. Paris, © ALPAGE (ODbL)",
+    "updated_at": "2026-11-17T12:40:03Z"
+  },
+  "photos": {
+    "count": 8640,
+    "sources": [
+      {
+        "key": "kahn",
+        "name": "Albert-Kahn, Archives de la Planète (Paris)",
+        "license": "See Musée départemental Albert-Kahn terms (CC0 / CC BY per item)",
+        "homepage": "https://www.data.gouv.fr/datasets/archives-de-la-planete-paris",
+        "attribution": "Musée départemental Albert-Kahn, Département des Hauts-de-Seine",
+        "count": 4302,
+        "rejected": {},
+        "harvested_at": "2026-11-17T18:08:20Z"
+      },
+      {
+        "key": "parismusees",
+        "name": "Paris Musées (Musée Carnavalet)",
+        "license": "CC0-1.0",
+        "homepage": "https://www.parismuseescollections.paris.fr/",
+        "attribution": "Paris Musées / Musée Carnavalet, Histoire de Paris (CC0)",
+        "count": 4338,
+        "rejected": {
+          "year_end before year": 1
+        },
+        "harvested_at": "2026-11-17T18:35:50Z"
+      }
+    ]
+  },
+  "model3d_cite": {
+    "file": "3d/cite-1836.geojson",
+    "area": "Île de la Cité",
+    "standing": 1443,
+    "later": 779,
+    "reconstructed": 2387,
+    "traced": 48,
+    "license": "Vasserot parcels: ODbL (ALPAGE). APUR buildings: ODbL.",
+    "updated_at": "2026-11-17T18:55:52Z"
+  },
+  "traced_cite": {
+    "area": "cite",
+    "no parcel match": 63,
+    "no drawing found": 7,
+    "poor fit": 42,
+    "traced": 57,
+    "image missing": 0,
+    "file": "3d/vasserot-traced-cite.geojson",
+    "updated_at": "2026-11-17T18:55:37Z"
+  }
+}
