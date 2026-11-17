@@ -83,6 +83,17 @@ export function describeBuilding(p: ModelProps): { title: string; lines: string[
   return { title, lines, link }
 }
 
+/** A pale Paris sky with a little haze toward the horizon. */
+const SKY = {
+  'sky-color': '#9fbbd8',
+  'horizon-color': '#e6e1d6',
+  'fog-color': '#e6e1d6',
+  'sky-horizon-blend': 0.6,
+  'horizon-fog-blend': 0.7,
+  'fog-ground-blend': 0.85,
+  'atmosphere-blend': 0
+}
+
 export class Model3D {
   active = false
   private added = false
@@ -129,6 +140,7 @@ export class Model3D {
     }
     map.setLayoutProperty('model', 'visibility', 'visible')
     map.setLight({ anchor: 'map', position: [1.5, 210, 35], intensity: 0.4, color: '#ffffff' })
+    map.setSky(SKY)
     map.setMaxPitch(85)
     map.setMaxZoom(21)
     map.dragRotate.enable()
@@ -149,6 +161,7 @@ export class Model3D {
     const map = this.map
     this.active = false
     if (this.added) map.setLayoutProperty('model', 'visibility', 'none')
+    // The sky stays set: it is only visible when the map is tilted.
     map.dragRotate.disable()
     map.touchZoomRotate.disableRotation()
     map.easeTo({ pitch: 0, bearing: 0, duration: 800 })

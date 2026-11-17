@@ -11,6 +11,7 @@
 | Vasserot parcels for the 3D model | ALPAGE via Stanford Libraries ([qr091wq2775](https://purl.stanford.edu/qr091wq2775)), Lambert I (EPSG:27561) shapefile | ODbL | "Arch. nat. F31 73-96, Arch. Paris, © ALPAGE" | `rpr model3d` reprojects with pyproj (`pip install -e ".[geo]"`). |
 | Vasserot ground-floor plans, one sheet per building (1809–1854) | Archives nationales, "Plans cadastraux des immeubles de Paris 1809-1856" (index CSV on data.gouv.fr, images on siv.archives-nationales.culture.gouv.fr) | Licence Ouverte 2.0 | "Archives nationales" plus the sheet's call number | `rpr trace` downloads the sheets for the model area (not committed) and publishes the traced footprints. |
 | Vasserot address points (1810–1836) | ALPAGE via Stanford Libraries ([pn650tp5621](https://purl.stanford.edu/pn650tp5621)) | ODbL | "© ALPAGE" | Used by `rpr trace` to match sheets to parcels. |
+| Thumbnails for 3D photo frames | Paris Musées images in the 3D area, resized to 224 px | CC0 | "Paris Musées / Musée Carnavalet" | `rpr thumbs`, stored in `web/public/data/3d/thumbs/`. |
 | Street positions for captions | IGN Géoplateforme geocoder (Base Adresse Nationale) | Licence Ouverte / Etalab 2.0 | "Base Adresse Nationale, IGN" | `rpr/geocode.py`, cached in `pipeline/cache/geocode.json`. |
 | Street-level photos today | Panoramax (IGN and OpenStreetMap France instances) | CC BY-SA 4.0 or Etalab 2.0, per photo | "Panoramax contributors" plus the photo's licence | Queried in the browser by place (`place_position`). |
 

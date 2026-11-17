@@ -44,6 +44,14 @@ Choose **Île de la Cité in 3D** to fly over the island in 1836, then drag the 
 
 It is a massing model to judge scale and density, labelled as a reconstruction in the app. Drag past 1860 to see Haussmann clear the island, and click any building for its sources.
 
+#### Photos in 3D and walking the streets
+
+In the 3D view the archive photographs stand as picture frames where they were taken, from the years around the one you pick. Buildings hide the frames behind them, the frames turn to face you, and photos sharing a spot become one frame with a count. Click a frame to open the photo.
+
+**Walk the streets** puts the camera about 2 m above the ground. Use the arrow keys or W A S D (Shift to go faster) and drag to look around and up. Buildings standing in the chosen year block the way, so changing the year changes the streets you can walk; if a building appears where you stand, you step out to the nearest open ground. Looking above the horizon uses MapLibre's experimental pitch beyond 90° with an unclamped camera centre.
+
+WebGL can only draw images served with CORS headers. Albert-Kahn images load from the museum's portal; Paris Musées images come from small same-origin thumbnails (`python -m rpr thumbs --area cite`, 682 images, 4.5 MB, CC0).
+
 #### Footprints traced from Vasserot's plans
 
 `python -m rpr trace --area cite` (needs `pip install -e ".[geo,vision]"`) traces real building footprints from Vasserot's ground-floor plans, one coloured sheet per building, published by the Archives nationales under the Licence Ouverte 2.0:

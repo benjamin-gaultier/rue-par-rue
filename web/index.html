@@ -33,11 +33,25 @@
       <section id="banner-3d" class="banner-3d" hidden aria-label="3D view">
         <div class="banner-3d-text">
           <strong>Île de la Cité in 3D</strong>
-          <span>Prototype massing model. Some demolished buildings are traced from Vasserot’s plans, the rest use cadastre parcels; their heights are estimated. Click a building for its sources. Drag the year past 1860 to watch Haussmann clear the island.</span>
+          <span>Prototype massing model with the archive photos standing where they were taken. Some demolished buildings are traced from Vasserot’s plans, the rest use cadastre parcels; their heights are estimated. Click a photo or a building. Drag the year past 1860 to watch Haussmann clear the island.</span>
           <div id="legend-3d" class="legend-3d"></div>
         </div>
-        <button id="exit-3d" type="button" class="tb-btn">Leave 3D</button>
+        <div class="banner-3d-actions">
+          <button id="walk-3d" type="button" class="tb-btn walk-btn">Walk the streets</button>
+          <button id="exit-3d" type="button" class="tb-btn">Leave 3D</button>
+        </div>
       </section>
+
+      <div id="walk-ui" class="walk-ui" hidden>
+        <p class="walk-help">Arrow keys or W A S D to walk · Shift to go faster · drag to look around and up · Esc to stop</p>
+        <div class="walk-pad" role="group" aria-label="Walk">
+          <button type="button" data-key="arrowup" class="walk-up" aria-label="Walk forward">▲</button>
+          <button type="button" data-key="arrowleft" class="walk-left" aria-label="Turn left">◀</button>
+          <button type="button" data-key="arrowdown" class="walk-down" aria-label="Walk back">▼</button>
+          <button type="button" data-key="arrowright" class="walk-right" aria-label="Turn right">▶</button>
+        </div>
+        <button id="walk-stop" type="button" class="tb-btn">Stop walking</button>
+      </div>
 
       <aside id="panel" class="panel" hidden aria-label="Selected photograph" tabindex="-1"></aside>
       </div>
