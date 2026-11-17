@@ -8,6 +8,7 @@ dependencies = []
 [project.optional-dependencies]
 dev = ["pytest>=8"]
 geo = ["pyshp>=2.3", "pyproj>=3.6", "shapely>=2.0"]
+vision = ["opencv-python-headless>=4.9", "numpy>=1.26"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

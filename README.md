@@ -42,7 +42,19 @@ Choose **Île de la Cité in 3D** to fly over the island in 1836, then drag the 
 | Ochre: standing in 1836, demolished since | Vasserot cadastre parcels not covered by a surviving building. No 1836 building footprints exist, so parcels over 400 m² become a 9 m-deep ring around a courtyard, open spaces (parvis, squares, markets) are left out, and heights are estimated at 12–19 m | until 1860 |
 | Grey: built later | APUR footprints and heights, appearing from their construction period | from that period |
 
-It is a massing model to judge scale and density, labelled as a reconstruction in the app. Drag past 1860 to see Haussmann clear the island. Next steps: real footprints from the Vasserot block plans, roof shapes, and facade textures from the archive photographs.
+It is a massing model to judge scale and density, labelled as a reconstruction in the app. Drag past 1860 to see Haussmann clear the island, and click any building for its sources.
+
+#### Footprints traced from Vasserot's plans
+
+`python -m rpr trace --area cite` (needs `pip install -e ".[geo,vision]"`) traces real building footprints from Vasserot's ground-floor plans, one coloured sheet per building, published by the Archives nationales under the Licence Ouverte 2.0:
+
+1. Each sheet is matched to its parcel through the ALPAGE 1836 address points (street, number, quarter).
+2. The drawing is segmented in Lab colour, relative to the sheet's own paper: the pink wash marks built rooms, white areas closed by boundary lines are courtyards. Sheets that colour only the walls are flagged `walls_only`.
+3. The drawing is registered onto the parcel polygon (scale from areas, rotation searched to 0.25°, scored by IoU). Fits below 0.72 are rejected.
+
+On the Cité: 169 sheets with a street number, 57 traced (median IoU 0.82), 42 rejected for a poor fit, 63 without an address match, 7 with no detectable drawing. Traced buildings are shown in terracotta, with a link to the original sheet. Output: `web/public/data/3d/vasserot-traced-cite.geojson`.
+
+Next: better address matching (renamed streets, number ranges), the Vasserot block atlas for full coverage, roof shapes, and facade textures from the archive photographs.
 
 ## Repository layout
 

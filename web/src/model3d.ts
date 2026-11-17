@@ -20,6 +20,7 @@ export const CITE_BOUNDS: [number, number, number, number] = [2.3395, 48.8505, 2
 
 export const MODEL_COLORS = {
   standing: '#ece2cc',
+  traced: '#b06a32',
   reconstructed: '#d1a96b',
   later: '#c9cdd3',
   undated: '#c9cdd3'
@@ -27,7 +28,8 @@ export const MODEL_COLORS = {
 
 export const MODEL_LABELS: Record<keyof typeof MODEL_COLORS, string> = {
   standing: 'Standing in 1836, still standing',
-  reconstructed: 'Demolished since (parcel, estimated height)',
+  traced: 'Demolished, footprint traced from Vasserot’s plan',
+  reconstructed: 'Demolished, parcel outline (estimated)',
   later: 'Built later',
   undated: 'Undated'
 }
@@ -47,6 +49,38 @@ export function existsIn(p: { kind: string; until?: number; from?: number }, yea
   if (p.kind === 'standing') return true
   if (p.kind === 'reconstructed') return year < (p.until ?? Infinity)
   return (p.from ?? Infinity) <= year
+}
+
+export interface ModelProps {
+  kind: 'standing' | 'reconstructed' | 'later' | 'undated'
+  height: number
+  height_max?: number
+  period: string
+  built?: number
+  source: string
+  traced?: boolean
+  address?: string
+  name?: string
+  plan_url?: string
+  iou?: number
+}
+
+/** Plain-language lines for the building popup. */
+export function describeBuilding(p: ModelProps): { title: string; lines: string[]; link?: { href: string; text: string } } {
+  const title =
+    p.address || p.name || (p.kind === 'standing' ? 'Building standing in 1836' : p.kind === 'reconstructed' ? 'Demolished building' : 'Later building')
+  const lines: string[] = []
+  if (p.kind === 'standing') lines.push(`Built ${p.period}${p.built ? ` (${p.built})` : ''}, still standing`)
+  else if (p.kind === 'reconstructed') lines.push('Standing in 1836, demolished since')
+  else lines.push(`Built ${p.period}`)
+  lines.push(
+    p.kind === 'reconstructed'
+      ? `Height: about ${Math.round(p.height)} m (estimated)`
+      : `Height: ${Math.round(p.height)} m median${p.height_max ? `, ${Math.round(p.height_max)} m at the highest` : ''} (measured)`
+  )
+  lines.push(p.source + (p.traced && p.iou ? ` · fit ${Math.round(p.iou * 100)}%` : ''))
+  const link = p.plan_url ? { href: p.plan_url, text: 'Vasserot’s plan at the Archives nationales' } : undefined
+  return { title, lines, link }
 }
 
 export class Model3D {
@@ -74,7 +108,13 @@ export class Model3D {
               'match',
               ['get', 'kind'],
               'standing', MODEL_COLORS.standing,
-              'reconstructed', ['interpolate', ['linear'], ['get', 'height'], 12, '#c79c5a', 19, '#e0c08a'],
+              'reconstructed',
+              [
+                'case',
+                ['boolean', ['get', 'traced'], false],
+                MODEL_COLORS.traced,
+                ['interpolate', ['linear'], ['get', 'height'], 12, '#c79c5a', 19, '#e0c08a']
+              ],
               MODEL_COLORS.later
             ],
             'fill-extrusion-height': ['get', 'height'],

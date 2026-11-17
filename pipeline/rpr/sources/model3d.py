@@ -94,6 +94,40 @@ def estimated_height(key: str) -> float:
     return round(lo + h * (hi - lo), 1)
 
 
+def load_traced(area: str, to_metric) -> dict[str, dict]:
+    """Traced footprints by parcel id (see rpr.sources.vasserot_plans), cleaned up."""
+    from shapely.geometry import Polygon, MultiPolygon, shape
+    from shapely.ops import transform
+
+    path = paths.DATA_DIR / "3d" / f"vasserot-traced-{area}.geojson"
+    if not path.exists():
+        return {}
+    out = {}
+    for f in json.loads(path.read_text())["features"]:
+        g = transform(to_metric, shape(f["geometry"]))
+        # Close hairline gaps, drop specks and pinholes left by unwashed patches.
+        g = g.buffer(0.4, join_style="mitre").buffer(-0.4, join_style="mitre")
+        parts = []
+        for p in getattr(g, "geoms", [g]):
+            if p.area < 4:
+                continue
+            holes = [h for h in p.interiors if Polygon(h).area >= 6]
+            parts.append(Polygon(p.exterior, holes))
+        if not parts:
+            continue
+        geom = MultiPolygon(parts) if len(parts) > 1 else parts[0]
+        prev = out.get(f["properties"]["parcel"])
+        if prev and prev["iou"] >= f["properties"]["iou"]:
+            continue  # several sheets for one parcel: keep the best fit
+        out[f["properties"]["parcel"]] = {
+            "geometry": geom.simplify(0.15, preserve_topology=True),
+            "address": f["properties"]["address"],
+            "plan_url": f["properties"]["url"],
+            "iou": f["properties"]["iou"],
+        }
+    return out
+
+
 def download_vasserot(cache: Path, log: Callable[[str], Any]) -> Path:
     cache.mkdir(parents=True, exist_ok=True)
     for ext in ("shp", "shx", "dbf", "prj"):
@@ -185,6 +219,8 @@ def build(area: str, log: Callable[[str], Any] = print) -> dict:
     reader = shapefile.Reader(str(shp), encoding="latin-1")
     fields = [f[0] for f in reader.fields[1:]]
     reconstructed, skipped = [], {"covered by a surviving building": 0, "too small": 0, "open space": 0}
+    traced = load_traced(area, to_l93)
+    used_traced = 0
     from_l93 = Transformer.from_crs(2154, 4326, always_xy=True).transform
     for sr in reader.iterShapeRecords():
         if sr.shape.shapeType == 0 or not sr.shape.points:
@@ -211,9 +247,13 @@ def build(area: str, log: Callable[[str], Any] = print) -> dict:
             skipped["open space"] += 1
             continue
         key = str(rec.get("ID_ALPAGE") or rec.get("IDENTIF") or sr.record.oid)
+        trace = traced.get(key)
         footprint = metric.buffer(-INSET_M, join_style="mitre", mitre_limit=3.0)
         ring = False
-        if metric.area > RING_ABOVE_M2:
+        if trace is not None:
+            footprint = trace["geometry"].intersection(footprint)
+            used_traced += 1
+        elif metric.area > RING_ABOVE_M2:
             inner = metric.buffer(-RING_DEPTH_M, join_style="mitre", mitre_limit=3.0)
             if not inner.is_empty and inner.area > 0.15 * metric.area:
                 footprint = footprint.difference(inner)
@@ -230,16 +270,22 @@ def build(area: str, log: Callable[[str], Any] = print) -> dict:
                     "height": estimated_height(key),
                     "period": "standing in 1836, since demolished",
                     "until": DEMOLISHED_BY,
-                    "source": "Vasserot cadastre parcel (1810–1836); height estimated",
+                    "source": (
+                        "Footprint traced from Vasserot's plan of the building; height estimated"
+                        if trace is not None
+                        else "Vasserot cadastre parcel (1810–1836); height estimated"
+                    ),
                     "id": f"vasserot:{key}",
                     "quartier": rec.get("QUARTIER") or None,
                     "name": fix_text(rec.get("NOM_CODE2")) or None,
                     "ring": ring,
+                    "traced": trace is not None,
+                    **({k: trace[k] for k in ("address", "plan_url", "iou")} if trace else {}),
                 },
                 "geometry": mapping(geom),
             }
         )
-    log(f"model3d: {len(reconstructed)} demolished buildings reconstructed from parcels; skipped {skipped}")
+    log(f"model3d: {len(reconstructed)} demolished buildings reconstructed ({used_traced} with traced footprints); skipped {skipped}")
 
     features = survivors + later + reconstructed
     out = paths.DATA_DIR / "3d" / f"{area}-1836.geojson"
@@ -253,6 +299,7 @@ def build(area: str, log: Callable[[str], Any] = print) -> dict:
             "standing": len(survivors),
             "later": len(later),
             "reconstructed": len(reconstructed),
+            "traced": used_traced,
             "notes": "Reconstructed buildings use whole parcels (courtyards included), estimated heights, and disappear in 1860. Later buildings appear from their APUR construction period.",
         },
         "features": features,
@@ -270,5 +317,6 @@ def build(area: str, log: Callable[[str], Any] = print) -> dict:
         "standing": len(survivors),
         "later": len(later),
         "reconstructed": len(reconstructed),
+        "traced": used_traced,
         "license": "Vasserot parcels: ODbL (ALPAGE). APUR buildings: ODbL.",
     }

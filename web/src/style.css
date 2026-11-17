@@ -90,6 +90,11 @@ button, input { font: inherit; color: inherit; }
 .legend-3d span { display: inline-flex; align-items: center; gap: 5px; }
 .legend-3d i { width: 11px; height: 11px; border-radius: 2px; border: 1px solid rgba(0, 0, 0, 0.25); display: inline-block; }
 
+.building-popup .maplibregl-popup-content { font: 12.5px/1.45 var(--font-body); color: #18202c; padding: 10px 12px; }
+.building-popup strong { display: block; font: 600 15px/1.2 var(--font-display); margin-bottom: 4px; padding-right: 14px; }
+.building-popup p { margin: 0 0 3px; }
+.building-popup a { color: #1d4c9c; }
+
 /* ---- photo panel */
 .panel {
   position: absolute; z-index: 4; top: 12px; right: max(12px, env(safe-area-inset-right)); bottom: 12px;

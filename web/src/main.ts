@@ -3,12 +3,13 @@ import './style.css'
 import {
   AttributionControl,
   NavigationControl,
+  Popup,
   ScaleControl,
   type GeoJSONSource,
   type MapGeoJSONFeature
 } from 'maplibre-gl'
 import { BASEMAPS, basemapForYear, YEAR_MAX } from './timeline'
-import { CITE_VIEW, Model3D, MODEL_COLORS, MODEL_LABELS } from './model3d'
+import { CITE_VIEW, describeBuilding, Model3D, MODEL_COLORS, MODEL_LABELS, type ModelProps } from './model3d'
 import { clampYear, formatHash, parseHash, type ViewState } from './state'
 import { histogram, inWindow, loadPhotos, type PhotoCollection, type PhotoFeature, type PhotoProps } from './photos'
 import { picturesOf, type TodayPicture } from './panoramax'
@@ -211,7 +212,7 @@ $('#about-close').addEventListener('click', () => ($('#about') as HTMLDialogElem
 const btn3d = $('#btn-3d') as HTMLButtonElement
 const banner3d = $('#banner-3d')
 const legend3d = $('#legend-3d')
-for (const kind of ['standing', 'reconstructed', 'later'] as const) {
+for (const kind of ['standing', 'traced', 'reconstructed', 'later'] as const) {
   const chip = document.createElement('span')
   const sw = document.createElement('i')
   sw.style.background = MODEL_COLORS[kind]
@@ -238,6 +239,29 @@ function exit3D() {
 }
 
 btn3d.addEventListener('click', () => (model.active ? exit3D() : enter3D()))
+
+const buildingPopup = new Popup({ closeButton: true, maxWidth: '300px', className: 'building-popup' })
+function showBuilding(p: ModelProps, at: [number, number]) {
+  const d = describeBuilding(p)
+  const box = document.createElement('div')
+  const h = document.createElement('strong')
+  h.textContent = d.title
+  box.append(h)
+  for (const line of d.lines) {
+    const el = document.createElement('p')
+    el.textContent = line
+    box.append(el)
+  }
+  if (d.link) {
+    const a = document.createElement('a')
+    a.href = d.link.href
+    a.target = '_blank'
+    a.rel = 'noopener'
+    a.textContent = d.link.text
+    box.append(a)
+  }
+  buildingPopup.setLngLat(at).setDOMContent(box).addTo(map)
+}
 $('#exit-3d').addEventListener('click', exit3D)
 
 /* --------------------------------------------------------------------- boot */
@@ -262,6 +286,12 @@ map.on('load', async () => {
   map.on('click', 'photos', (e) => {
     const f = e.features?.[0] as MapGeoJSONFeature | undefined
     if (f) select(String(f.properties.id))
+  })
+  map.on('click', (e) => {
+    if (!model.active || !map.getLayer('model')) return
+    if (map.queryRenderedFeatures(e.point, { layers: ['photos'] }).length) return
+    const f = map.queryRenderedFeatures(e.point, { layers: ['model'] })[0]
+    if (f) showBuilding(f.properties as unknown as ModelProps, [e.lngLat.lng, e.lngLat.lat])
   })
   map.on('mouseenter', 'photos', () => (map.getCanvas().style.cursor = 'pointer'))
   map.on('mouseleave', 'photos', () => (map.getCanvas().style.cursor = ''))

@@ -62,6 +62,12 @@ def cmd_model3d(args: argparse.Namespace) -> None:
     _update_manifest(manifest_key, model3d.build(args.area))
 
 
+def cmd_trace(args: argparse.Namespace) -> None:
+    from rpr.sources import vasserot_plans
+
+    _update_manifest(f"traced_{args.area}", vasserot_plans.trace(args.area, limit=args.limit))
+
+
 def cmd_index(args: argparse.Namespace) -> None:
     manifest = build_index()
     print(f"index: {manifest['photos']['count']} photos from {len(manifest['photos']['sources'])} sources")
@@ -89,6 +95,11 @@ def main(argv: list[str] | None = None) -> int:
     p = sub.add_parser("model3d", help="3D massing model of an area in 1836 (needs the [geo] extras)")
     p.add_argument("--area", choices=["cite"], default="cite")
     p.set_defaults(func=cmd_model3d)
+
+    p = sub.add_parser("trace", help="trace building footprints from Vasserot's plans (needs [geo] and [vision])")
+    p.add_argument("--area", choices=["cite"], default="cite")
+    p.add_argument("--limit", type=int, default=None)
+    p.set_defaults(func=cmd_trace)
 
     p = sub.add_parser("index", help="rebuild photos.geojson and manifest.json")
     p.set_defaults(func=cmd_index)
