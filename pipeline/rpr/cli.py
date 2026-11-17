@@ -55,6 +55,13 @@ def cmd_parismusees(args: argparse.Namespace) -> None:
     build_index()
 
 
+def cmd_model3d(args: argparse.Namespace) -> None:
+    from rpr.sources import model3d
+
+    manifest_key = f"model3d_{args.area}"
+    _update_manifest(manifest_key, model3d.build(args.area))
+
+
 def cmd_index(args: argparse.Namespace) -> None:
     manifest = build_index()
     print(f"index: {manifest['photos']['count']} photos from {len(manifest['photos']['sources'])} sources")
@@ -78,6 +85,10 @@ def main(argv: list[str] | None = None) -> int:
     p = sub.add_parser("parismusees", help="Paris Musées photographs (needs PARISMUSEES_TOKEN)")
     p.add_argument("--inspect", "--introspect", dest="introspect", action="store_true", help="print the GraphQL query fields and stop")
     p.set_defaults(func=cmd_parismusees)
+
+    p = sub.add_parser("model3d", help="3D massing model of an area in 1836 (needs the [geo] extras)")
+    p.add_argument("--area", choices=["cite"], default="cite")
+    p.set_defaults(func=cmd_model3d)
 
     p = sub.add_parser("index", help="rebuild photos.geojson and manifest.json")
     p.set_defaults(func=cmd_index)

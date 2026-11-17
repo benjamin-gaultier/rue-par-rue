@@ -1,0 +1,121 @@
+/**
+ * 3D prototype: the Île de la Cité as a massing model that follows the year.
+ *
+ * Built by `python -m rpr model3d --area cite`. Kinds of building:
+ *   standing      built before 1851 and still standing (APUR footprint and height)
+ *   reconstructed standing in 1836, demolished since (Vasserot parcel, estimated height)
+ *   later         built after 1850, shown from its APUR construction period
+ *   undated       no construction date in APUR, shown from 1851
+ */
+
+import { LngLat, type FilterSpecification, type Map as MapLibreMap } from 'maplibre-gl'
+
+export const MODEL_URL = 'data/3d/cite-1836.geojson'
+
+/** From above the Pont Saint-Michel, 160 m up, looking north-east at Notre-Dame. */
+export const CITE_CAMERA = { from: [2.3455, 48.8522] as [number, number], altitude: 160, to: [2.3488, 48.8535] as [number, number] }
+/** The same view as plain camera options (bearing 59°, pitch 60°). */
+export const CITE_VIEW = { center: [2.3488, 48.8535] as [number, number], zoom: 17.3, pitch: 60, bearing: 59 }
+export const CITE_BOUNDS: [number, number, number, number] = [2.3395, 48.8505, 2.3565, 48.859]
+
+export const MODEL_COLORS = {
+  standing: '#ece2cc',
+  reconstructed: '#d1a96b',
+  later: '#c9cdd3',
+  undated: '#c9cdd3'
+} as const
+
+export const MODEL_LABELS: Record<keyof typeof MODEL_COLORS, string> = {
+  standing: 'Standing in 1836, still standing',
+  reconstructed: 'Demolished since (parcel, estimated height)',
+  later: 'Built later',
+  undated: 'Undated'
+}
+
+/** Which buildings exist in a given year. */
+export function modelFilter(year: number): FilterSpecification {
+  return [
+    'any',
+    ['==', ['get', 'kind'], 'standing'],
+    ['all', ['==', ['get', 'kind'], 'reconstructed'], ['<', year, ['get', 'until']]],
+    ['all', ['in', ['get', 'kind'], ['literal', ['later', 'undated']]], ['<=', ['get', 'from'], year]]
+  ]
+}
+
+/** Same rule as modelFilter, for tests and counts. */
+export function existsIn(p: { kind: string; until?: number; from?: number }, year: number): boolean {
+  if (p.kind === 'standing') return true
+  if (p.kind === 'reconstructed') return year < (p.until ?? Infinity)
+  return (p.from ?? Infinity) <= year
+}
+
+export class Model3D {
+  active = false
+  private added = false
+
+  constructor(
+    private map: MapLibreMap,
+    private base: string,
+    private beforeLayer: string
+  ) {}
+
+  enter(year: number, fly = true) {
+    const map = this.map
+    if (!this.added) {
+      map.addSource('model', { type: 'geojson', data: this.base + MODEL_URL, attribution: 'Massing model: APUR (ODbL), Vasserot cadastre/ALPAGE (ODbL)' })
+      map.addLayer(
+        {
+          id: 'model',
+          type: 'fill-extrusion',
+          source: 'model',
+          paint: {
+            // Reconstructed houses vary slightly with height so neighbours read apart.
+            'fill-extrusion-color': [
+              'match',
+              ['get', 'kind'],
+              'standing', MODEL_COLORS.standing,
+              'reconstructed', ['interpolate', ['linear'], ['get', 'height'], 12, '#c79c5a', 19, '#e0c08a'],
+              MODEL_COLORS.later
+            ],
+            'fill-extrusion-height': ['get', 'height'],
+            'fill-extrusion-base': 0,
+            'fill-extrusion-opacity': 0.97,
+            'fill-extrusion-vertical-gradient': true
+          }
+        },
+        map.getLayer(this.beforeLayer) ? this.beforeLayer : undefined
+      )
+      this.added = true
+    }
+    map.setLayoutProperty('model', 'visibility', 'visible')
+    map.setLight({ anchor: 'map', position: [1.5, 210, 35], intensity: 0.4, color: '#ffffff' })
+    map.setMaxPitch(85)
+    map.setMaxZoom(21)
+    map.dragRotate.enable()
+    map.touchZoomRotate.enableRotation()
+    this.active = true
+    this.setYear(year)
+    if (fly) {
+      const camera = map.calculateCameraOptionsFromTo(LngLat.convert(CITE_CAMERA.from), CITE_CAMERA.altitude, LngLat.convert(CITE_CAMERA.to), 0)
+      map.flyTo({ ...camera, duration: 2400, essential: true })
+    }
+  }
+
+  setYear(year: number) {
+    if (this.added) this.map.setFilter('model', modelFilter(year))
+  }
+
+  exit() {
+    const map = this.map
+    this.active = false
+    if (this.added) map.setLayoutProperty('model', 'visibility', 'none')
+    map.dragRotate.disable()
+    map.touchZoomRotate.disableRotation()
+    map.easeTo({ pitch: 0, bearing: 0, duration: 800 })
+    map.once('moveend', () => {
+      if (this.active) return
+      map.setMaxPitch(0)
+      map.setMaxZoom(20)
+    })
+  }
+}

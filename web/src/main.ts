@@ -7,7 +7,8 @@ import {
   type GeoJSONSource,
   type MapGeoJSONFeature
 } from 'maplibre-gl'
-import { basemapForYear, YEAR_MAX } from './timeline'
+import { BASEMAPS, basemapForYear, YEAR_MAX } from './timeline'
+import { CITE_VIEW, Model3D, MODEL_COLORS, MODEL_LABELS } from './model3d'
 import { clampYear, formatHash, parseHash, type ViewState } from './state'
 import { histogram, inWindow, loadPhotos, type PhotoCollection, type PhotoFeature, type PhotoProps } from './photos'
 import { picturesOf, type TodayPicture } from './panoramax'
@@ -39,6 +40,7 @@ map.addControl(new AttributionControl({ compact: true }), 'bottom-right')
 map.addControl(new ScaleControl({ unit: 'metric' }), 'bottom-left')
 
 const basemaps = new BasemapSwitcher(map, BASE)
+const model = new Model3D(map, BASE, 'selection-cone')
 let ready = false // set once the load handler has added sources and layers
 let photos: PhotoFeature[] = []
 const byId = new Map<string, PhotoFeature>()
@@ -50,7 +52,7 @@ function writeHash() {
   window.clearTimeout(hashTimer)
   hashTimer = window.setTimeout(() => {
     const c = map.getCenter()
-    Object.assign(state, { zoom: map.getZoom(), lat: c.lat, lon: c.lng })
+    Object.assign(state, { zoom: map.getZoom(), lat: c.lat, lon: c.lng, bearing: map.getBearing(), pitch: map.getPitch() })
     history.replaceState(null, '', formatHash(state))
   }, 250)
 }
@@ -69,10 +71,16 @@ function setYear(y: number) {
   const year = clampYear(y)
   state.year = year
   timebar.setYear(year)
-  const { basemap, nearestOnly } = basemapForYear(year)
+  let { basemap, nearestOnly } = basemapForYear(year)
+  // The Allmaps layer cannot be tilted, so the 3D view starts at the 1820 map.
+  if (model.active && basemap.source.kind === 'allmaps') {
+    basemap = BASEMAPS.find((b) => b.id === 'etatmajor')!
+    nearestOnly = true
+  }
   timebar.setBasemap(basemap, nearestOnly)
   if (ready) {
     void basemaps.show(basemap)
+    model.setYear(year)
     styleCadastre(map, year, controls.cadastre)
     filterPhotos(map, year, controls.allYears)
   }
@@ -198,6 +206,40 @@ buildControls(
 )
 $('#about-close').addEventListener('click', () => ($('#about') as HTMLDialogElement).close())
 
+/* ---------------------------------------------------------------------- 3D */
+
+const btn3d = $('#btn-3d') as HTMLButtonElement
+const banner3d = $('#banner-3d')
+const legend3d = $('#legend-3d')
+for (const kind of ['standing', 'reconstructed', 'later'] as const) {
+  const chip = document.createElement('span')
+  const sw = document.createElement('i')
+  sw.style.background = MODEL_COLORS[kind]
+  chip.append(sw, MODEL_LABELS[kind])
+  legend3d.append(chip)
+}
+
+function enter3D(fly = true) {
+  if (!ready) return
+  if (fly && (state.year < 1810 || state.year >= 1860)) setYear(1836)
+  model.enter(state.year, fly)
+  state.view3d = true
+  banner3d.hidden = false
+  btn3d.setAttribute('aria-pressed', 'true')
+  setYear(state.year) // reapply the basemap rule for 3D
+}
+
+function exit3D() {
+  model.exit()
+  state.view3d = false
+  banner3d.hidden = true
+  btn3d.setAttribute('aria-pressed', 'false')
+  setYear(state.year)
+}
+
+btn3d.addEventListener('click', () => (model.active ? exit3D() : enter3D()))
+$('#exit-3d').addEventListener('click', exit3D)
+
 /* --------------------------------------------------------------------- boot */
 
 timebar.setYear(state.year)
@@ -211,6 +253,11 @@ map.on('load', async () => {
   setPhotos(data)
   ready = true
   setYear(state.year)
+  if (initial.view3d) {
+    enter3D(false)
+    if (initial.pitch === undefined) map.jumpTo(CITE_VIEW)
+    else map.jumpTo({ pitch: initial.pitch, bearing: initial.bearing ?? 0 })
+  }
 
   map.on('click', 'photos', (e) => {
     const f = e.features?.[0] as MapGeoJSONFeature | undefined

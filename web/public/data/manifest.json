@@ -48,5 +48,14 @@
         "harvested_at": "2026-11-17T18:08:20Z"
       }
     ]
+  },
+  "model3d_cite": {
+    "file": "3d/cite-1836.geojson",
+    "area": "Île de la Cité",
+    "standing": 1443,
+    "later": 779,
+    "reconstructed": 2387,
+    "license": "Vasserot parcels: ODbL (ALPAGE). APUR buildings: ODbL.",
+    "updated_at": "2026-11-17T18:30:00Z"
   }
 }

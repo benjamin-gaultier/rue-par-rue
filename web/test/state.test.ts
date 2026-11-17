@@ -31,3 +31,17 @@ describe('URL hash state', () => {
     expect(parseHash('#m=14/95/2').lat).toBe(DEFAULT_STATE.lat)
   })
 })
+
+describe('3D view in the URL', () => {
+  it('round-trips the 3D flag with bearing and pitch', () => {
+    const h = formatHash({ year: 1836, zoom: 17.3, lat: 48.8536, lon: 2.3466, bearing: 100, pitch: 68, view3d: true })
+    expect(h).toBe('#y=1836&m=17.30/48.85360/2.34660/100.0/68.0&d=3d')
+    const s = parseHash(h)
+    expect([s.view3d, s.bearing, s.pitch]).toEqual([true, 100, 68])
+  })
+  it('keeps old three-part views working', () => {
+    const s = parseHash('#y=1900&m=14/48.85/2.35')
+    expect(s.pitch).toBeUndefined()
+    expect(s.view3d).toBeUndefined()
+  })
+})

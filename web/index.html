@@ -23,8 +23,21 @@
 
       <div class="side">
         <div id="controls" class="controls" role="group" aria-label="Map layers"></div>
+        <button id="btn-3d" class="btn-3d" type="button" aria-pressed="false">
+          <span>Île de la Cité in 3D</span>
+          <small>Prototype · 1836 to today</small>
+        </button>
         <p id="photo-status" class="photo-status"></p>
       </div>
+
+      <section id="banner-3d" class="banner-3d" hidden aria-label="3D view">
+        <div class="banner-3d-text">
+          <strong>Île de la Cité in 3D</strong>
+          <span>Prototype massing model. Demolished buildings use whole cadastre parcels with estimated heights. Drag the year past 1860 to watch Haussmann clear the island.</span>
+          <div id="legend-3d" class="legend-3d"></div>
+        </div>
+        <button id="exit-3d" type="button" class="tb-btn">Leave 3D</button>
+      </section>
 
       <aside id="panel" class="panel" hidden aria-label="Selected photograph" tabindex="-1"></aside>
       </div>

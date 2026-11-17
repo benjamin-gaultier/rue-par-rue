@@ -32,6 +32,18 @@ Select a photograph and choose **Compare then and now**. The archive photo opens
 
 The archive photo is drawn as a plain image above the panorama, not as a WebGL texture, so it works with archives that send no CORS headers (Paris Musées). The viewer and three.js load only when it is first opened.
 
+### 3D prototype: the Île de la Cité
+
+Choose **Île de la Cité in 3D** to fly over the island in 1836, then drag the year. The model (`python -m rpr model3d --area cite`) combines:
+
+| Shown as | Source | Years shown |
+| --- | --- | --- |
+| Cream: standing in 1836 and still standing | APUR building footprints dated before 1851, with their measured median heights (Notre-Dame's towers come out at about 70 m) | always |
+| Ochre: standing in 1836, demolished since | Vasserot cadastre parcels not covered by a surviving building. No 1836 building footprints exist, so parcels over 400 m² become a 9 m-deep ring around a courtyard, open spaces (parvis, squares, markets) are left out, and heights are estimated at 12–19 m | until 1860 |
+| Grey: built later | APUR footprints and heights, appearing from their construction period | from that period |
+
+It is a massing model to judge scale and density, labelled as a reconstruction in the app. Drag past 1860 to see Haussmann clear the island. Next steps: real footprints from the Vasserot block plans, roof shapes, and facade textures from the archive photographs.
+
 ## Repository layout
 
 ```
@@ -85,7 +97,7 @@ For Paris Musées, create a free token at <https://apicollections.parismusees.pa
 1. **Phase 1, time-slider map** (this release): basemap timeline, cadastre, Panoramax "today" view, photo pipeline.
 2. **Phase 2, then-and-now viewer** (this release): archive photo over the nearest Panoramax panorama, with alignment saved in the URL.
 3. **Phase 3, pose refinement**: geocode Marville and Atget captions against historical street names and the 1836/1888 street networks; infer headings (Kahn records have positions but no direction, so the viewer cannot yet face the subject automatically); refine poses by matching against Panoramax imagery; let people submit the alignments they make in the viewer.
-4. **Phase 4, walkable 1836**: extrude the Vasserot parcels into 3D and walk them at eye level, clearly labelled as a reconstruction.
+4. **Phase 4, 3D**: a prototype over the Île de la Cité is in place (see above). Next: building footprints traced from the Vasserot block plans, roof shapes, facade textures, an eye-level walk, then more quarters.
 
 ## Licences
 
