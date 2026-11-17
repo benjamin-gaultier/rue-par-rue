@@ -1,0 +1,3245 @@
+{
+"avenue de l'0péra|75101": {
+"citycode": "75101",
+"label": "Avenue de l'Opéra 75001 Paris",
+"lat": 48.865563,
+"lon": 2.33447,
+"score": 0.6905736363636363
+},
+"avenue de l'impératrice|75116": {
+"citycode": "75116",
+"label": "Avenue Dode de la Brunerie 75016 Paris",
+"lat": 48.836481,
+"lon": 2.257513,
+"score": 0.34087584415584415
+},
+"avenue de l'opéra / chantier de la butte des moulins du passage molière|paris": {
+"citycode": "75117",
+"label": "Place des Magasins de l'Opéra Comique 75017 Paris",
+"lat": 48.890985,
+"lon": 2.305054,
+"score": 0.3559920855614973
+},
+"avenue de l'opéra|75101": {
+"citycode": "75101",
+"label": "Avenue de l'Opéra 75001 Paris",
+"lat": 48.865563,
+"lon": 2.33447,
+"score": 0.963300909090909
+},
+"avenue de l'opéra|75102": {
+"citycode": "75102",
+"label": "Avenue de l'Opéra 75002 Paris",
+"lat": 48.868721,
+"lon": 2.333104,
+"score": 0.9619572727272726
+},
+"avenue de l'opéra|paris": {
+"citycode": "75101",
+"label": "Avenue de l'Opéra 75001 Paris",
+"lat": 48.865563,
+"lon": 2.33447,
+"score": 0.963300909090909
+},
+"avenue foch|75116": {
+"citycode": "75116",
+"label": "Avenue Foch 75116 Paris",
+"lat": 48.872684,
+"lon": 2.284781,
+"score": 0.9792472727272726
+},
+"boulevard arago|75113": {
+"citycode": "75113",
+"label": "Boulevard Arago 75013 Paris",
+"lat": 48.835395,
+"lon": 2.346484,
+"score": 0.9794318181818181
+},
+"boulevard bourdon|75104": {
+"citycode": "75104",
+"label": "Boulevard Bourdon 75004 Paris",
+"lat": 48.850065,
+"lon": 2.366729,
+"score": 0.9659936363636362
+},
+"boulevard d'auteuil|75116": {
+"citycode": "75116",
+"label": "Boulevard d'Auteuil 75016 Paris",
+"lat": 48.846424,
+"lon": 2.248938,
+"score": 0.9708572727272727
+},
+"boulevard d'italie|75113": {
+"citycode": "75113",
+"label": "Rue d'Italie 75013 Paris",
+"lat": 48.824171,
+"lon": 2.355078,
+"score": 0.38778090909090907
+},
+"boulevard de l'hôpital|75113": {
+"citycode": "75113",
+"label": "Boulevard de l'Hôpital 75013 Paris",
+"lat": 48.837383,
+"lon": 2.360214,
+"score": 0.9808554545454544
+},
+"boulevard de l'hôpital|paris": {
+"citycode": "75113",
+"label": "Boulevard de l'Hôpital 75013 Paris",
+"lat": 48.837383,
+"lon": 2.360214,
+"score": 0.9808554545454544
+},
+"boulevard de la madeleine|75109": {
+"citycode": "75109",
+"label": "Boulevard de la Madeleine 75009 Paris",
+"lat": 48.869932,
+"lon": 2.326652,
+"score": 0.9627399999999998
+},
+"boulevard de sébastopol|75101": {
+"citycode": "75101",
+"label": "Boulevard de Sébastopol 75001 Paris",
+"lat": 48.860766,
+"lon": 2.349244,
+"score": 0.9641290909090909
+},
+"boulevard de sébastopol|75103": {
+"citycode": "75103",
+"label": "Boulevard de Sébastopol 75003 Paris",
+"lat": 48.865305,
+"lon": 2.352246,
+"score": 0.9679281818181817
+},
+"boulevard des italiens|paris": {
+"citycode": "75109",
+"label": "Boulevard des Italiens 75009 Paris",
+"lat": 48.871518,
+"lon": 2.336341,
+"score": 0.9655545454545454
+},
+"boulevard du palais|75104": {
+"citycode": "75104",
+"label": "Boulevard du Palais 75004 Paris",
+"lat": 48.854972,
+"lon": 2.345794,
+"score": 0.960520909090909
+},
+"boulevard henri iv au niveau du quai des célestins|75104": {
+"citycode": "75104",
+"label": "Quai des Célestins 75004 Paris",
+"lat": 48.852418,
+"lon": 2.360431,
+"score": 0.34989955403087475
+},
+"boulevard henri iv. / la rue de sully de la caserne des célestins|paris": null,
+"boulevard henri iv|75104": {
+"citycode": "75104",
+"label": "Boulevard Henri IV 75004 Paris",
+"lat": 48.851694,
+"lon": 2.364363,
+"score": 0.9694372727272726
+},
+"boulevard henri iv|paris": {
+"citycode": "75104",
+"label": "Boulevard Henri IV 75004 Paris",
+"lat": 48.851694,
+"lon": 2.364363,
+"score": 0.9694372727272726
+},
+"boulevard malesherbes|75108": {
+"citycode": "75108",
+"label": "Boulevard Malesherbes 75008 Paris",
+"lat": 48.87578,
+"lon": 2.318171,
+"score": 0.9731454545454544
+},
+"boulevard saint-germain|75105": {
+"citycode": "75105",
+"label": "Boulevard Saint-Germain 75005 Paris",
+"lat": 48.850008,
+"lon": 2.349908,
+"score": 0.974431818181818
+},
+"boulevard saint-jacques|75114": {
+"citycode": "75114",
+"label": "Boulevard Saint-Jacques 75014 Paris",
+"lat": 48.832744,
+"lon": 2.337505,
+"score": 0.9777027272727273
+},
+"boulevard saint-martin|75110": {
+"citycode": "75110",
+"label": "Boulevard Saint-Martin 75010 Paris",
+"lat": 48.868734,
+"lon": 2.358261,
+"score": 0.9672881818181818
+},
+"boulevard saint-michel devant le jardin du luxembourg|75106": null,
+"boulevard serrurier|75119": {
+"citycode": "75119",
+"label": "Boulevard Sérurier 75019 Paris",
+"lat": 48.882836,
+"lon": 2.398444,
+"score": 0.8456572727272726
+},
+"boulevard serrurier|paris": {
+"citycode": "75119",
+"label": "Boulevard Sérurier 75019 Paris",
+"lat": 48.882836,
+"lon": 2.398444,
+"score": 0.8570209090909091
+},
+"boulevard sébastopol|75101": {
+"citycode": "75101",
+"label": "Boulevard de Sébastopol 75001 Paris",
+"lat": 48.860766,
+"lon": 2.349244,
+"score": 0.7616497520661157
+},
+"carrefour buci|paris": {
+"citycode": "50363",
+"label": "Route du Carrefour Paris 50860 Moyon Villages",
+"lat": 48.99841,
+"lon": -1.131841,
+"score": 0.4607127272727273
+},
+"carrefour de l'odéon|75106": {
+"citycode": "75106",
+"label": "Carrefour de l'Odéon 75006 Paris",
+"lat": 48.851907,
+"lon": 2.338742,
+"score": 0.9643036363636364
+},
+"carrefour de la croix-catelan|75116": {
+"citycode": "75116",
+"label": "Carrefour de la Croix Catelan 75016 Paris",
+"lat": 48.866676,
+"lon": 2.254362,
+"score": 0.9616981818181818
+},
+"carrefour du jour|75101": {
+"citycode": "75101",
+"label": "Rue du Jour 75001 Paris",
+"lat": 48.863797,
+"lon": 2.344731,
+"score": 0.37335355731225295
+},
+"carrefour gozlin|75106": {
+"citycode": "75106",
+"label": "Carrefour de l'Odéon 75006 Paris",
+"lat": 48.851907,
+"lon": 2.338742,
+"score": 0.3497581818181818
+},
+"carrefour sainte-opportune|75101": {
+"citycode": "75101",
+"label": "Rue Sainte-Opportune 75001 Paris",
+"lat": 48.859974,
+"lon": 2.347245,
+"score": 0.5151270129870129
+},
+"chaussée de la muette|paris": {
+"citycode": "75116",
+"label": "Chaussée de la Muette 75016 Paris",
+"lat": 48.858201,
+"lon": 2.273494,
+"score": 0.9705436363636363
+},
+"cité coquenard|75109": {
+"citycode": "75109",
+"label": "Cité Condorcet 75009 Paris",
+"lat": 48.879588,
+"lon": 2.344666,
+"score": 0.3033972727272727
+},
+"cité d'antin|75109": {
+"citycode": "75109",
+"label": "Cité d'Antin 75009 Paris",
+"lat": 48.873766,
+"lon": 2.334074,
+"score": 0.9687045454545453
+},
+"cour 21 rue / mazarine /|paris": {
+"citycode": "75106",
+"label": "Rue Mazarine 75006 Paris",
+"lat": 48.855167,
+"lon": 2.33777,
+"score": 0.6188263636363637
+},
+"cour caulaincourt|75101": null,
+"cour caulaincourt|paris": {
+"citycode": "75118",
+"label": "Rue Caulaincourt 75018 Paris",
+"lat": 48.888597,
+"lon": 2.335924,
+"score": 0.6605445454545454
+},
+"cour de l'institut|75106": {
+"citycode": "75106",
+"label": "Place de l'Institut 75006 Paris",
+"lat": 48.857574,
+"lon": 2.336558,
+"score": 0.5329892561983471
+},
+"cour des marbres|75106": null,
+"cour des messageries impériales|75102": null,
+"cour du 4 de la rue jarente|75104": {
+"citycode": "75104",
+"label": "Rue de Jarente 75004 Paris",
+"lat": 48.855709,
+"lon": 2.36294,
+"score": 0.46182818181818175
+},
+"cour du louvre|paris": {
+"citycode": "75101",
+"label": "Rue du Louvre 75001 Paris",
+"lat": 48.862851,
+"lon": 2.341818,
+"score": 0.6130139669421487
+},
+"cour du ministère de la marine|paris": {
+"citycode": "75105",
+"label": "Place Louis Marin 75005 Paris",
+"lat": 48.843786,
+"lon": 2.339255,
+"score": 0.34184324675324673
+},
+"cour rue de buffon|paris": {
+"citycode": "75105",
+"label": "Rue Buffon 75005 Paris",
+"lat": 48.842214,
+"lon": 2.360209,
+"score": 0.5966159288537549
+},
+"cour saint-guillaume|75109": null,
+"faubourg saint-jacques|75114": {
+"citycode": "75114",
+"label": "Rue du Faubourg Saint-Jacques 75014 Paris",
+"lat": 48.837177,
+"lon": 2.338651,
+"score": 0.7024172727272726
+},
+"galerie de l'horloge|75109": null,
+"galerie des fêtes|paris": {
+"citycode": "75102",
+"label": "Galerie des Variétés 75002 Paris",
+"lat": 48.870894,
+"lon": 2.341662,
+"score": 0.6580442424242423
+},
+"galerie du baromètre|75109": null,
+"impasse briare|75109": {
+"citycode": "75109",
+"label": "Passage Briare 75009 Paris",
+"lat": 48.877082,
+"lon": 2.343615,
+"score": 0.5704199999999999
+},
+"impasse de l'essai|75113": {
+"citycode": "75113",
+"label": "Impasse de la Santé 75013 Paris",
+"lat": 48.836621,
+"lon": 2.342686,
+"score": 0.4869065612648221
+},
+"impasse de l'etoile|75102": {
+"citycode": "75102",
+"label": "Impasse des Peintres 75002 Paris",
+"lat": 48.863903,
+"lon": 2.350501,
+"score": 0.31426974025974025
+},
+"impasse de versailles|75105": {
+"citycode": "75105",
+"label": "Impasse des Boeufs 75005 Paris",
+"lat": 48.84807,
+"lon": 2.347737,
+"score": 0.35651666666666665
+},
+"impasse des bourdonnais|75101": {
+"citycode": "75101",
+"label": "Impasse des Bourdonnais 75001 Paris",
+"lat": 48.86053,
+"lon": 2.345033,
+"score": 0.9572927272727271
+},
+"impasse larrey|75106": {
+"citycode": "75106",
+"label": "Impasse Robiquet 75006 Paris",
+"lat": 48.84393,
+"lon": 2.325747,
+"score": 0.32723909090909087
+},
+"impasse longue avoine|75114": null,
+"jardin de la bourse|75102": {
+"citycode": "75102",
+"label": "Rue de la Bourse 75002 Paris",
+"lat": 48.869505,
+"lon": 2.339592,
+"score": 0.519178831168831
+},
+"jardin des arts|75103": null,
+"jardin des champs-elysées|75108": {
+"citycode": "75108",
+"label": "Port des Champs Élysées 75008 Paris",
+"lat": 48.864249,
+"lon": 2.313773,
+"score": 0.5735749350649351
+},
+"jardin du luxembourg|75106": null,
+"jardin du luxembourg|paris": {
+"citycode": "91201",
+"label": "château de paris-jardins 91210 Draveil",
+"lat": 48.687335,
+"lon": 2.407423,
+"score": 0.31775818181818183
+},
+"jardin du vert-galant|75101": null,
+"marché aux chevaux|75113": null,
+"marché aux veaux|75105": {
+"citycode": "75105",
+"label": "Impasse du Marché aux Chevaux 75005 Paris",
+"lat": 48.838736,
+"lon": 2.356613,
+"score": 0.37020190615835774
+},
+"marché des carmes|75105": {
+"citycode": "75105",
+"label": "Rue des Carmes 75005 Paris",
+"lat": 48.848968,
+"lon": 2.347483,
+"score": 0.5599472727272726
+},
+"marché des innocents à paris|paris": {
+"citycode": "75101",
+"label": "Rue des Innocents 75001 Paris",
+"lat": 48.860458,
+"lon": 2.347394,
+"score": 0.5185915584415584
+},
+"marché des patriaches|75105": {
+"citycode": "75105",
+"label": "Rue du Marché des Patriarches 75005 Paris",
+"lat": 48.840748,
+"lon": 2.351096,
+"score": 0.5895365203761754
+},
+"parvis de notre-dame|75104": {
+"citycode": "75104",
+"label": "Parvis Notre-Dame Place Jean-Paul II 75004 Paris",
+"lat": 48.853206,
+"lon": 2.3487,
+"score": 0.42620864864864866
+},
+"parvis notre-dame|75104": {
+"citycode": "75104",
+"label": "Parvis Notre-Dame Place Jean-Paul II 75004 Paris",
+"lat": 48.853206,
+"lon": 2.3487,
+"score": 0.8684690909090909
+},
+"passage choiseul|75102": {
+"citycode": "75102",
+"label": "Passage Choiseul 75002 Paris",
+"lat": 48.868003,
+"lon": 2.335527,
+"score": 0.9696818181818182
+},
+"passage de l'opéra|75109": {
+"citycode": "75109",
+"label": "Place de l'Opéra 75009 Paris",
+"lat": 48.871044,
+"lon": 2.332135,
+"score": 0.4815205194805195
+},
+"passage de la bibliothèque|paris": {
+"citycode": "98811",
+"label": "Impasse de la Bibliotheque 98859 Koné",
+"lat": -21.055935,
+"lon": 164.863233,
+"score": 0.5715990374331551
+},
+"passage de la bièvre à la rue du fer-à-moulin|75105": {
+"citycode": "75105",
+"label": "Rue du Fer à Moulin 75005 Paris",
+"lat": 48.839023,
+"lon": 2.353531,
+"score": 0.39704256198347104
+},
+"passage de la cour de rome|75103": {
+"citycode": "75103",
+"label": "Cour de Rome 75003 Paris",
+"lat": 48.864203,
+"lon": 2.357037,
+"score": 0.41394934169278996
+},
+"passage de la petite-boucherie|75106": {
+"citycode": "75106",
+"label": "Passage de la Petite Boucherie 75006 Paris",
+"lat": 48.853664,
+"lon": 2.33567,
+"score": 0.96176
+},
+"passage des patriarches|75105": {
+"citycode": "75105",
+"label": "Passage des Patriarches 75005 Paris",
+"lat": 48.841127,
+"lon": 2.350154,
+"score": 0.9657281818181817
+},
+"passage des patriarches|paris": {
+"citycode": "75105",
+"label": "Passage des Patriarches 75005 Paris",
+"lat": 48.841127,
+"lon": 2.350154,
+"score": 0.9657281818181817
+},
+"passage des postes|75105": {
+"citycode": "75105",
+"label": "Passage des Postes 75005 Paris",
+"lat": 48.841077,
+"lon": 2.349087,
+"score": 0.9625772727272727
+},
+"passage des singes|75104": {
+"citycode": "75104",
+"label": "Passage des Singes 75004 Paris",
+"lat": 48.857993,
+"lon": 2.357675,
+"score": 0.9555272727272727
+},
+"passage du commerce|75106": {
+"citycode": "75106",
+"label": "Cour du Commerce Saint-André 75006 Paris",
+"lat": 48.852915,
+"lon": 2.33913,
+"score": 0.3865027272727273
+},
+"passage du commerce|paris": {
+"citycode": "75115",
+"label": "Impasse du Commerce 75015 Paris",
+"lat": 48.845589,
+"lon": 2.294217,
+"score": 0.6969336363636364
+},
+"passage du dragon|75106": {
+"citycode": "75106",
+"label": "Rue du Dragon 75006 Paris",
+"lat": 48.853178,
+"lon": 2.330774,
+"score": 0.5149636363636363
+},
+"passage hautefeuille|75106": {
+"citycode": "75106",
+"label": "Impasse Hautefeuille 75006 Paris",
+"lat": 48.852434,
+"lon": 2.343189,
+"score": 0.6445595041322314
+},
+"passage saint-benoît|75106": {
+"citycode": "75106",
+"label": "Rue Saint-Benoît 75006 Paris",
+"lat": 48.854815,
+"lon": 2.333011,
+"score": 0.5641562337662337
+},
+"passage saint-guillaume|75101": {
+"citycode": "75101",
+"label": "Passage Saint-Roch 75001 Paris",
+"lat": 48.865177,
+"lon": 2.33277,
+"score": 0.4583072727272727
+},
+"passage tivoli|75108": {
+"citycode": "75108",
+"label": "Passage Puteaux 75008 Paris",
+"lat": 48.873022,
+"lon": 2.32387,
+"score": 0.3339645454545454
+},
+"place d'enfer|75114": {
+"citycode": "75114",
+"label": "Passage d'Enfer 75014 Paris",
+"lat": 48.838889,
+"lon": 2.331874,
+"score": 0.4286754545454545
+},
+"place d'italie|75113": {
+"citycode": "75113",
+"label": "Place d'Italie 75013 Paris",
+"lat": 48.831342,
+"lon": 2.355345,
+"score": 0.972970909090909
+},
+"place dauphine|75101": {
+"citycode": "75101",
+"label": "Place Dauphine 75001 Paris",
+"lat": 48.856616,
+"lon": 2.342374,
+"score": 0.9622863636363637
+},
+"place de l'etoile|75108": {
+"citycode": "75108",
+"label": "Place de l'Alma 75008 Paris",
+"lat": 48.864992,
+"lon": 2.301348,
+"score": 0.45799909090909086
+},
+"place de l'hôtel de ville|paris": {
+"citycode": "75104",
+"label": "Rue de l'Hôtel de Ville 75004 Paris",
+"lat": 48.854287,
+"lon": 2.356161,
+"score": 0.7234163636363636
+},
+"place de la bastille|75104": {
+"citycode": "75104",
+"label": "Place de la Bastille 75004 Paris",
+"lat": 48.853372,
+"lon": 2.368195,
+"score": 0.9586772727272727
+},
+"place de la bourse|75102": {
+"citycode": "75102",
+"label": "Place de la Bourse 75002 Paris",
+"lat": 48.869123,
+"lon": 2.341235,
+"score": 0.9646881818181816
+},
+"place de la collégiale|75113": {
+"citycode": "75113",
+"label": "Place Coluche 75013 Paris",
+"lat": 48.826237,
+"lon": 2.341963,
+"score": 0.3168536363636364
+},
+"place de la collégiale|paris": {
+"citycode": "75105",
+"label": "Rue de la Collégiale 75005 Paris",
+"lat": 48.837872,
+"lon": 2.352116,
+"score": 0.7079900940438871
+},
+"place de la concorde|75108": {
+"citycode": "75108",
+"label": "Place de la Concorde 75008 Paris",
+"lat": 48.867063,
+"lon": 2.321554,
+"score": 0.9605436363636363
+},
+"place de la concorde|paris": {
+"citycode": "75108",
+"label": "Place de la Concorde 75008 Paris",
+"lat": 48.867063,
+"lon": 2.321554,
+"score": 0.9605436363636363
+},
+"place des trois-maries|75101": {
+"citycode": "75101",
+"label": "Impasse des Trois Visages 75001 Paris",
+"lat": 48.85921,
+"lon": 2.344475,
+"score": 0.3533259459459459
+},
+"place du châtelet|75101": {
+"citycode": "75101",
+"label": "Place du Châtelet 75001 Paris",
+"lat": 48.857614,
+"lon": 2.346758,
+"score": 0.9509918181818182
+},
+"place du louvre|75101": {
+"citycode": "75101",
+"label": "Place du Louvre 75001 Paris",
+"lat": 48.859816,
+"lon": 2.340855,
+"score": 0.9578281818181819
+},
+"place du palais-bourbon|75107": {
+"citycode": "75107",
+"label": "Place du Palais Bourbon 75007 Paris",
+"lat": 48.86043,
+"lon": 2.31838,
+"score": 0.9647527272727272
+},
+"place du petit-pont|75105": {
+"citycode": "75105",
+"label": "Place du Petit Pont 75005 Paris",
+"lat": 48.852908,
+"lon": 2.346639,
+"score": 0.9610481818181817
+},
+"place du théâtre français|75101": null,
+"place du trône|75112": {
+"citycode": "75112",
+"label": "Avenue du Trône 75012 Paris",
+"lat": 48.847798,
+"lon": 2.398031,
+"score": 0.4667390909090909
+},
+"place ferdinand-brunot|75114": {
+"citycode": "75114",
+"label": "Place Ferdinand Brunot 75014 Paris",
+"lat": 48.832878,
+"lon": 2.326801,
+"score": 0.9628354545454544
+},
+"place gozlin|75106": {
+"citycode": "75106",
+"label": "Rue Gozlin 75006 Paris",
+"lat": 48.853388,
+"lon": 2.333723,
+"score": 0.49376398601398597
+},
+"place joachim-du-bellay|75101": null,
+"place maubert|75105": {
+"citycode": "75105",
+"label": "Place Maubert 75005 Paris",
+"lat": 48.8503,
+"lon": 2.348889,
+"score": 0.9618763636363634
+},
+"place saint-andré-des-arts|75106": {
+"citycode": "75106",
+"label": "Place Saint-André des Arts 75006 Paris",
+"lat": 48.852976,
+"lon": 2.3431,
+"score": 0.9611527272727273
+},
+"place saint-germain-des-prés|75106": {
+"citycode": "75106",
+"label": "Place Saint-Germain des Prés 75006 Paris",
+"lat": 48.854148,
+"lon": 2.333399,
+"score": 0.96176
+},
+"place saint-germain-l'auxerrois|75101": {
+"citycode": "75101",
+"label": "Rue Saint-Germain l'Auxerrois 75001 Paris",
+"lat": 48.858346,
+"lon": 2.344672,
+"score": 0.7189827272727273
+},
+"place st andré des arts|paris": {
+"citycode": "75106",
+"label": "Place Saint-André des Arts 75006 Paris",
+"lat": 48.852976,
+"lon": 2.3431,
+"score": 0.7424027272727273
+},
+"place st sulpice|paris": {
+"citycode": "75106",
+"label": "Place Saint-Sulpice 75006 Paris",
+"lat": 48.850947,
+"lon": 2.333961,
+"score": 0.7097581818181818
+},
+"pont au change|75101": null,
+"pont au change|75104": null,
+"pont d'arcole|75104": {
+"citycode": "75104",
+"label": "Rue d'Arcole 75004 Paris",
+"lat": 48.854268,
+"lon": 2.349738,
+"score": 0.49094363636363636
+},
+"pont de la concorde|75108": {
+"citycode": "75108",
+"label": "Place de la Concorde 75008 Paris",
+"lat": 48.867063,
+"lon": 2.321554,
+"score": 0.5494764426877471
+},
+"pont de la réforme|paris": {
+"citycode": "87085",
+"label": "rue de la Réforme 87000 Limoges",
+"lat": 45.834897,
+"lon": 1.259623,
+"score": 0.5155554545454546
+},
+"pont de suresnes|75116": {
+"citycode": "75116",
+"label": "Route de Suresnes 75016 Paris",
+"lat": 48.865799,
+"lon": 2.247907,
+"score": 0.5076009090909092
+},
+"pont des arts|75101": null,
+"pont des arts|paris": {
+"citycode": "75117",
+"label": "Avenue des Arts 75017 Paris",
+"lat": 48.881082,
+"lon": 2.286814,
+"score": 0.5367118181818181
+},
+"pont des saints-pères|75104": null,
+"pont du carrousel|75107": {
+"citycode": "75107",
+"label": "Port du Gros Caillou 75007 Paris",
+"lat": 48.863022,
+"lon": 2.306329,
+"score": 0.33453587412587416
+},
+"pont neuf|75101": {
+"citycode": "75101",
+"label": "Rue du Pont Neuf 75001 Paris",
+"lat": 48.860048,
+"lon": 2.344031,
+"score": 0.6911427272727272
+},
+"pont neuf|75106": null,
+"pont saint-charles|75104": {
+"citycode": "75104",
+"label": "Rue Charles V 75004 Paris",
+"lat": 48.852932,
+"lon": 2.36274,
+"score": 0.3162187603305785
+},
+"port de conti|75106": {
+"citycode": "75106",
+"label": "Quai de Conti 75006 Paris",
+"lat": 48.856627,
+"lon": 2.338725,
+"score": 0.46461727272727277
+},
+"port de la mégisserie|75101": {
+"citycode": "75101",
+"label": "Quai de la Mégisserie 75001 Paris",
+"lat": 48.858046,
+"lon": 2.344578,
+"score": 0.5968072727272726
+},
+"port du louvre|75101": {
+"citycode": "75101",
+"label": "Port du Louvre 75001 Paris",
+"lat": 48.859824,
+"lon": 2.333673,
+"score": 0.9551563636363636
+},
+"porte dauphine|75116": {
+"citycode": "75116",
+"label": "Chemin des Lacs à la Porte Dauphine 75116 Paris",
+"lat": 48.86963,
+"lon": 2.270394,
+"score": 0.688970909090909
+},
+"porte de madrid|75116": {
+"citycode": "75116",
+"label": "Porte de Madrid 75016 Paris",
+"lat": 48.874015,
+"lon": 2.254826,
+"score": 0.9616981818181818
+},
+"porte rouge. façade septentrionale de l'église de notre-dame|paris": null,
+"porte rouge. portail septentrional de l'eglise métropolitaine|paris": null,
+"porte rouge. portail septentrional de l'église métropolitaine à paris|paris": null,
+"quai aux fleurs|75104": {
+"citycode": "75104",
+"label": "Quai aux Fleurs 75004 Paris",
+"lat": 48.853965,
+"lon": 2.351468,
+"score": 0.9634118181818181
+},
+"quai conti|75106": {
+"citycode": "75106",
+"label": "Quai de Conti 75006 Paris",
+"lat": 48.856627,
+"lon": 2.338725,
+"score": 0.6691627272727273
+},
+"quai de conti|75101": {
+"citycode": "75101",
+"label": "Quai de l'Horloge 75001 Paris",
+"lat": 48.85686,
+"lon": 2.343116,
+"score": 0.3243554545454545
+},
+"quai de l'horloge|75101": {
+"citycode": "75101",
+"label": "Quai de l'Horloge 75001 Paris",
+"lat": 48.85686,
+"lon": 2.343116,
+"score": 0.9607190909090909
+},
+"quai de la mégisserie|75101": {
+"citycode": "75101",
+"label": "Quai de la Mégisserie 75001 Paris",
+"lat": 48.858046,
+"lon": 2.344578,
+"score": 0.9604436363636364
+},
+"quai de la mégisserie|75104": {
+"citycode": "75104",
+"label": "Quai de la Corse - Pasquale Paoli 75004 Paris",
+"lat": 48.855469,
+"lon": 2.348686,
+"score": 0.30045820295983083
+},
+"quai de la tournelle|75105": {
+"citycode": "75105",
+"label": "Quai de la Tournelle 75005 Paris",
+"lat": 48.850483,
+"lon": 2.352819,
+"score": 0.9703845454545453
+},
+"quai de montebello|75105": {
+"citycode": "75105",
+"label": "Quai de Montebello 75005 Paris",
+"lat": 48.85192,
+"lon": 2.348986,
+"score": 0.9660418181818181
+},
+"quai des ormes à paris|paris": {
+"citycode": "75101",
+"label": "Quai des Orfèvres 75001 Paris",
+"lat": 48.855761,
+"lon": 2.342829,
+"score": 0.4891618181818182
+},
+"quai du louvre|75101": {
+"citycode": "75101",
+"label": "Quai du Louvre 75001 Paris",
+"lat": 48.858873,
+"lon": 2.341409,
+"score": 0.9604436363636364
+},
+"quai montebello|75105": {
+"citycode": "75105",
+"label": "Quai de Montebello 75005 Paris",
+"lat": 48.85192,
+"lon": 2.348986,
+"score": 0.7307477005347593
+},
+"quai voltaire à paris|paris": {
+"citycode": "75107",
+"label": "Quai Voltaire 75007 Paris",
+"lat": 48.85884,
+"lon": 2.331067,
+"score": 0.624689020979021
+},
+"route d'orléans|75114": {
+"citycode": "75114",
+"label": "Villa d'Orléans 75014 Paris",
+"lat": 48.82857,
+"lon": 2.328661,
+"score": 0.44720980861244014
+},
+"route de suresnes|75116": {
+"citycode": "75116",
+"label": "Route de Suresnes 75016 Paris",
+"lat": 48.865799,
+"lon": 2.247907,
+"score": 0.9666918181818182
+},
+"rue au lard|75101": {
+"citycode": "75101",
+"label": "Rue Baltard 75001 Paris",
+"lat": 48.862224,
+"lon": 2.34637,
+"score": 0.316470909090909
+},
+"rue au maire|75103": {
+"citycode": "75103",
+"label": "Rue au Maire 75003 Paris",
+"lat": 48.864673,
+"lon": 2.356119,
+"score": 0.9694072727272727
+},
+"rue aux ours|75102": {
+"citycode": "75102",
+"label": "Rue Daunou 75002 Paris",
+"lat": 48.869598,
+"lon": 2.331448,
+"score": 0.3280209090909091
+},
+"rue babille|75101": {
+"citycode": "75101",
+"label": "Rue Baillet 75001 Paris",
+"lat": 48.859795,
+"lon": 2.342559,
+"score": 0.5951036363636364
+},
+"rue basse-des-ursins|75104": {
+"citycode": "75104",
+"label": "Rue des Ursins 75004 Paris",
+"lat": 48.854324,
+"lon": 2.351081,
+"score": 0.6148677033492822
+},
+"rue bernard de palissy|paris": {
+"citycode": "75106",
+"label": "Rue Bernard Palissy 75006 Paris",
+"lat": 48.85317,
+"lon": 2.331623,
+"score": 0.7827990909090908
+},
+"rue bernard palissy|paris": {
+"citycode": "75106",
+"label": "Rue Bernard Palissy 75006 Paris",
+"lat": 48.85317,
+"lon": 2.331623,
+"score": 0.9646172727272727
+},
+"rue berton|75116": {
+"citycode": "75116",
+"label": "Rue Berton 75016 Paris",
+"lat": 48.855105,
+"lon": 2.280712,
+"score": 0.9708572727272727
+},
+"rue bonaparte|75106": {
+"citycode": "75106",
+"label": "Rue Bonaparte 75006 Paris",
+"lat": 48.853597,
+"lon": 2.333631,
+"score": 0.9723936363636363
+},
+"rue boucher|75101": {
+"citycode": "75101",
+"label": "Rue Boucher 75001 Paris",
+"lat": 48.85948,
+"lon": 2.344128,
+"score": 0.9583072727272727
+},
+"rue boutebrie|75105": {
+"citycode": "75105",
+"label": "Rue Boutebrie 75005 Paris",
+"lat": 48.851438,
+"lon": 2.344612,
+"score": 0.9653909090909091
+},
+"rue broca|75105": {
+"citycode": "75105",
+"label": "Rue Broca 75005 Paris",
+"lat": 48.838232,
+"lon": 2.34815,
+"score": 0.9712327272727272
+},
+"rue buffon|75105": {
+"citycode": "75105",
+"label": "Rue Buffon 75005 Paris",
+"lat": 48.842214,
+"lon": 2.360209,
+"score": 0.9721099999999999
+},
+"rue cardinale|75106": {
+"citycode": "75106",
+"label": "Rue Cardinale 75006 Paris",
+"lat": 48.854247,
+"lon": 2.336067,
+"score": 0.9622954545454544
+},
+"rue cassette|75106": {
+"citycode": "75106",
+"label": "Rue Cassette 75006 Paris",
+"lat": 48.84961,
+"lon": 2.330887,
+"score": 0.9682009090909091
+},
+"rue censier|75105": {
+"citycode": "75105",
+"label": "Rue Censier 75005 Paris",
+"lat": 48.840403,
+"lon": 2.353175,
+"score": 0.9715145454545453
+},
+"rue champlain|paris": {
+"citycode": "87085",
+"label": "rue Champlain 87000 Limoges",
+"lat": 45.83809,
+"lon": 1.273225,
+"score": 0.6129572727272726
+},
+"rue charretière|75105": {
+"citycode": "75105",
+"label": "Impasse Chartière 75005 Paris",
+"lat": 48.848363,
+"lon": 2.346166,
+"score": 0.4057566233766233
+},
+"rue childebert|75106": {
+"citycode": "75106",
+"label": "Rue de Bérite 75006 Paris",
+"lat": 48.847729,
+"lon": 2.324137,
+"score": 0.30973502392344493
+},
+"rue clopin|75105": {
+"citycode": "75105",
+"label": "Rue Clotaire 75005 Paris",
+"lat": 48.845672,
+"lon": 2.344658,
+"score": 0.4034348051948051
+},
+"rue clovis|75105": {
+"citycode": "75105",
+"label": "Rue Clovis 75005 Paris",
+"lat": 48.846156,
+"lon": 2.349016,
+"score": 0.9679845454545454
+},
+"rue constantine|75104": {
+"citycode": "75104",
+"label": "Rue Chanoinesse 75004 Paris",
+"lat": 48.853742,
+"lon": 2.350771,
+"score": 0.32842181818181815
+},
+"rue coquillière|75101": {
+"citycode": "75101",
+"label": "Rue Coquillière 75001 Paris",
+"lat": 48.864105,
+"lon": 2.341923,
+"score": 0.9641290909090909
+},
+"rue croulebarbe|75113": {
+"citycode": "75113",
+"label": "Rue de Croulebarbe 75013 Paris",
+"lat": 48.83249,
+"lon": 2.350472,
+"score": 0.7426704278074866
+},
+"rue d'alesia|paris": {
+"citycode": "75114",
+"label": "Rue d'Alésia 75014 Paris",
+"lat": 48.829184,
+"lon": 2.324935,
+"score": 0.9830472727272728
+},
+"rue d'alésia /|paris": {
+"citycode": "75114",
+"label": "Rue d'Alésia 75014 Paris",
+"lat": 48.829184,
+"lon": 2.324935,
+"score": 0.9830472727272728
+},
+"rue d'alésia|75114": {
+"citycode": "75114",
+"label": "Rue d'Alésia 75014 Paris",
+"lat": 48.829184,
+"lon": 2.324935,
+"score": 0.9830472727272728
+},
+"rue d'alésia|paris": {
+"citycode": "75114",
+"label": "Rue d'Alésia 75014 Paris",
+"lat": 48.829184,
+"lon": 2.324935,
+"score": 0.9830472727272728
+},
+"rue d'antin|75101": {
+"citycode": "75101",
+"label": "Rue d'Alger 75001 Paris",
+"lat": 48.865266,
+"lon": 2.329765,
+"score": 0.4017084415584415
+},
+"rue d'antin|75102": {
+"citycode": "75102",
+"label": "Rue d'Antin 75002 Paris",
+"lat": 48.868721,
+"lon": 2.333216,
+"score": 0.9624627272727271
+},
+"rue d'arcole|75104": {
+"citycode": "75104",
+"label": "Rue d'Arcole 75004 Paris",
+"lat": 48.854268,
+"lon": 2.349738,
+"score": 0.963670909090909
+},
+"rue d'argenteuil|75101": {
+"citycode": "75101",
+"label": "Rue d'Argenteuil 75001 Paris",
+"lat": 48.865459,
+"lon": 2.333679,
+"score": 0.9640018181818182
+},
+"rue d'argenteuil|paris": {
+"citycode": "75101",
+"label": "Rue d'Argenteuil 75001 Paris",
+"lat": 48.865459,
+"lon": 2.333679,
+"score": 0.9640018181818182
+},
+"rue d'argout|75102": {
+"citycode": "75102",
+"label": "Rue d'Argout 75002 Paris",
+"lat": 48.865932,
+"lon": 2.343629,
+"score": 0.9635245454545454
+},
+"rue d'arras|75105": {
+"citycode": "75105",
+"label": "Rue d'Arras 75005 Paris",
+"lat": 48.84739,
+"lon": 2.351612,
+"score": 0.9650272727272727
+},
+"rue d'arras|paris": {
+"citycode": "75105",
+"label": "Rue d'Arras 75005 Paris",
+"lat": 48.84739,
+"lon": 2.351612,
+"score": 0.9650272727272727
+},
+"rue d'ecosse|75105": {
+"citycode": "75105",
+"label": "Rue d'Écosse 75005 Paris",
+"lat": 48.848148,
+"lon": 2.346535,
+"score": 0.9625772727272727
+},
+"rue d'enfer|75114": {
+"citycode": "75114",
+"label": "Passage d'Enfer 75014 Paris",
+"lat": 48.838889,
+"lon": 2.331874,
+"score": 0.47412999999999994
+},
+"rue d'erfurth|75106": {
+"citycode": "75106",
+"label": "Rue d'Assas 75006 Paris",
+"lat": 48.84564,
+"lon": 2.331717,
+"score": 0.30594898395721926
+},
+"rue d'hautpoul|75119": {
+"citycode": "75119",
+"label": "Rue d'Hautpoul 75019 Paris",
+"lat": 48.883946,
+"lon": 2.387519,
+"score": 0.9796699999999999
+},
+"rue d'hautpoul|paris": {
+"citycode": "75119",
+"label": "Rue d'Hautpoul 75019 Paris",
+"lat": 48.883946,
+"lon": 2.387519,
+"score": 0.9796699999999999
+},
+"rue d'orléans-saint-honoré|75101": {
+"citycode": "75101",
+"label": "Rue Saint-Honoré 75001 Paris",
+"lat": 48.863801,
+"lon": 2.335725,
+"score": 0.5549700000000001
+},
+"rue d'orléans|75114": {
+"citycode": "75114",
+"label": "Villa d'Orléans 75014 Paris",
+"lat": 48.82857,
+"lon": 2.328661,
+"score": 0.49280508021390373
+},
+"rue d'orléans|paris": {
+"citycode": "45234",
+"label": "Rue Parisie 45000 Orléans",
+"lat": 47.900544,
+"lon": 1.909119,
+"score": 0.6450446753246752
+},
+"rue daubenton|75105": {
+"citycode": "75105",
+"label": "Rue Daubenton 75005 Paris",
+"lat": 48.841001,
+"lon": 2.352938,
+"score": 0.9716045454545453
+},
+"rue daubenton|paris": {
+"citycode": "75105",
+"label": "Rue Daubenton 75005 Paris",
+"lat": 48.841001,
+"lon": 2.352938,
+"score": 0.9716045454545453
+},
+"rue de bourbon-le-château|75106": {
+"citycode": "75106",
+"label": "Rue de Bourbon Le Château 75006 Paris",
+"lat": 48.853853,
+"lon": 2.336262,
+"score": 0.9604527272727271
+},
+"rue de buci|75106": {
+"citycode": "75106",
+"label": "Rue de Buci 75006 Paris",
+"lat": 48.853708,
+"lon": 2.337063,
+"score": 0.968720909090909
+},
+"rue de choiseul|75102": {
+"citycode": "75102",
+"label": "Rue de Choiseul 75002 Paris",
+"lat": 48.870143,
+"lon": 2.335966,
+"score": 0.9638881818181817
+},
+"rue de cléry|75102": {
+"citycode": "75102",
+"label": "Rue de Cléry 75002 Paris",
+"lat": 48.868626,
+"lon": 2.348348,
+"score": 0.9698254545454544
+},
+"rue de constantine|75104": {
+"citycode": "75104",
+"label": "Rue de la Bastille 75004 Paris",
+"lat": 48.853849,
+"lon": 2.367928,
+"score": 0.30409006993006993
+},
+"rue de gentilly|75113": {
+"citycode": "75113",
+"label": "Rue de Sainte-Hélène 75013 Paris",
+"lat": 48.819522,
+"lon": 2.352385,
+"score": 0.32385545454545456
+},
+"rue de glatigny|75104": {
+"citycode": "75104",
+"label": "Rue de la Bastille 75004 Paris",
+"lat": 48.853849,
+"lon": 2.367928,
+"score": 0.33692679841897233
+},
+"rue de grammont|75102": {
+"citycode": "75102",
+"label": "Rue de Gramont 75002 Paris",
+"lat": 48.870181,
+"lon": 2.336852,
+"score": 0.8151884415584415
+},
+"rue de grenelle-saint-honoré|75101": {
+"citycode": "75101",
+"label": "Rue Saint-Honoré 75001 Paris",
+"lat": 48.863801,
+"lon": 2.335725,
+"score": 0.5186063636363637
+},
+"rue de harlay au palais|75101": {
+"citycode": "75101",
+"label": "Rue de Harlay 75001 Paris",
+"lat": 48.856234,
+"lon": 2.34322,
+"score": 0.5941918181818181
+},
+"rue de humboldt|75114": {
+"citycode": "75114",
+"label": "Rue de l'Ouest 75014 Paris",
+"lat": 48.835046,
+"lon": 2.31751,
+"score": 0.30501168831168823
+},
+"rue de jarente|75104": {
+"citycode": "75104",
+"label": "Rue de Jarente 75004 Paris",
+"lat": 48.855709,
+"lon": 2.36294,
+"score": 0.9618281818181817
+},
+"rue de l'abbaye|75106": {
+"citycode": "75106",
+"label": "Rue de l'Abbaye 75006 Paris",
+"lat": 48.854175,
+"lon": 2.334972,
+"score": 0.9663581818181818
+},
+"rue de l'arbalète|75105": {
+"citycode": "75105",
+"label": "Rue de l'Arbalète 75005 Paris",
+"lat": 48.840062,
+"lon": 2.348162,
+"score": 0.9703845454545453
+},
+"rue de l'arbre-sec|75101": {
+"citycode": "75101",
+"label": "Rue de l'Arbre Sec 75001 Paris",
+"lat": 48.860325,
+"lon": 2.342266,
+"score": 0.965800909090909
+},
+"rue de l'echaudé|75106": {
+"citycode": "75106",
+"label": "Rue de l'Échaudé 75006 Paris",
+"lat": 48.854197,
+"lon": 2.336208,
+"score": 0.9682009090909091
+},
+"rue de l'ecole polytechnique|75105": {
+"citycode": "75105",
+"label": "Rue de l'École Polytechnique 75005 Paris",
+"lat": 48.847722,
+"lon": 2.347731,
+"score": 0.9677827272727273
+},
+"rue de l'ecole-de-médecine|75106": {
+"citycode": "75106",
+"label": "Rue de l'École de Médecine 75006 Paris",
+"lat": 48.850945,
+"lon": 2.341175,
+"score": 0.9665599999999999
+},
+"rue de l'ecole-polytechnique|75105": {
+"citycode": "75105",
+"label": "Rue de l'École Polytechnique 75005 Paris",
+"lat": 48.847722,
+"lon": 2.347731,
+"score": 0.9677827272727273
+},
+"rue de l'egout|75106": {
+"citycode": "75106",
+"label": "Rue de l'Échaudé 75006 Paris",
+"lat": 48.854197,
+"lon": 2.336208,
+"score": 0.44666980861244016
+},
+"rue de l'egout|paris": {
+"citycode": "80021",
+"label": "Rue de Paris 80000 Amiens",
+"lat": 49.885337,
+"lon": 2.287486,
+"score": 0.5481751196172249
+},
+"rue de l'eperon|75106": {
+"citycode": "75106",
+"label": "Rue de l'Éperon 75006 Paris",
+"lat": 48.852821,
+"lon": 2.340687,
+"score": 0.9646172727272727
+},
+"rue de l'espérance|75113": {
+"citycode": "75113",
+"label": "Rue de l'Espérance 75013 Paris",
+"lat": 48.826522,
+"lon": 2.347941,
+"score": 0.9766336363636363
+},
+"rue de l'essai|75113": {
+"citycode": "75113",
+"label": "Rue de Sainte-Hélène 75013 Paris",
+"lat": 48.819522,
+"lon": 2.352385,
+"score": 0.3347645454545454
+},
+"rue de l'evêque|75101": {
+"citycode": "75101",
+"label": "Rue Rouget de l'Isle 75001 Paris",
+"lat": 48.866111,
+"lon": 2.326266,
+"score": 0.3094127272727273
+},
+"rue de l'orangerie|75105": {
+"citycode": "75105",
+"label": "Rue de Latran 75005 Paris",
+"lat": 48.849681,
+"lon": 2.346514,
+"score": 0.4241181818181818
+},
+"rue de la bûcherie|75105": {
+"citycode": "75105",
+"label": "Rue de la Bûcherie 75005 Paris",
+"lat": 48.851924,
+"lon": 2.348295,
+"score": 0.9687136363636363
+},
+"rue de la chaussée d'antin|75109": {
+"citycode": "75109",
+"label": "Rue de la Chaussée d'Antin 75009 Paris",
+"lat": 48.873679,
+"lon": 2.332985,
+"score": 0.9727990909090908
+},
+"rue de la cité|75104": {
+"citycode": "75104",
+"label": "Rue de la Cité 75004 Paris",
+"lat": 48.854643,
+"lon": 2.347769,
+"score": 0.960520909090909
+},
+"rue de la clef|75105": {
+"citycode": "75105",
+"label": "Rue de la Clef 75005 Paris",
+"lat": 48.841316,
+"lon": 2.352954,
+"score": 0.9723427272727272
+},
+"rue de la collégiale|75105": {
+"citycode": "75105",
+"label": "Rue de la Collégiale 75005 Paris",
+"lat": 48.837872,
+"lon": 2.352116,
+"score": 0.9681781818181818
+},
+"rue de la colombe|75104": {
+"citycode": "75104",
+"label": "Rue de la Colombe 75004 Paris",
+"lat": 48.854554,
+"lon": 2.350331,
+"score": 0.9618281818181817
+},
+"rue de la contrescarpe-saint-andré|75106": {
+"citycode": "75106",
+"label": "Place Saint-André des Arts 75006 Paris",
+"lat": 48.852976,
+"lon": 2.3431,
+"score": 0.4202436363636363
+},
+"rue de la ferronnerie|75101": {
+"citycode": "75101",
+"label": "Rue de la Ferronnerie 75001 Paris",
+"lat": 48.860241,
+"lon": 2.347369,
+"score": 0.9629872727272726
+},
+"rue de la fontenelle|paris": {
+"citycode": "72231",
+"label": "Lieu Dit La Fontenelle 72250 Parigné-l'Évêque",
+"lat": 47.953286,
+"lon": 0.392272,
+"score": 0.44627909090909085
+},
+"rue de la grande truanderie|75101": {
+"citycode": "75101",
+"label": "Rue de la Grande Truanderie 75001 Paris",
+"lat": 48.862805,
+"lon": 2.349095,
+"score": 0.962471818181818
+},
+"rue de la grande-truanderie|75101": {
+"citycode": "75101",
+"label": "Rue de la Grande Truanderie 75001 Paris",
+"lat": 48.862805,
+"lon": 2.349095,
+"score": 0.962471818181818
+},
+"rue de la harpe|75105": {
+"citycode": "75105",
+"label": "Rue de la Harpe 75005 Paris",
+"lat": 48.852269,
+"lon": 2.344354,
+"score": 0.9711354545454545
+},
+"rue de la huchette|75105": {
+"citycode": "75105",
+"label": "Rue de la Huchette 75005 Paris",
+"lat": 48.852984,
+"lon": 2.345681,
+"score": 0.9701454545454543
+},
+"rue de la jussienne|75101": {
+"citycode": "75101",
+"label": "Rue de la Reynie 75001 Paris",
+"lat": 48.860106,
+"lon": 2.348652,
+"score": 0.4017966798418972
+},
+"rue de la jussienne|75102": {
+"citycode": "75102",
+"label": "Rue de la Jussienne 75002 Paris",
+"lat": 48.865355,
+"lon": 2.344318,
+"score": 0.9607372727272726
+},
+"rue de la licorne|75104": {
+"citycode": "75104",
+"label": "Rue de la Verrerie 75004 Paris",
+"lat": 48.857935,
+"lon": 2.353061,
+"score": 0.36812181818181816
+},
+"rue de la limace|75101": {
+"citycode": "75101",
+"label": "Rue de la Reynie 75001 Paris",
+"lat": 48.860106,
+"lon": 2.348652,
+"score": 0.3967148051948051
+},
+"rue de la lingerie|75101": {
+"citycode": "75101",
+"label": "Rue de la Lingerie 75001 Paris",
+"lat": 48.860319,
+"lon": 2.346573,
+"score": 0.9541418181818181
+},
+"rue de la michodière|75102": {
+"citycode": "75102",
+"label": "Rue de la Michodière 75002 Paris",
+"lat": 48.869927,
+"lon": 2.334707,
+"score": 0.9638881818181817
+},
+"rue de la monnaie|75101": {
+"citycode": "75101",
+"label": "Rue de la Monnaie 75001 Paris",
+"lat": 48.859376,
+"lon": 2.342958,
+"score": 0.9618909090909089
+},
+"rue de la montagne-sainte-geneviève|75105": {
+"citycode": "75105",
+"label": "Rue de la Montagne Sainte-Geneviève 75005 Paris",
+"lat": 48.848053,
+"lon": 2.348433,
+"score": 0.9719472727272727
+},
+"rue de la parcheminerie /|paris": {
+"citycode": "75105",
+"label": "Rue de la Parcheminerie 75005 Paris",
+"lat": 48.851698,
+"lon": 2.344879,
+"score": 0.9673490909090908
+},
+"rue de la parcheminerie mars|75105": {
+"citycode": "75105",
+"label": "Rue de la Parcheminerie 75005 Paris",
+"lat": 48.851698,
+"lon": 2.344879,
+"score": 0.7249248484848484
+},
+"rue de la parcheminerie|75105": {
+"citycode": "75105",
+"label": "Rue de la Parcheminerie 75005 Paris",
+"lat": 48.851698,
+"lon": 2.344879,
+"score": 0.9673490909090908
+},
+"rue de la parcheminerie|paris": {
+"citycode": "75105",
+"label": "Rue de la Parcheminerie 75005 Paris",
+"lat": 48.851698,
+"lon": 2.344879,
+"score": 0.9673490909090908
+},
+"rue de la petite-truanderie|75101": {
+"citycode": "75101",
+"label": "Rue de la Petite Truanderie 75001 Paris",
+"lat": 48.862802,
+"lon": 2.348329,
+"score": 0.9551563636363636
+},
+"rue de la poterie|75101": {
+"citycode": "75101",
+"label": "Rue de la Petite Truanderie 75001 Paris",
+"lat": 48.862802,
+"lon": 2.348329,
+"score": 0.4551563636363636
+},
+"rue de la reine-blanche|75113": {
+"citycode": "75113",
+"label": "Rue de la Reine Blanche 75013 Paris",
+"lat": 48.836644,
+"lon": 2.353997,
+"score": 0.9748854545454544
+},
+"rue de la reynie|75101": {
+"citycode": "75101",
+"label": "Rue de la Reynie 75001 Paris",
+"lat": 48.860106,
+"lon": 2.348652,
+"score": 0.9551563636363636
+},
+"rue de la tannerie à abbeville|paris": {
+"citycode": "80001",
+"label": "Rue de la Tannerie 80100 Abbeville",
+"lat": 50.102046,
+"lon": 1.835915,
+"score": 0.6924997402597401
+},
+"rue de la tombe issoire|paris": {
+"citycode": "75114",
+"label": "Rue de la Tombe Issoire 75014 Paris",
+"lat": 48.827813,
+"lon": 2.332932,
+"score": 0.9813954545454544
+},
+"rue de la tonnellerie|75101": {
+"citycode": "75101",
+"label": "Rue la Vrillière 75001 Paris",
+"lat": 48.865592,
+"lon": 2.340221,
+"score": 0.37601
+},
+"rue de langlade|75101": {
+"citycode": "75101",
+"label": "Rue de Rohan 75001 Paris",
+"lat": 48.862954,
+"lon": 2.335402,
+"score": 0.3642472727272727
+},
+"rue de lourcine|75113": {
+"citycode": "75113",
+"label": "Rue Dupuy de Lôme 75013 Paris",
+"lat": 48.821486,
+"lon": 2.371197,
+"score": 0.3564070247933884
+},
+"rue de maubeuge|75109": {
+"citycode": "75109",
+"label": "Rue de Maubeuge 75009 Paris",
+"lat": 48.878013,
+"lon": 2.344634,
+"score": 0.9736981818181817
+},
+"rue de mexico|paris": {
+"citycode": "75116",
+"label": "Place de Mexico 75116 Paris",
+"lat": 48.865485,
+"lon": 2.283237,
+"score": 0.6553976859504131
+},
+"rue de pontoise|75105": {
+"citycode": "75105",
+"label": "Rue de Pontoise 75005 Paris",
+"lat": 48.849576,
+"lon": 2.351754,
+"score": 0.9690381818181817
+},
+"rue de port-mahon|75102": {
+"citycode": "75102",
+"label": "Rue de Port-Mahon 75002 Paris",
+"lat": 48.869494,
+"lon": 2.334055,
+"score": 0.9610745454545454
+},
+"rue de port-royal|75105": {
+"citycode": "75105",
+"label": "Boulevard de Port-Royal 75005 Paris",
+"lat": 48.838097,
+"lon": 2.344768,
+"score": 0.48814272727272723
+},
+"rue de reims|75105": {
+"citycode": "75105",
+"label": "Rue de Bièvre 75005 Paris",
+"lat": 48.850564,
+"lon": 2.350229,
+"score": 0.4190090909090909
+},
+"rue de rennes|75106": {
+"citycode": "75106",
+"label": "Rue de Rennes 75006 Paris",
+"lat": 48.848741,
+"lon": 2.328502,
+"score": 0.974290909090909
+},
+"rue de richelieu|75101": {
+"citycode": "75101",
+"label": "Rue de Richelieu 75001 Paris",
+"lat": 48.865238,
+"lon": 2.336634,
+"score": 0.965800909090909
+},
+"rue de rivoli|75101": {
+"citycode": "75101",
+"label": "Rue de Rivoli 75001 Paris",
+"lat": 48.862442,
+"lon": 2.3362,
+"score": 0.970430909090909
+},
+"rue de rivoli|paris": {
+"citycode": "75101",
+"label": "Rue de Rivoli 75001 Paris",
+"lat": 48.862442,
+"lon": 2.3362,
+"score": 0.970430909090909
+},
+"rue de seine|75106": {
+"citycode": "75106",
+"label": "Rue de Seine 75006 Paris",
+"lat": 48.854806,
+"lon": 2.336811,
+"score": 0.9725554545454546
+},
+"rue de sully|75104": {
+"citycode": "75104",
+"label": "Rue de Sully 75004 Paris",
+"lat": 48.850465,
+"lon": 2.363714,
+"score": 0.9628427272727271
+},
+"rue de sully|paris": {
+"citycode": "75104",
+"label": "Rue de Sully 75004 Paris",
+"lat": 48.850465,
+"lon": 2.363714,
+"score": 0.9628427272727271
+},
+"rue de sévigné|75103": {
+"citycode": "75103",
+"label": "Rue Madame de Sévigné 75003 Paris",
+"lat": 48.857592,
+"lon": 2.363349,
+"score": 0.5868809090909091
+},
+"rue de sévigné|75104": {
+"citycode": "75104",
+"label": "Rue Madame de Sévigné 75004 Paris",
+"lat": 48.856048,
+"lon": 2.362345,
+"score": 0.5885663636363636
+},
+"rue de valence|75105": {
+"citycode": "75105",
+"label": "Rue de Valence 75005 Paris",
+"lat": 48.838009,
+"lon": 2.349946,
+"score": 0.9657281818181817
+},
+"rue de valois devant le passage|75101": {
+"citycode": "75101",
+"label": "Rue de Valois 75001 Paris",
+"lat": 48.864787,
+"lon": 2.338613,
+"score": 0.42774719008264456
+},
+"rue de vaugirard|75106": {
+"citycode": "75106",
+"label": "Rue de Vaugirard 75006 Paris",
+"lat": 48.847488,
+"lon": 2.329531,
+"score": 0.9747045454545454
+},
+"rue de viarmes|75101": {
+"citycode": "75101",
+"label": "Rue de Viarmes 75001 Paris",
+"lat": 48.862916,
+"lon": 2.34244,
+"score": 0.9604436363636364
+},
+"rue des anglaises|75113": {
+"citycode": "75113",
+"label": "Rue des Cordelières 75013 Paris",
+"lat": 48.834116,
+"lon": 2.348589,
+"score": 0.31975006993006994
+},
+"rue des boulangers|75105": {
+"citycode": "75105",
+"label": "Rue des Boulangers 75005 Paris",
+"lat": 48.846001,
+"lon": 2.353247,
+"score": 0.9706118181818182
+},
+"rue des boulangers|paris": {
+"citycode": "75105",
+"label": "Rue des Boulangers 75005 Paris",
+"lat": 48.846001,
+"lon": 2.353247,
+"score": 0.9706118181818182
+},
+"rue des bourdonnais|75101": {
+"citycode": "75101",
+"label": "Rue des Bourdonnais 75001 Paris",
+"lat": 48.859422,
+"lon": 2.344464,
+"score": 0.9643754545454545
+},
+"rue des bourguignons|75113": {
+"citycode": "75113",
+"label": "Rue du Dessous des Berges 75013 Paris",
+"lat": 48.826871,
+"lon": 2.373957,
+"score": 0.3193002479338843
+},
+"rue des capucins|75105": {
+"citycode": "75105",
+"label": "Rue Descartes 75005 Paris",
+"lat": 48.846251,
+"lon": 2.348975,
+"score": 0.3488772727272727
+},
+"rue des carmes|75105": {
+"citycode": "75105",
+"label": "Rue des Carmes 75005 Paris",
+"lat": 48.848968,
+"lon": 2.347483,
+"score": 0.9690381818181817
+},
+"rue des chantres|75104": {
+"citycode": "75104",
+"label": "Rue des Chantres 75004 Paris",
+"lat": 48.8537,
+"lon": 2.351451,
+"score": 0.9593781818181817
+},
+"rue des cinq-diamants|75113": {
+"citycode": "75113",
+"label": "Rue des Cinq Diamants 75013 Paris",
+"lat": 48.828797,
+"lon": 2.350772,
+"score": 0.977891818181818
+},
+"rue des ciseaux|75106": {
+"citycode": "75106",
+"label": "Rue des Ciseaux 75006 Paris",
+"lat": 48.853064,
+"lon": 2.334022,
+"score": 0.9632072727272727
+},
+"rue des cornes|75113": {
+"citycode": "75113",
+"label": "Rue des Cordelières 75013 Paris",
+"lat": 48.834116,
+"lon": 2.348589,
+"score": 0.5180018181818181
+},
+"rue des deux-ecus|75101": {
+"citycode": "75101",
+"label": "Place des Deux Écus 75001 Paris",
+"lat": 48.862787,
+"lon": 2.341377,
+"score": 0.6164709090909091
+},
+"rue des deux-portes|75101": null,
+"rue des ecoles|75105": {
+"citycode": "75105",
+"label": "Rue des Écoles 75005 Paris",
+"lat": 48.848743,
+"lon": 2.348101,
+"score": 0.9730436363636363
+},
+"rue des fontaines|75103": {
+"citycode": "75103",
+"label": "Rue des Fontaines du Temple 75003 Paris",
+"lat": 48.865651,
+"lon": 2.35904,
+"score": 0.8749972727272727
+},
+"rue des fossés-saint-marcel|75105": {
+"citycode": "75105",
+"label": "Rue des Fossés Saint-Marcel 75005 Paris",
+"lat": 48.838982,
+"lon": 2.356132,
+"score": 0.9671163636363636
+},
+"rue des fossés-saint-marcel|75113": {
+"citycode": "75113",
+"label": "Rue des Marmousets 75013 Paris",
+"lat": 48.835988,
+"lon": 2.350199,
+"score": 0.33628545454545455
+},
+"rue des fossés-saint-victor|75105": {
+"citycode": "75105",
+"label": "Rue des Fossés Saint-Marcel 75005 Paris",
+"lat": 48.838982,
+"lon": 2.356132,
+"score": 0.5693890909090908
+},
+"rue des francs-bourgeois saint-marcel|paris": {
+"citycode": "75103",
+"label": "Rue des Francs Bourgeois 75003 Paris",
+"lat": 48.857933,
+"lon": 2.360719,
+"score": 0.6234077922077922
+},
+"rue des francs-bourgeois st marcel|paris": {
+"citycode": "75103",
+"label": "Rue des Francs Bourgeois 75003 Paris",
+"lat": 48.857933,
+"lon": 2.360719,
+"score": 0.6668643356643357
+},
+"rue des francs-bourgeois-saint-marcel|75105": null,
+"rue des francs-bourgeois-saint-marcel|75113": {
+"citycode": "75113",
+"label": "Rue Louise Bourgeois 75013 Paris",
+"lat": 48.826071,
+"lon": 2.379358,
+"score": 0.3096482785299806
+},
+"rue des frondeurs|75101": {
+"citycode": "75101",
+"label": "Rue des Déchargeurs 75001 Paris",
+"lat": 48.859758,
+"lon": 2.346054,
+"score": 0.4405207114624506
+},
+"rue des gobelins|75113": {
+"citycode": "75113",
+"label": "Rue des Gobelins 75013 Paris",
+"lat": 48.835849,
+"lon": 2.351286,
+"score": 0.9741136363636363
+},
+"rue des guillemites /|paris": {
+"citycode": "75104",
+"label": "Rue des Guillemites 75004 Paris",
+"lat": 48.8582,
+"lon": 2.357443,
+"score": 0.9618281818181817
+},
+"rue des halles|75101": {
+"citycode": "75101",
+"label": "Rue des Halles 75001 Paris",
+"lat": 48.85976,
+"lon": 2.346704,
+"score": 0.962471818181818
+},
+"rue des lavandières-sainte-opportune|75101": {
+"citycode": "75101",
+"label": "Rue des Lavandières Sainte-Opportune 75001 Paris",
+"lat": 48.85877,
+"lon": 2.346147,
+"score": 0.9616790909090908
+},
+"rue des lavandières|75101": {
+"citycode": "75101",
+"label": "Rue des Lavandières Sainte-Opportune 75001 Paris",
+"lat": 48.85877,
+"lon": 2.346147,
+"score": 0.8707699999999999
+},
+"rue des lyonnais|75113": {
+"citycode": "75113",
+"label": "Impasse du Crédit Lyonnais 75013 Paris",
+"lat": 48.820183,
+"lon": 2.344745,
+"score": 0.3347645454545454
+},
+"rue des marmousets-saint-marcel|75113": {
+"citycode": "75113",
+"label": "Rue des Marmousets 75013 Paris",
+"lat": 48.835988,
+"lon": 2.350199,
+"score": 0.5186718181818182
+},
+"rue des marmousets|75104": {
+"citycode": "75104",
+"label": "Rue des Barres 75004 Paris",
+"lat": 48.855388,
+"lon": 2.355384,
+"score": 0.353013388429752
+},
+"rue des moineaux|75101": {
+"citycode": "75101",
+"label": "Rue des Moulins 75001 Paris",
+"lat": 48.866768,
+"lon": 2.335063,
+"score": 0.4810311004784688
+},
+"rue des moulins|75101": {
+"citycode": "75101",
+"label": "Rue des Moulins 75001 Paris",
+"lat": 48.866768,
+"lon": 2.335063,
+"score": 0.9594999999999999
+},
+"rue des orties-saint-honoré|75101": {
+"citycode": "75101",
+"label": "Rue Saint-Honoré 75001 Paris",
+"lat": 48.863801,
+"lon": 2.335725,
+"score": 0.5360888811188811
+},
+"rue des orties|75101": {
+"citycode": "75101",
+"label": "Rue des Orfèvres 75001 Paris",
+"lat": 48.858531,
+"lon": 2.345257,
+"score": 0.5049545454545454
+},
+"rue des postes|75105": {
+"citycode": "75105",
+"label": "Passage des Postes 75005 Paris",
+"lat": 48.841077,
+"lon": 2.349087,
+"score": 0.5271705741626794
+},
+"rue des pretres st severin|paris": {
+"citycode": "75105",
+"label": "Rue des Prêtres Saint-Séverin 75005 Paris",
+"lat": 48.852022,
+"lon": 2.345098,
+"score": 0.756405974025974
+},
+"rue des prêtres st germain l'auxerrois|paris": {
+"citycode": "75101",
+"label": "Rue des Prêtres Saint-Germain l'Auxerrois 75001 Paris",
+"lat": 48.859258,
+"lon": 2.341222,
+"score": 0.7807902901353964
+},
+"rue des prêtres-saint-etienne-du-mont|75105": {
+"citycode": "75105",
+"label": "Rue Saint-Étienne du Mont 75005 Paris",
+"lat": 48.846684,
+"lon": 2.348443,
+"score": 0.6026981818181818
+},
+"rue des prêtres-saint-germain-l'auxerrois|75101": {
+"citycode": "75101",
+"label": "Rue des Prêtres Saint-Germain l'Auxerrois 75001 Paris",
+"lat": 48.859258,
+"lon": 2.341222,
+"score": 0.9587399999999998
+},
+"rue des prêtres-saint-séverin donnant sur le presbytère de l'église saint-séverin|75105": {
+"citycode": "75105",
+"label": "Rue des Prêtres Saint-Séverin 75005 Paris",
+"lat": 48.852022,
+"lon": 2.345098,
+"score": 0.37439773835920176
+},
+"rue des prêtres-saint-séverin|75105": {
+"citycode": "75105",
+"label": "Rue des Prêtres Saint-Séverin 75005 Paris",
+"lat": 48.852022,
+"lon": 2.345098,
+"score": 0.9641981818181818
+},
+"rue des pèlerins-saint-jacques|75101": null,
+"rue des rondeaux|paris": {
+"citycode": "75120",
+"label": "Rue des Rondeaux 75020 Paris",
+"lat": 48.863151,
+"lon": 2.397629,
+"score": 0.9776854545454544
+},
+"rue des saules|paris": {
+"citycode": "75118",
+"label": "Rue des Saules 75018 Paris",
+"lat": 48.889192,
+"lon": 2.340082,
+"score": 0.9779381818181817
+},
+"rue des sept-voies|75105": null,
+"rue des trois-canettes|75104": null,
+"rue des trois-couronnes-saint-marcel|75113": null,
+"rue des vertus|75103": {
+"citycode": "75103",
+"label": "Rue des Vertus 75003 Paris",
+"lat": 48.864372,
+"lon": 2.357908,
+"score": 0.9662563636363637
+},
+"rue du bac|75107": {
+"citycode": "75107",
+"label": "Rue du Bac 75007 Paris",
+"lat": 48.854898,
+"lon": 2.325443,
+"score": 0.9754572727272726
+},
+"rue du bac|paris": {
+"citycode": "75107",
+"label": "Rue du Bac 75007 Paris",
+"lat": 48.854898,
+"lon": 2.325443,
+"score": 0.9754572727272726
+},
+"rue du banquier|75113": {
+"citycode": "75113",
+"label": "Rue du Banquier 75013 Paris",
+"lat": 48.835469,
+"lon": 2.356011,
+"score": 0.9773472727272727
+},
+"rue du bon-puits|75105": {
+"citycode": "75105",
+"label": "Rue du Puits de l'Ermite 75005 Paris",
+"lat": 48.842205,
+"lon": 2.352866,
+"score": 0.3902842424242424
+},
+"rue du cardinal lemoine|75105": {
+"citycode": "75105",
+"label": "Rue du Cardinal Lemoine 75005 Paris",
+"lat": 48.847084,
+"lon": 2.352094,
+"score": 0.9741863636363635
+},
+"rue du cardinal-lemoine|75105": {
+"citycode": "75105",
+"label": "Rue du Cardinal Lemoine 75005 Paris",
+"lat": 48.847084,
+"lon": 2.352094,
+"score": 0.9741863636363635
+},
+"rue du cendrier|75113": {
+"citycode": "75113",
+"label": "Rue du Banquier 75013 Paris",
+"lat": 48.835469,
+"lon": 2.356011,
+"score": 0.39552909090909094
+},
+"rue du cherche-midi|75106": {
+"citycode": "75106",
+"label": "Rue du Cherche-Midi 75006 Paris",
+"lat": 48.848602,
+"lon": 2.324544,
+"score": 0.9746045454545454
+},
+"rue du clos-bruneau|75105": {
+"citycode": "75105",
+"label": "Passage du Clos Bruneau 75005 Paris",
+"lat": 48.848617,
+"lon": 2.347724,
+"score": 0.598940909090909
+},
+"rue du cloître-notre-dame|75104": {
+"citycode": "75104",
+"label": "Rue du Cloître Notre-Dame 75004 Paris",
+"lat": 48.853216,
+"lon": 2.350595,
+"score": 0.9631354545454546
+},
+"rue du contrat-social|75101": null,
+"rue du coq-héron|75101": {
+"citycode": "75101",
+"label": "Rue Coq Héron 75001 Paris",
+"lat": 48.864312,
+"lon": 2.342178,
+"score": 0.70214
+},
+"rue du coq-héron|75102": null,
+"rue du faubourg st martin|paris": {
+"citycode": "75110",
+"label": "Rue du Faubourg Saint-Martin 75010 Paris",
+"lat": 48.876006,
+"lon": 2.360718,
+"score": 0.7695873262032085
+},
+"rue du faubourg-saint-jacques|75114": {
+"citycode": "75114",
+"label": "Rue du Faubourg Saint-Jacques 75014 Paris",
+"lat": 48.837177,
+"lon": 2.338651,
+"score": 0.9751445454545454
+},
+"rue du faubourg-saint-martin|75110": {
+"citycode": "75110",
+"label": "Rue du Faubourg Saint-Martin 75010 Paris",
+"lat": 48.876006,
+"lon": 2.360718,
+"score": 0.9808172727272727
+},
+"rue du fer-à-moulin|75105": {
+"citycode": "75105",
+"label": "Rue du Fer à Moulin 75005 Paris",
+"lat": 48.839023,
+"lon": 2.353531,
+"score": 0.9714227272727272
+},
+"rue du fouarre|75105": {
+"citycode": "75105",
+"label": "Rue du Fouarre 75005 Paris",
+"lat": 48.851695,
+"lon": 2.347462,
+"score": 0.9631845454545455
+},
+"rue du four-saint-jacques|75105": {
+"citycode": "75105",
+"label": "Rue Saint-Jacques 75005 Paris",
+"lat": 48.845006,
+"lon": 2.342617,
+"score": 0.6139699999999999
+},
+"rue du four|75101": {
+"citycode": "75101",
+"label": "Rue du Jour 75001 Paris",
+"lat": 48.863797,
+"lon": 2.344731,
+"score": 0.5986499999999999
+},
+"rue du four|75106": {
+"citycode": "75106",
+"label": "Rue du Four 75006 Paris",
+"lat": 48.85259,
+"lon": 2.332873,
+"score": 0.9702681818181819
+},
+"rue du four|paris": {
+"citycode": "75106",
+"label": "Rue du Four 75006 Paris",
+"lat": 48.85259,
+"lon": 2.332873,
+"score": 0.9702681818181819
+},
+"rue du gindre|75106": {
+"citycode": "75106",
+"label": "Rue du Four 75006 Paris",
+"lat": 48.85259,
+"lon": 2.332873,
+"score": 0.3679954545454545
+},
+"rue du hasard|75101": {
+"citycode": "75101",
+"label": "Rue du Jour 75001 Paris",
+"lat": 48.863797,
+"lon": 2.344731,
+"score": 0.3600136363636363
+},
+"rue du haut-moulin|75104": {
+"citycode": "75104",
+"label": "Rue Saint-Paul 75004 Paris",
+"lat": 48.853637,
+"lon": 2.361777,
+"score": 0.30832640316205534
+},
+"rue du haut-pavé|75105": {
+"citycode": "75105",
+"label": "Rue du Haut Pavé 75005 Paris",
+"lat": 48.851533,
+"lon": 2.349428,
+"score": 0.9618763636363634
+},
+"rue du helder|75109": {
+"citycode": "75109",
+"label": "Rue du Helder 75009 Paris",
+"lat": 48.871888,
+"lon": 2.334953,
+"score": 0.9672790909090908
+},
+"rue du jardinet|75106": {
+"citycode": "75106",
+"label": "Rue du Jardinet 75006 Paris",
+"lat": 48.852576,
+"lon": 2.340219,
+"score": 0.96176
+},
+"rue du jardinet|paris": {
+"citycode": "75106",
+"label": "Rue du Jardinet 75006 Paris",
+"lat": 48.852576,
+"lon": 2.340219,
+"score": 0.96176
+},
+"rue du jour|75101": {
+"citycode": "75101",
+"label": "Rue du Jour 75001 Paris",
+"lat": 48.863797,
+"lon": 2.344731,
+"score": 0.9622863636363637
+},
+"rue du marché-aux-chevaux|75113": null,
+"rue du marché-aux-fleurs|paris": {
+"citycode": "34172",
+"label": "Place du Marché aux Fleurs 34000 Montpellier",
+"lat": 43.61142,
+"lon": 3.877518,
+"score": 0.5831329752066116
+},
+"rue du mûrier|75105": {
+"citycode": "75105",
+"label": "Rue du Gril 75005 Paris",
+"lat": 48.841174,
+"lon": 2.354756,
+"score": 0.4353045454545455
+},
+"rue du parc-royal|75103": {
+"citycode": "75103",
+"label": "Rue du Parc Royal 75003 Paris",
+"lat": 48.858629,
+"lon": 2.363017,
+"score": 0.9641536363636364
+},
+"rue du petit-lion-saint-sauveur|75102": {
+"citycode": "75102",
+"label": "Rue Saint-Sauveur 75002 Paris",
+"lat": 48.866042,
+"lon": 2.348627,
+"score": 0.49439818181818174
+},
+"rue du petit-pont après la démolition|75105": null,
+"rue du petit-pont|75105": {
+"citycode": "75105",
+"label": "Rue du Petit Pont 75005 Paris",
+"lat": 48.852494,
+"lon": 2.346534,
+"score": 0.9657281818181817
+},
+"rue du pont-aux-biches|75105": {
+"citycode": "75105",
+"label": "Rue du Chat Qui Pêche 75005 Paris",
+"lat": 48.85305,
+"lon": 2.346137,
+"score": 0.31487234604105574
+},
+"rue du prévôt|75104": {
+"citycode": "75104",
+"label": "Rue du Prévôt 75004 Paris",
+"lat": 48.854785,
+"lon": 2.359691,
+"score": 0.9621918181818181
+},
+"rue du puits-de-l'ermite|75105": {
+"citycode": "75105",
+"label": "Rue du Puits de l'Ermite 75005 Paris",
+"lat": 48.842205,
+"lon": 2.352866,
+"score": 0.9660418181818181
+},
+"rue du rocher|75108": {
+"citycode": "75108",
+"label": "Rue du Rocher 75008 Paris",
+"lat": 48.878165,
+"lon": 2.320049,
+"score": 0.9724927272727272
+},
+"rue du sabot|75106": {
+"citycode": "75106",
+"label": "Rue du Sabot 75006 Paris",
+"lat": 48.852796,
+"lon": 2.331485,
+"score": 0.9627745454545454
+},
+"rue du sentier|75102": {
+"citycode": "75102",
+"label": "Rue du Sentier 75002 Paris",
+"lat": 48.86928,
+"lon": 2.345952,
+"score": 0.9662799999999999
+},
+"rue du sentier|paris": {
+"citycode": "75102",
+"label": "Rue du Sentier 75002 Paris",
+"lat": 48.86928,
+"lon": 2.345952,
+"score": 0.9662799999999999
+},
+"rue du temple|75103": {
+"citycode": "75103",
+"label": "Rue du Temple 75003 Paris",
+"lat": 48.863651,
+"lon": 2.358599,
+"score": 0.9736390909090907
+},
+"rue du vertbois|75103": {
+"citycode": "75103",
+"label": "Rue du Vertbois 75003 Paris",
+"lat": 48.867144,
+"lon": 2.357481,
+"score": 0.9703190909090907
+},
+"rue du vieux-colombier|75106": {
+"citycode": "75106",
+"label": "Rue du Vieux Colombier 75006 Paris",
+"lat": 48.851571,
+"lon": 2.331322,
+"score": 0.9669390909090909
+},
+"rue duméril|75113": {
+"citycode": "75113",
+"label": "Rue Duméril 75013 Paris",
+"lat": 48.837044,
+"lon": 2.357891,
+"score": 0.9745927272727272
+},
+"rue dupetit-thouars|75103": {
+"citycode": "75103",
+"label": "Rue Dupetit-Thouars 75003 Paris",
+"lat": 48.86532,
+"lon": 2.361944,
+"score": 0.9657209090909089
+},
+"rue dupuytren|75106": {
+"citycode": "75106",
+"label": "Rue Dupuytren 75006 Paris",
+"lat": 48.851659,
+"lon": 2.339454,
+"score": 0.9627745454545454
+},
+"rue etienne-marcel|75102": {
+"citycode": "75102",
+"label": "Rue Étienne Marcel 75002 Paris",
+"lat": 48.864542,
+"lon": 2.346644,
+"score": 0.9640599999999998
+},
+"rue fer-à-moulin|paris": {
+"citycode": "75105",
+"label": "Rue du Fer à Moulin 75005 Paris",
+"lat": 48.839023,
+"lon": 2.353531,
+"score": 0.778240909090909
+},
+"rue feydeau|75102": {
+"citycode": "75102",
+"label": "Rue Feydeau 75002 Paris",
+"lat": 48.869971,
+"lon": 2.340751,
+"score": 0.9646881818181816
+},
+"rue fontaine-molière|75101": {
+"citycode": "75101",
+"label": "Rue Molière 75001 Paris",
+"lat": 48.865081,
+"lon": 2.335938,
+"score": 0.48467746411483253
+},
+"rue françois miron|75104": {
+"citycode": "75104",
+"label": "Rue François Miron 75004 Paris",
+"lat": 48.855635,
+"lon": 2.357192,
+"score": 0.9696454545454545
+},
+"rue françois-miron|75104": {
+"citycode": "75104",
+"label": "Rue François Miron 75004 Paris",
+"lat": 48.855635,
+"lon": 2.357192,
+"score": 0.9696454545454545
+},
+"rue fresnel|75105": null,
+"rue gaillon|75102": {
+"citycode": "75102",
+"label": "Rue Gaillon 75002 Paris",
+"lat": 48.868293,
+"lon": 2.334076,
+"score": 0.9622172727272725
+},
+"rue galande|75105": {
+"citycode": "75105",
+"label": "Rue Galande 75005 Paris",
+"lat": 48.851637,
+"lon": 2.347064,
+"score": 0.9704999999999999
+},
+"rue gervais-laurent|paris": {
+"citycode": "75113",
+"label": "Rue Paul Gervais 75013 Paris",
+"lat": 48.830971,
+"lon": 2.347195,
+"score": 0.5599332467532466
+},
+"rue gozlin|75106": {
+"citycode": "75106",
+"label": "Rue Gozlin 75006 Paris",
+"lat": 48.853388,
+"lon": 2.333723,
+"score": 0.9622954545454544
+},
+"rue gozlin|paris": {
+"citycode": "75106",
+"label": "Rue Gozlin 75006 Paris",
+"lat": 48.853388,
+"lon": 2.333723,
+"score": 0.9622954545454544
+},
+"rue gracieuse|75105": {
+"citycode": "75105",
+"label": "Rue Gracieuse 75005 Paris",
+"lat": 48.842726,
+"lon": 2.351484,
+"score": 0.9690381818181817
+},
+"rue grenelle-saint-honoré|75101": {
+"citycode": "75101",
+"label": "Rue Saint-Honoré 75001 Paris",
+"lat": 48.863801,
+"lon": 2.335725,
+"score": 0.5754245454545455
+},
+"rue grégoire de tours|75106": {
+"citycode": "75106",
+"label": "Rue Grégoire de Tours 75006 Paris",
+"lat": 48.852814,
+"lon": 2.33773,
+"score": 0.968720909090909
+},
+"rue grégoire-de-tours|75106": {
+"citycode": "75106",
+"label": "Rue Grégoire de Tours 75006 Paris",
+"lat": 48.852814,
+"lon": 2.33773,
+"score": 0.968720909090909
+},
+"rue guénégaud|75106": {
+"citycode": "75106",
+"label": "Rue Guénégaud 75006 Paris",
+"lat": 48.855722,
+"lon": 2.338627,
+"score": 0.9676136363636364
+},
+"rue gérard|75113": {
+"citycode": "75113",
+"label": "Rue Gérard 75013 Paris",
+"lat": 48.829309,
+"lon": 2.352058,
+"score": 0.9744381818181818
+},
+"rue haute-des-ursins|75104": {
+"citycode": "75104",
+"label": "Rue des Ursins 75004 Paris",
+"lat": 48.854324,
+"lon": 2.351081,
+"score": 0.6148677033492822
+},
+"rue hautefeuille|75106": {
+"citycode": "75106",
+"label": "Rue Hautefeuille 75006 Paris",
+"lat": 48.852033,
+"lon": 2.342492,
+"score": 0.9663581818181818
+},
+"rue jean-jacques-rousseau|75101": {
+"citycode": "75101",
+"label": "Rue Jean-Jacques Rousseau 75001 Paris",
+"lat": 48.863359,
+"lon": 2.342177,
+"score": 0.9661381818181817
+},
+"rue juillet prise du haut de la rue|paris": {
+"citycode": "75120",
+"label": "Rue Juillet 75020 Paris",
+"lat": 48.86765,
+"lon": 2.39169,
+"score": 0.39124909090909094
+},
+"rue juillet|paris": {
+"citycode": "75120",
+"label": "Rue Juillet 75020 Paris",
+"lat": 48.86765,
+"lon": 2.39169,
+"score": 0.9730672727272726
+},
+"rue la fayette|75109": {
+"citycode": "75109",
+"label": "Rue la Fayette 75009 Paris",
+"lat": 48.87519,
+"lon": 2.341288,
+"score": 0.9743490909090909
+},
+"rue laffitte|75109": {
+"citycode": "75109",
+"label": "Rue Laffitte 75009 Paris",
+"lat": 48.873951,
+"lon": 2.338008,
+"score": 0.9714918181818181
+},
+"rue lamartine|75109": {
+"citycode": "75109",
+"label": "Rue Lamartine 75009 Paris",
+"lat": 48.876575,
+"lon": 2.341822,
+"score": 0.9714918181818181
+},
+"rue laplace|75105": {
+"citycode": "75105",
+"label": "Rue Laplace 75005 Paris",
+"lat": 48.847323,
+"lon": 2.347447,
+"score": 0.9679845454545454
+},
+"rue larrey|75106": {
+"citycode": "75106",
+"label": "Rue Regnard 75006 Paris",
+"lat": 48.849842,
+"lon": 2.338122,
+"score": 0.34172597402597404
+},
+"rue leclerc|75114": {
+"citycode": "75114",
+"label": "Rue Leclerc 75014 Paris",
+"lat": 48.833879,
+"lon": 2.335799,
+"score": 0.9672936363636362
+},
+"rue lepeletier|75109": {
+"citycode": "75109",
+"label": "Rue Pétrelle 75009 Paris",
+"lat": 48.880697,
+"lon": 2.348044,
+"score": 0.39633385026737966
+},
+"rue louis-le-grand|75102": {
+"citycode": "75102",
+"label": "Rue Louis Le Grand 75002 Paris",
+"lat": 48.869382,
+"lon": 2.333072,
+"score": 0.9646881818181816
+},
+"rue lourcine|75105": null,
+"rue lourcine|75113": {
+"citycode": "75113",
+"label": "Rue Pinel 75013 Paris",
+"lat": 48.834042,
+"lon": 2.359636,
+"score": 0.35755506493506495
+},
+"rue madame|paris": {
+"citycode": "75106",
+"label": "Rue Madame 75006 Paris",
+"lat": 48.848929,
+"lon": 2.331726,
+"score": 0.9724481818181817
+},
+"rue mauconseil|75101": {
+"citycode": "75101",
+"label": "Rue Mauconseil 75001 Paris",
+"lat": 48.864061,
+"lon": 2.347049,
+"score": 0.96015
+},
+"rue mazarine|75106": {
+"citycode": "75106",
+"label": "Rue Mazarine 75006 Paris",
+"lat": 48.855167,
+"lon": 2.33777,
+"score": 0.9715536363636362
+},
+"rue mazet|75106": {
+"citycode": "75106",
+"label": "Rue André Mazet 75006 Paris",
+"lat": 48.853905,
+"lon": 2.339077,
+"score": 0.5230588311688311
+},
+"rue mercier|75101": null,
+"rue mogador|75109": {
+"citycode": "75109",
+"label": "Rue de Mogador 75009 Paris",
+"lat": 48.874619,
+"lon": 2.33128,
+"score": 0.6903360839160839
+},
+"rue mondétour|75101": {
+"citycode": "75101",
+"label": "Rue Mondétour 75001 Paris",
+"lat": 48.862892,
+"lon": 2.34803,
+"score": 0.9594999999999999
+},
+"rue montmartre|75102": {
+"citycode": "75102",
+"label": "Rue Montmartre 75002 Paris",
+"lat": 48.867891,
+"lon": 2.343801,
+"score": 0.9706863636363635
+},
+"rue montorgueil|75101": {
+"citycode": "75101",
+"label": "Rue Montorgueil 75001 Paris",
+"lat": 48.863794,
+"lon": 2.346459,
+"score": 0.9631463636363635
+},
+"rue montorgueil|75102": {
+"citycode": "75102",
+"label": "Rue Montorgueil 75002 Paris",
+"lat": 48.865463,
+"lon": 2.346989,
+"score": 0.9667690909090907
+},
+"rue montorgueil|paris": {
+"citycode": "75102",
+"label": "Rue Montorgueil 75002 Paris",
+"lat": 48.865463,
+"lon": 2.346989,
+"score": 0.9667690909090907
+},
+"rue mouffetard|75105": {
+"citycode": "75105",
+"label": "Rue Mouffetard 75005 Paris",
+"lat": 48.842202,
+"lon": 2.349573,
+"score": 0.9763227272727272
+},
+"rue mouffetard|75113": {
+"citycode": "75113",
+"label": "Rue du Moulinet 75013 Paris",
+"lat": 48.826975,
+"lon": 2.354671,
+"score": 0.3549390909090909
+},
+"rue neuve-coquenard|75109": null,
+"rue neuve-des-mathurins|75108": {
+"citycode": "75108",
+"label": "Rue des Mathurins 75008 Paris",
+"lat": 48.87333,
+"lon": 2.323998,
+"score": 0.6549513223140495
+},
+"rue neuve-guillemin|75106": null,
+"rue neuve-saint-augustin|75101": null,
+"rue neuve-saint-augustin|75102": {
+"citycode": "75102",
+"label": "Rue Saint-Augustin 75002 Paris",
+"lat": 48.868868,
+"lon": 2.335896,
+"score": 0.6617203557312252
+},
+"rue oblin|75101": null,
+"rue ollivier|75109": {
+"citycode": "75109",
+"label": "Rue Lallier 75009 Paris",
+"lat": 48.8816,
+"lon": 2.341076,
+"score": 0.46620454545454537
+},
+"rue parcheminerie|paris": {
+"citycode": "75105",
+"label": "Rue de la Parcheminerie 75005 Paris",
+"lat": 48.851698,
+"lon": 2.344879,
+"score": 0.7011153246753247
+},
+"rue pascal|75105": {
+"citycode": "75105",
+"label": "Rue Pascal 75005 Paris",
+"lat": 48.83811,
+"lon": 2.349459,
+"score": 0.9687136363636363
+},
+"rue pascal|75113": {
+"citycode": "75113",
+"label": "Rue Pascal 75013 Paris",
+"lat": 48.834824,
+"lon": 2.347946,
+"score": 0.9774299999999999
+},
+"rue phelippeaux|75103": {
+"citycode": "75103",
+"label": "Rue du Perche 75003 Paris",
+"lat": 48.860818,
+"lon": 2.361317,
+"score": 0.3010227272727273
+},
+"rue pierre-lombard|75113": {
+"citycode": "75113",
+"label": "Rue Gérard 75013 Paris",
+"lat": 48.829309,
+"lon": 2.352058,
+"score": 0.3108018181818182
+},
+"rue poliveau|75113": {
+"citycode": "75113",
+"label": "Rue Chéreau 75013 Paris",
+"lat": 48.827509,
+"lon": 2.351536,
+"score": 0.31619
+},
+"rue poliveau|paris": {
+"citycode": "75105",
+"label": "Rue Poliveau 75005 Paris",
+"lat": 48.840182,
+"lon": 2.359085,
+"score": 0.9727063636363635
+},
+"rue rambuteau|75101": {
+"citycode": "75101",
+"label": "Rue Rambuteau 75001 Paris",
+"lat": 48.862518,
+"lon": 2.34783,
+"score": 0.9648299999999999
+},
+"rue richelieu|75101": {
+"citycode": "75101",
+"label": "Rue de Richelieu 75001 Paris",
+"lat": 48.865238,
+"lon": 2.336634,
+"score": 0.7112554545454546
+},
+"rue richelieu|75102": {
+"citycode": "75102",
+"label": "Rue de Richelieu 75002 Paris",
+"lat": 48.869597,
+"lon": 2.338874,
+"score": 0.71299
+},
+"rue royale|75108": {
+"citycode": "75108",
+"label": "Rue Royale 75008 Paris",
+"lat": 48.868125,
+"lon": 2.323074,
+"score": 0.9666790909090909
+},
+"rue réaumur|75103": {
+"citycode": "75103",
+"label": "Rue Réaumur 75003 Paris",
+"lat": 48.865362,
+"lon": 2.356659,
+"score": 0.9697318181818181
+},
+"rue saint dominique|paris": {
+"citycode": "75107",
+"label": "Rue Saint-Dominique 75007 Paris",
+"lat": 48.85924,
+"lon": 2.311019,
+"score": 0.9759890909090908
+},
+"rue saint-andré-des-arts|75106": {
+"citycode": "75106",
+"label": "Rue Saint-André des Arts 75006 Paris",
+"lat": 48.853432,
+"lon": 2.340629,
+"score": 0.9700899999999999
+},
+"rue saint-benoit|75106": {
+"citycode": "75106",
+"label": "Rue Saint-Benoît 75006 Paris",
+"lat": 48.854815,
+"lon": 2.333011,
+"score": 0.9667536363636362
+},
+"rue saint-denis|75101": {
+"citycode": "75101",
+"label": "Rue Saint-Denis 75001 Paris",
+"lat": 48.861148,
+"lon": 2.348782,
+"score": 0.9697872727272727
+},
+"rue saint-denis|75102": {
+"citycode": "75102",
+"label": "Rue Saint-Denis 75002 Paris",
+"lat": 48.866709,
+"lon": 2.351178,
+"score": 0.9720909090909089
+},
+"rue saint-dominique prise du ministère des travaux publics|paris": {
+"citycode": "75107",
+"label": "Rue Saint-Dominique 75007 Paris",
+"lat": 48.85924,
+"lon": 2.311019,
+"score": 0.3785864935064935
+},
+"rue saint-dominique|paris": {
+"citycode": "75107",
+"label": "Rue Saint-Dominique 75007 Paris",
+"lat": 48.85924,
+"lon": 2.311019,
+"score": 0.9759890909090908
+},
+"rue saint-georges|75109": {
+"citycode": "75109",
+"label": "Rue Saint-Georges 75009 Paris",
+"lat": 48.87622,
+"lon": 2.337204,
+"score": 0.9721109090909091
+},
+"rue saint-guillaume|paris": {
+"citycode": "75107",
+"label": "Rue Saint-Guillaume 75007 Paris",
+"lat": 48.854498,
+"lon": 2.328722,
+"score": 0.96754
+},
+"rue saint-hilaire|75105": {
+"citycode": "75105",
+"label": "Rue Geoffroy-Saint-Hilaire 75005 Paris",
+"lat": 48.840675,
+"lon": 2.356155,
+"score": 0.5865745454545455
+},
+"rue saint-hippolyte|75113": {
+"citycode": "75113",
+"label": "Rue Saint-Hippolyte 75013 Paris",
+"lat": 48.836094,
+"lon": 2.346958,
+"score": 0.9748854545454544
+},
+"rue saint-honoré|75101": {
+"citycode": "75101",
+"label": "Rue Saint-Honoré 75001 Paris",
+"lat": 48.863801,
+"lon": 2.335725,
+"score": 0.9731518181818182
+},
+"rue saint-honoré|paris": {
+"citycode": "75101",
+"label": "Rue Saint-Honoré 75001 Paris",
+"lat": 48.863801,
+"lon": 2.335725,
+"score": 0.9731518181818182
+},
+"rue saint-jacques|75105": {
+"citycode": "75105",
+"label": "Rue Saint-Jacques 75005 Paris",
+"lat": 48.845006,
+"lon": 2.342617,
+"score": 0.9776063636363636
+},
+"rue saint-jacques|75114": {
+"citycode": "75114",
+"label": "Place Saint-Jacques 75014 Paris",
+"lat": 48.833625,
+"lon": 2.336329,
+"score": 0.63093
+},
+"rue saint-julien-le-pauvre|75105": {
+"citycode": "75105",
+"label": "Rue Saint-Julien Le Pauvre 75005 Paris",
+"lat": 48.852319,
+"lon": 2.346994,
+"score": 0.964631818181818
+},
+"rue saint-landry|75104": {
+"citycode": "75104",
+"label": "Rue Saint-Paul 75004 Paris",
+"lat": 48.853637,
+"lon": 2.361777,
+"score": 0.4468743540669856
+},
+"rue saint-lazare|75108": {
+"citycode": "75108",
+"label": "Rue Saint-Lazare 75008 Paris",
+"lat": 48.875399,
+"lon": 2.325593,
+"score": 0.9633572727272727
+},
+"rue saint-lazare|75109": {
+"citycode": "75109",
+"label": "Rue Saint-Lazare 75009 Paris",
+"lat": 48.876448,
+"lon": 2.333174,
+"score": 0.9750063636363636
+},
+"rue saint-marcel|75113": {
+"citycode": "75113",
+"label": "Boulevard Saint-Marcel 75013 Paris",
+"lat": 48.838142,
+"lon": 2.35676,
+"score": 0.4762290909090909
+},
+"rue saint-nicolas-du-chardonnet|75105": {
+"citycode": "75105",
+"label": "Rue Nicolas Houël 75005 Paris",
+"lat": 48.842088,
+"lon": 2.362129,
+"score": 0.31466285714285713
+},
+"rue saint-nicolas|75109": null,
+"rue saint-roch|paris": {
+"citycode": "75101",
+"label": "Rue Saint-Roch 75001 Paris",
+"lat": 48.865681,
+"lon": 2.332449,
+"score": 0.965800909090909
+},
+"rue saint-sauveur|75102": {
+"citycode": "75102",
+"label": "Rue Saint-Sauveur 75002 Paris",
+"lat": 48.866042,
+"lon": 2.348627,
+"score": 0.9671254545454545
+},
+"rue saint-séverin|75105": {
+"citycode": "75105",
+"label": "Rue Saint-Séverin 75005 Paris",
+"lat": 48.852442,
+"lon": 2.345119,
+"score": 0.9694854545454545
+},
+"rue saint-victor|75105": {
+"citycode": "75105",
+"label": "Rue Saint-Victor 75005 Paris",
+"lat": 48.848304,
+"lon": 2.35102,
+"score": 0.9673490909090908
+},
+"rue sainte-anne|75101": {
+"citycode": "75101",
+"label": "Rue Sainte-Anne 75001 Paris",
+"lat": 48.866106,
+"lon": 2.33545,
+"score": 0.9634499999999999
+},
+"rue sainte-anne|75102": {
+"citycode": "75102",
+"label": "Rue Sainte-Anne 75002 Paris",
+"lat": 48.867996,
+"lon": 2.336306,
+"score": 0.9652390909090909
+},
+"rue sainte-croix|75104": {
+"citycode": "75104",
+"label": "Rue Sainte-Croix de la Bretonnerie 75004 Paris",
+"lat": 48.858376,
+"lon": 2.355637,
+"score": 0.8777554545454544
+},
+"rue sainte-marthe|75106": {
+"citycode": "75106",
+"label": "Rue Saint-Romain 75006 Paris",
+"lat": 48.847552,
+"lon": 2.320854,
+"score": 0.3910661983471075
+},
+"rue sainte-opportune|75101": {
+"citycode": "75101",
+"label": "Rue Sainte-Opportune 75001 Paris",
+"lat": 48.859974,
+"lon": 2.347245,
+"score": 0.9566854545454545
+},
+"rue sauval|75101": {
+"citycode": "75101",
+"label": "Rue Sauval 75001 Paris",
+"lat": 48.861852,
+"lon": 2.342475,
+"score": 0.9598363636363635
+},
+"rue scipion|75105": {
+"citycode": "75105",
+"label": "Rue Scipion 75005 Paris",
+"lat": 48.8383,
+"lon": 2.353746,
+"score": 0.9660418181818181
+},
+"rue serpente|75106": {
+"citycode": "75106",
+"label": "Rue Serpente 75006 Paris",
+"lat": 48.852238,
+"lon": 2.342087,
+"score": 0.9671172727272725
+},
+"rue soufflot|75105": {
+"citycode": "75105",
+"label": "Rue Soufflot 75005 Paris",
+"lat": 48.846936,
+"lon": 2.342709,
+"score": 0.9687136363636363
+},
+"rue soufflot|75106": {
+"citycode": "75106",
+"label": "Rue Rotrou 75006 Paris",
+"lat": 48.849497,
+"lon": 2.338393,
+"score": 0.3222454545454545
+},
+"rue st honoré|paris": {
+"citycode": "75101",
+"label": "Rue Saint-Honoré 75001 Paris",
+"lat": 48.863801,
+"lon": 2.335725,
+"score": 0.6962923140495867
+},
+"rue st jacques après la démolition -|paris": {
+"citycode": "75113",
+"label": "Rue Jacques Destrée 75013 Paris",
+"lat": 48.816823,
+"lon": 2.354899,
+"score": 0.4622827272727273
+},
+"rue st jacques entre le bd st germain|paris": {
+"citycode": "75105",
+"label": "Rue Saint-Jacques 75005 Paris",
+"lat": 48.845006,
+"lon": 2.342617,
+"score": 0.468092621564482
+},
+"rue taitbout|75109": {
+"citycode": "75109",
+"label": "Rue Taitbout 75009 Paris",
+"lat": 48.875026,
+"lon": 2.335524,
+"score": 0.9736981818181817
+},
+"rue thérèse|75101": {
+"citycode": "75101",
+"label": "Rue Thérèse 75001 Paris",
+"lat": 48.866122,
+"lon": 2.33559,
+"score": 0.96265
+},
+"rue thévenot|75102": {
+"citycode": "75102",
+"label": "Rue Chénier 75002 Paris",
+"lat": 48.869185,
+"lon": 2.351529,
+"score": 0.3061363636363636
+},
+"rue tiquetonne|75102": {
+"citycode": "75102",
+"label": "Rue Tiquetonne 75002 Paris",
+"lat": 48.864654,
+"lon": 2.348097,
+"score": 0.9672936363636362
+},
+"rue tirechape|paris": {
+"citycode": "77142",
+"label": "Rue de Tirechappe 77580 Crécy-la-Chapelle",
+"lat": 48.868336,
+"lon": 2.921451,
+"score": 0.5571816883116884
+},
+"rue traversine|75105": null,
+"rue vaucanson|75103": {
+"citycode": "75103",
+"label": "Rue Vaucanson 75003 Paris",
+"lat": 48.866417,
+"lon": 2.356262,
+"score": 0.9612627272727271
+},
+"rue vauvilliers|75101": {
+"citycode": "75101",
+"label": "Rue Vauvilliers 75001 Paris",
+"lat": 48.861656,
+"lon": 2.343296,
+"score": 0.9604436363636364
+},
+"rue vavin|paris": {
+"citycode": "75106",
+"label": "Rue Vavin 75006 Paris",
+"lat": 48.843709,
+"lon": 2.330307,
+"score": 0.9700899999999999
+},
+"rue vieille du temple|75104": {
+"citycode": "75104",
+"label": "Rue Vieille du Temple 75004 Paris",
+"lat": 48.85756,
+"lon": 2.357598,
+"score": 0.9684054545454543
+},
+"rue vieille-notre-dame|75105": null,
+"rue visconti|75106": {
+"citycode": "75106",
+"label": "Rue Visconti 75006 Paris",
+"lat": 48.855786,
+"lon": 2.335602,
+"score": 0.9674545454545455
+},
+"rue volta|75103": {
+"citycode": "75103",
+"label": "Rue Volta 75003 Paris",
+"lat": 48.865926,
+"lon": 2.357618,
+"score": 0.9686781818181819
+},
+"rue volta|paris": {
+"citycode": "75103",
+"label": "Rue Volta 75003 Paris",
+"lat": 48.865926,
+"lon": 2.357618,
+"score": 0.9686781818181819
+},
+"square clary|75108": {
+"citycode": "75108",
+"label": "Square Beaujon 75008 Paris",
+"lat": 48.87574,
+"lon": 2.311841,
+"score": 0.32532181818181816
+},
+"square de montrouge|75114": {
+"citycode": "75114",
+"label": "Square de Montsouris 75014 Paris",
+"lat": 48.823603,
+"lon": 2.334148,
+"score": 0.5676609881422925
+},
+"square des arts|75103": null,
+"square des batignolles|paris": {
+"citycode": "75117",
+"label": "Rue des Batignolles 75017 Paris",
+"lat": 48.885026,
+"lon": 2.320797,
+"score": 0.6889742006269592
+},
+"square montrouge|paris": {
+"citycode": "75114",
+"label": "Square de Montsouris 75014 Paris",
+"lat": 48.823603,
+"lon": 2.334148,
+"score": 0.5492610971786833
+},
+"square napoléon iii|paris": {
+"citycode": "75110",
+"label": "Place Napoléon III 75010 Paris",
+"lat": 48.880053,
+"lon": 2.354858,
+"score": 0.6105784415584415
+}
+}
