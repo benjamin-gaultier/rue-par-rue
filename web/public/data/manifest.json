@@ -33,5 +33,20 @@
     "license": "ODbL-1.0",
     "attribution": "Vasserot cadastre: Arch. nat. F31 73-96, Arch. Paris, © ALPAGE (ODbL)",
     "updated_at": "2026-11-17T12:40:03Z"
+  },
+  "photos": {
+    "count": 4302,
+    "sources": [
+      {
+        "key": "kahn",
+        "name": "Albert-Kahn, Archives de la Planète (Paris)",
+        "license": "See Musée départemental Albert-Kahn terms (CC0 / CC BY per item)",
+        "homepage": "https://www.data.gouv.fr/datasets/archives-de-la-planete-paris",
+        "attribution": "Musée départemental Albert-Kahn, Département des Hauts-de-Seine",
+        "count": 4302,
+        "rejected": {},
+        "harvested_at": "2026-11-17T18:06:45Z"
+      }
+    ]
   }
 }
