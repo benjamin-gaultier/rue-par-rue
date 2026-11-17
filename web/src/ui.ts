@@ -138,7 +138,12 @@ export interface Panel {
   setToday(state: { loading: true } | { error: string } | { pictures: TodayPicture[] }): void
 }
 
-export function buildPanel(root: HTMLElement, onClose: () => void, onCompare: (pic: TodayPicture) => void): Panel {
+export function buildPanel(
+  root: HTMLElement,
+  onClose: () => void,
+  onCompare: (pic: TodayPicture) => void,
+  depth: { has: (id: string) => boolean; open: (p: PhotoProps) => void } = { has: () => false, open: () => {} }
+): Panel {
   const close = el('button', { class: 'panel-close', type: 'button', 'aria-label': 'Close', text: '×' })
   const body = el('div', { class: 'panel-body' })
   const today = el('div', { class: 'today-list' })
@@ -147,6 +152,15 @@ export function buildPanel(root: HTMLElement, onClose: () => void, onCompare: (p
   root.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') onClose()
   })
+
+  const depthButton = (p: PhotoProps) => {
+    const b = el('button', { class: 'depth-btn', type: 'button' }, [
+      el('span', { text: 'View as a 3D photo' }),
+      el('small', { text: 'AI depth estimate' })
+    ])
+    b.addEventListener('click', () => depth.open(p))
+    return b
+  }
 
   return {
     show(p) {
@@ -174,6 +188,7 @@ export function buildPanel(root: HTMLElement, onClose: () => void, onCompare: (p
           el('figcaption', { text: p.credit ?? '' })
         ]),
         el('h2', { class: 'panel-title', text: p.title }),
+        depth.has(p.id) ? depthButton(p) : null,
         dl,
         p.url ? el('a', { class: 'archive-link', href: p.url, target: '_blank', rel: 'noopener', text: 'Open the archive record' }) : null,
         el('section', { class: 'today', 'aria-labelledby': 'today-h' }, [

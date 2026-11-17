@@ -16,6 +16,7 @@
 import * as THREE from 'three'
 import { MercatorCoordinate, type CustomLayerInterface, type CustomRenderMethodInput, type Map as MapLibreMap } from 'maplibre-gl'
 import { inWindow, type PhotoFeature } from './photos'
+import { loadDepthGrid, reliefGeometry } from './depth'
 
 export interface FrameGroup {
   key: string
@@ -44,7 +45,9 @@ export function groupPhotos(
   year: number,
   showAll: boolean,
   bounds: [number, number, number, number],
-  cell = 0.00005
+  cell = 0.00005,
+  /** Photos to show first at a shared spot (those with a 3D depth map). */
+  preferred: (f: PhotoFeature) => boolean = () => false
 ): FrameGroup[] {
   const [x0, y0, x1, y1] = bounds
   const groups = new Map<string, FrameGroup & { gap: number }>()
@@ -53,7 +56,7 @@ export function groupPhotos(
     if (lon < x0 || lon > x1 || lat < y0 || lat > y1) continue
     if (!showAll && !inWindow(f.properties, year)) continue
     const key = `${Math.round(lon / cell)}:${Math.round(lat / cell)}`
-    const gap = f.properties.year === undefined ? 999 : Math.abs(f.properties.year - year)
+    const gap = (f.properties.year === undefined ? 999 : Math.abs(f.properties.year - year)) + (preferred(f) ? 0 : 10000)
     const g = groups.get(key)
     if (!g) {
       groups.set(key, { key, lon, lat, photo: f, count: 1, gap })
@@ -80,7 +83,11 @@ interface Frame {
   picture: THREE.Mesh
   border: THREE.Mesh
   aspect: number
+  relief: boolean
 }
+
+/** Relief depth of 3D-photo frames, as a share of the frame height. */
+const FRAME_RELIEF = 0.35
 
 const PLANE = new THREE.PlaneGeometry(1, 1).rotateX(Math.PI / 2) // vertical, facing south (-y)
 
@@ -140,7 +147,8 @@ export class PhotoFrames implements CustomLayerInterface {
 
   constructor(
     private center: [number, number],
-    private imageFor: (f: PhotoFeature) => string | undefined
+    private imageFor: (f: PhotoFeature) => string | undefined,
+    private depthFor: (f: PhotoFeature) => { depth: string; image?: string } | undefined = () => undefined
   ) {
     this.origin = MercatorCoordinate.fromLngLat(center, 0)
     this.meter = this.origin.meterInMercatorCoordinateUnits()
@@ -202,20 +210,36 @@ export class PhotoFrames implements CustomLayerInterface {
       node.add(badge)
     }
     this.scene.add(node)
-    const frame: Frame = { group: g, node, picture, border, aspect: 4 / 3 }
+    const frame: Frame = { group: g, node, picture, border, aspect: 4 / 3, relief: false }
 
-    const url = this.imageFor(g.photo)
-    if (url) this.texture(url, frame, placeholder)
+    const depth = this.depthFor(g.photo)
+    const url = depth?.image ?? this.imageFor(g.photo)
+    if (url) this.texture(url, frame, placeholder, depth?.depth)
     return frame
   }
 
-  private texture(url: string, frame: Frame, placeholder: THREE.Texture) {
+  /** Swap the flat picture for a relief built from the photo's depth map. */
+  private async relief(frame: Frame, depthUrl: string) {
+    try {
+      const grid = await loadDepthGrid(depthUrl)
+      if (!this.frames.has(frame.group.key + frame.group.photo.id)) return
+      frame.picture.geometry = reliefGeometry(grid, { aspect: frame.aspect, strength: FRAME_RELIEF, segments: 96, facing: '-y' })
+      frame.relief = true
+      frame.border.visible = false
+      this.map?.triggerRepaint()
+    } catch {
+      /* stay flat */
+    }
+  }
+
+  private texture(url: string, frame: Frame, placeholder: THREE.Texture, depthUrl?: string) {
     const apply = (t: THREE.Texture) => {
       const img = t.image as HTMLImageElement
       frame.aspect = img.width && img.height ? img.width / img.height : frame.aspect
       ;(frame.picture.material as THREE.MeshBasicMaterial).map = t
       ;(frame.picture.material as THREE.MeshBasicMaterial).needsUpdate = true
       placeholder.dispose()
+      if (depthUrl) void this.relief(frame, depthUrl)
       this.map?.triggerRepaint()
     }
     const cached = this.textures.get(url)
@@ -237,6 +261,7 @@ export class PhotoFrames implements CustomLayerInterface {
 
   private dispose(f: Frame) {
     this.scene.remove(f.node)
+    if (f.relief) f.picture.geometry.dispose()
     for (const child of f.node.children) {
       const mat = (child as THREE.Mesh).material as THREE.MeshBasicMaterial
       if (mat.map && ![...this.textures.values()].includes(mat.map)) mat.map.dispose()
@@ -259,7 +284,8 @@ export class PhotoFrames implements CustomLayerInterface {
       f.node.rotation.z = turn
       f.node.scale.setScalar(h)
       f.node.position.z = h / 2 + 0.4
-      f.picture.scale.set(f.aspect, 1, 1)
+      if (f.relief) f.picture.scale.set(1, 1, 1) // relief geometry is built at its own width
+      else f.picture.scale.set(f.aspect, 1, 1)
       f.border.scale.set(f.aspect + 0.06, 1, 1.06)
       const badge = f.node.getObjectByName('badge')
       if (badge) {
