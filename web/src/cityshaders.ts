@@ -8,6 +8,7 @@
  * (the ground box, where everything fades out at the edge).
  */
 
+import { institutionFacades } from './institutionshaders'
 import { landmarkFacades } from './landmarkshaders'
 
 const common = /* glsl */ `
@@ -208,6 +209,7 @@ vec4 westFront(float s, float z, float eave, vec3 stone, vec2 aa) {
 }
 
 ${landmarkFacades}
+${institutionFacades}
 
 void main() {
   float u = v_a.x, z = v_a.y, L = v_a.z, flags = v_a.w;
@@ -245,6 +247,10 @@ void main() {
     glass = f.a;
   } else if (st > 19.5) {
     vec4 f = landmarkFacade(st, u, z, L, eave, seed, v_world, v_normal, aa);
+    col = f.rgb;
+    glass = f.a;
+  } else if (st > 9.5) {
+    vec4 f = institutionFacade(st, u, z, L, eave, seed, v_world, v_normal, aa);
     col = f.rgb;
     glass = f.a;
   } else if (st > 6.5 && st < 7.5) {
