@@ -1137,7 +1137,7 @@ void main() {
       // Cornices and string courses (a_a.w: kind × 1000 + bottom height).
       float kind = floor(flags / 1000.0);
       float z0 = flags - kind * 1000.0;
-      float h = kind < 0.5 ? 0.32 : kind < 1.5 ? 0.65 : kind < 2.5 ? 0.28 : 0.27;
+      float h = kind < 0.5 ? 0.4 : kind < 1.5 ? 0.65 : kind < 2.5 ? 0.28 : 0.27;
       float t = (z - z0) / h;
       if (side == 0) {
         if (kind > 0.5 && kind < 1.5) {

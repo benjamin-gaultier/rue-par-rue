@@ -30,6 +30,8 @@ function spec(polys: Poly[], over: Partial<BuildingSpec> = {}): BuildingSpec {
 
 /** Highest z of a mesh. */
 const top = (m: MeshData) => Math.max(...m.position.filter((_, i) => i % 3 === 2))
+/** The first vertex of each triangle of a mesh. */
+const corners = (m: MeshData) => m.index.filter((_, i) => i % 3 === 0)
 /** Vertices of the plain walls of a mesh (a_c.x = 0), without the relief. */
 const plain = (m: MeshData) => {
   const out = new MeshData()
@@ -37,7 +39,7 @@ const plain = (m: MeshData) => {
     if (m.c[v * 4] === 0) out.vertex([m.position[v * 3], m.position[v * 3 + 1], m.position[v * 3 + 2]], [0, 0, 1], [0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0])
   return out
 }
-const plainTriangles = (m: MeshData) => plain(m).position.length / 9
+const plainTriangles = (m: MeshData) => corners(m).filter((v) => m.c[v * 4] === 0).length
 
 describe('polygons', () => {
   it('orients outer rings counter-clockwise and holes clockwise, without the closing point', () => {
@@ -103,7 +105,7 @@ describe('buildings', () => {
   it('marks the walls between neighbours that stand at the same time as party walls', () => {
     const a = spec([normalisePoly([rect(0, 0, 10, 10)])!])
     const b = spec([normalisePoly([rect(10.3, 0, 20, 10)])!])
-    const party = (m: MeshData) => m.a.filter((_, i) => i % 4 === 3).filter((v) => v === 1).length / 6
+    const party = (m: MeshData) => corners(m).filter((v) => m.a[v * 4 + 3] === 1).length / 2
     expect(party(buildCity([a, b]).facades)).toBe(2)
     const later = { ...b, life: [1900, 1e4, 0, 0] as [number, number, number, number] }
     const gone = { ...a, life: [-1e4, 1860, 0, 0] as [number, number, number, number] }

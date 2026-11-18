@@ -19,6 +19,7 @@ import {
   addShopfronts,
   addStrip,
   bays,
+  corbelRing,
   FACADE,
   floorLayout,
   groundLayout,
@@ -27,8 +28,10 @@ import {
   packCodes,
   packHeightYear,
   PART,
+  SIDE,
   sidOf,
-  sillOf
+  sillOf,
+  stripOffsets
 } from './facades'
 
 export type Pt = [number, number]
@@ -72,12 +75,28 @@ export class MeshData {
   c: number[] = []
   life: number[] = []
   owner: number[] = []
+  /** Three vertex indices per triangle, in the order of `owner`: vertex() adds its own, quad() shares corners. */
+  index: number[] = []
 
   get triangles(): number {
     return this.owner.length
   }
 
+  /** Add a vertex; every three calls make a triangle (push its owner). */
   vertex(p: [number, number, number], n: [number, number, number], a: number[], b: number[], life: number[], c: number[] = NO_C) {
+    this.index.push(this.position.length / 3)
+    this.push(p, n, a, b, life, c)
+  }
+
+  /** A quad from four corners (in order around it) as two triangles sharing two vertices; owner pushed too. */
+  quad(p: [number, number, number][], n: [number, number, number], a: number[][], b: number[], life: number[], c: number[], owner: number) {
+    const v = this.position.length / 3
+    for (let i = 0; i < 4; i++) this.push(p[i], n, a[i], b, life, c)
+    this.index.push(v, v + 1, v + 2, v, v + 2, v + 3)
+    this.owner.push(owner, owner)
+  }
+
+  private push(p: [number, number, number], n: [number, number, number], a: number[], b: number[], life: number[], c: number[]) {
     this.position.push(p[0], p[1], p[2])
     this.normal.push(n[0], n[1], n[2])
     this.a.push(a[0], a[1], a[2], a[3])
@@ -439,7 +458,7 @@ function roofFor(poly: Poly, spec: BuildingSpec, owner: number, roofs: MeshData,
             if (c - w / 2 - 0.06 < lo || c + w / 2 + 0.06 > hi) continue
             // Old roofs: a dormer every other bay or so.
             if (spec.style === STYLE.old && ihash(sid, wallIdx * 32 + k, 40) < 0.4) continue
-            addDormer(roofs, owner, frame, c, w, front, height, [mat, FACE.dormer, spec.style, spec.seed], life, sid * 64 + wallIdx)
+            addDormer(roofs, owner, frame, c, w, front, height, [mat, FACE.dormer, spec.style, spec.seed], life, sid * 64 + (wallIdx % 64))
           }
         }
         wallIdx++
@@ -545,7 +564,7 @@ function roofFor(poly: Poly, spec: BuildingSpec, owner: number, roofs: MeshData,
         const c = (k + 0.5) * bw
         if (c - w0 / 2 < 0.5 || c + w0 / 2 > L - 0.5) continue
         if (placed > 0 && ihash(sid, i * 32 + k, 41) < 0.5) continue
-        addDormer(roofs, owner, frame, c, w0, front, height, [mat, FACE.dormer, spec.style, spec.seed], life, sid * 64 + i)
+        addDormer(roofs, owner, frame, c, w0, front, height, [mat, FACE.dormer, spec.style, spec.seed], life, sid * 64 + (i % 64))
         placed++
       }
     })
@@ -590,8 +609,22 @@ export function addBuilding(spec: BuildingSpec, owner: number, walls: MeshData, 
   }
   const probe = (a: Pt, b: Pt) => neighbours?.covers(probePoint(a, b), owner) ?? false
   const bv = [spec.style, spec.seed, 0, floorH]
-  const facades: { a: Pt; b: Pt; L: number; n: [number, number, number]; za: number; zb: number; ri: number; idx: number; eave: number }[] = []
+  const facades: {
+    a: Pt
+    b: Pt
+    L: number
+    n: [number, number, number]
+    za: number
+    zb: number
+    ri: number
+    idx: number
+    eave: number
+    /** Corbelled: the upper wall's ends, and whether it returns to the wall line at either end. */
+    out?: [Pt, Pt, boolean, boolean]
+  }[] = []
   const reliefRings: { ring: Ring; eaveEdge: boolean[]; eave: number }[] = []
+  // Some old houses still had corbelled upper floors overhanging the street (banned for new houses since 1607).
+  const corbel = spec.style === STYLE.old && spec.life[1] <= 1870 && ihash(sid, 0, 52) < 0.16 ? 0.22 + 0.22 * ihash(sid, 0, 53) : 0
   let wallCount = 0
   for (const poly of spec.polys) {
     const party = poly.map((ring) => ring.map((a, i) => probe(a, ring[(i + 1) % ring.length])))
@@ -601,6 +634,8 @@ export function addBuilding(spec: BuildingSpec, owner: number, walls: MeshData, 
     placed.rings.forEach((ring, ri) => {
       const tops = placed.tops[ri]
       const eaveEdge: boolean[] = []
+      const first = facades.length
+      const edgeOf: number[] = []
       for (let i = 0; i < ring.length; i++) {
         const j = (i + 1) % ring.length
         const a = ring[i]
@@ -618,10 +653,26 @@ export function addBuilding(spec: BuildingSpec, owner: number, walls: MeshData, 
           wallQuad(own, owner, a, b, za, zb, L, n, 1, [...bv], spec.life, [PART.wall, sid * 64, p1, p2])
           continue
         }
-        facades.push({ a, b, L, n, za, zb, ri, idx: Math.min(63, wallCount++), eave: placed.eave })
+        edgeOf.push(i)
+        facades.push({ a, b, L, n, za, zb, ri, idx: wallCount++ % 64, eave: placed.eave })
         eaveEdge[i] = ri === 0 && L > 1 && Math.abs(za - placed.eave) < 0.05 && Math.abs(zb - placed.eave) < 0.05
       }
-      reliefRings.push({ ring, eaveEdge, eave: placed.eave })
+      if (corbel > 0 && ri === 0 && placed.eave > floorLayout(spec.style, placed.eave, floorH).ground + 1.5) {
+        const out = ring.map((_, i) => edgeOf.includes(i))
+        const { start, end } = stripOffsets(ring, out)
+        const n = ring.length
+        edgeOf.forEach((i, k) => {
+          const f = facades[first + k]
+          f.out = [
+            [f.a[0] + start[i][0] * corbel, f.a[1] + start[i][1] * corbel],
+            [f.b[0] + end[i][0] * corbel, f.b[1] + end[i][1] * corbel],
+            !out[(i + n - 1) % n],
+            !out[(i + 1) % n]
+          ]
+        })
+        const c = corbelRing(ring, out, eaveEdge, corbel)
+        reliefRings.push({ ring: c.ring, eaveEdge: c.flags, eave: placed.eave })
+      } else reliefRings.push({ ring, eaveEdge, eave: placed.eave })
     })
     // Chimney stacks on the party walls, with their pots.
     if (spec.roof !== 'flat' && spec.style !== STYLE.monument && spec.style !== STYLE.cathedral) {
@@ -655,7 +706,41 @@ export function addBuilding(spec: BuildingSpec, owner: number, walls: MeshData, 
     const courtyard = f.ri > 0
     const layout = groundLayout(spec.style, spec.seed, sid, f.idx, f.L, { courtyard, cochere: wantsCochere && f === longest })
     const w = layout.cochere + 1 + (courtyard ? FACADE.courtyard : 0) + (timber ? FACADE.timber : 0)
-    wallQuad(own, owner, f.a, f.b, f.za, f.zb, f.L, f.n, 0, fb, spec.life, [PART.wall, sid * 64 + f.idx, packCodes(layout.codes), w])
+    const wc = [PART.wall, sid * 64 + f.idx, packCodes(layout.codes), w]
+    if (f.out) {
+      // The ground floor on the street line, the floors above pushed out, the overhang's underside,
+      // a strip of roof over the gap, and returns to the neighbours' walls.
+      const g = floorLayout(spec.style, f.eave, floorH).ground
+      const [A, B, capA, capB] = f.out
+      wallQuad(own, owner, f.a, f.b, g, g, f.L, f.n, 0, fb, spec.life, wc)
+      wallQuad(own, owner, A, B, f.za, f.zb, f.L, f.n, 0, fb, spec.life, wc, g)
+      const under = [PART.moulding, sid * 64 + f.idx, SIDE.under, 0]
+      const wu = MOULDING.band * 1000 + g
+      details.quad(
+        [
+          [f.a[0], f.a[1], g],
+          [f.b[0], f.b[1], g],
+          [B[0], B[1], g],
+          [A[0], A[1], g]
+        ],
+        [0, 0, -1],
+        [
+          [0, g, f.L, wu],
+          [f.L, g, f.L, wu],
+          [f.L, g - corbel, f.L, wu],
+          [0, g - corbel, f.L, wu]
+        ],
+        fb,
+        spec.life,
+        under,
+        owner
+      )
+      face(roofs, owner, [[f.a[0], f.a[1], f.za + 0.03], [f.b[0], f.b[1], f.zb + 0.03], [B[0], B[1], f.zb + 0.03]], [[0, 0, f.L, 1], [f.L, 0, f.L, 1], [f.L, 1, f.L, 1]], [spec.roofMaterial, FACE.slope, spec.style, spec.seed], spec.life)
+      face(roofs, owner, [[f.a[0], f.a[1], f.za + 0.03], [B[0], B[1], f.zb + 0.03], [A[0], A[1], f.za + 0.03]], [[0, 0, f.L, 1], [f.L, 1, f.L, 1], [0, 1, f.L, 1]], [spec.roofMaterial, FACE.slope, spec.style, spec.seed], spec.life)
+      const t: [number, number, number] = [(f.b[0] - f.a[0]) / f.L, (f.b[1] - f.a[1]) / f.L, 0]
+      if (capA) wallQuad(own, owner, f.a, A, f.za, f.za, corbel, [-t[0], -t[1], 0], 1, fb, spec.life, [PART.wall, sid * 64, 0, 0], g)
+      if (capB) wallQuad(own, owner, B, f.b, f.zb, f.zb, corbel, t, 1, fb, spec.life, [PART.wall, sid * 64, 0, 0], g)
+    } else wallQuad(own, owner, f.a, f.b, f.za, f.zb, f.L, f.n, 0, fb, spec.life, wc)
     if (!courtyard) addShopfronts(details, { owner, b: fb, life: spec.life, id: sid * 64 + f.idx }, f.a, f.b, spec.style, sid, f.idx, layout, floorLayout(spec.style, f.eave, floorH).ground, spec.life)
   }
 
@@ -677,21 +762,34 @@ export function addBuilding(spec: BuildingSpec, owner: number, walls: MeshData, 
         addBalconyRail(details, ctx, ring, eaveEdge, depth, top, 1.0, 0)
       }
     } else if (spec.style === STYLE.old) {
-      addStrip(details, ctx, ring, eaveEdge, { depth: 0.24, z0: eave - 0.32, z1: eave, part: PART.moulding, w: MOULDING.oldCornice * 1000 + (eave - 0.32), slope: 0.05, caps: true })
+      addStrip(details, ctx, ring, eaveEdge, { depth: 0.24, z0: eave - 0.4, z1: eave, part: PART.moulding, w: MOULDING.oldCornice * 1000 + (eave - 0.4), slope: 0.05, caps: true, cove: true })
     } else {
       addStrip(details, ctx, ring, eaveEdge, { depth: 0.12, z0: eave - 0.28, z1: eave, part: PART.moulding, w: MOULDING.coping * 1000 + (eave - 0.28), slope: 0.02, caps: true })
     }
   }
 }
 
-function wallQuad(walls: MeshData, owner: number, a: Pt, b: Pt, za: number, zb: number, L: number, n: [number, number, number], party: number, bv: number[], life: BuildingSpec['life'], c: number[]) {
-  walls.vertex([a[0], a[1], 0], n, [0, 0, L, party], bv, life, c)
-  walls.vertex([b[0], b[1], 0], n, [L, 0, L, party], bv, life, c)
-  walls.vertex([b[0], b[1], zb], n, [L, zb, L, party], bv, life, c)
-  walls.vertex([a[0], a[1], 0], n, [0, 0, L, party], bv, life, c)
-  walls.vertex([b[0], b[1], zb], n, [L, zb, L, party], bv, life, c)
-  walls.vertex([a[0], a[1], za], n, [0, za, L, party], bv, life, c)
-  walls.owner.push(owner, owner)
+/** A wall from a to b, from z0 up to its tops at each end. */
+function wallQuad(walls: MeshData, owner: number, a: Pt, b: Pt, za: number, zb: number, L: number, n: [number, number, number], party: number, bv: number[], life: BuildingSpec['life'], c: number[], z0 = 0) {
+  walls.quad(
+    [
+      [a[0], a[1], z0],
+      [b[0], b[1], z0],
+      [b[0], b[1], zb],
+      [a[0], a[1], za]
+    ],
+    n,
+    [
+      [0, z0, L, party],
+      [L, z0, L, party],
+      [L, zb, L, party],
+      [0, za, L, party]
+    ],
+    bv,
+    life,
+    c,
+    owner
+  )
 }
 
 /** An upright box (chimney, spire drum) into the roof mesh. */

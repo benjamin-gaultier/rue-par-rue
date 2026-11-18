@@ -158,6 +158,8 @@ function geometry(m: MeshData): THREE.BufferGeometry {
   g.setAttribute('a_a', new THREE.Float32BufferAttribute(m.a, 4))
   g.setAttribute('a_b', new THREE.Float32BufferAttribute(m.b, 4))
   if (m.c.length) g.setAttribute('a_c', new THREE.Float32BufferAttribute(m.c, 4))
+  // Quads share their corners; meshes filled without MeshData.vertex/quad stay unindexed.
+  if (m.index.length === m.owner.length * 3) g.setIndex(m.index)
   g.setAttribute('a_life', new THREE.Float32BufferAttribute(m.life, 4))
   g.computeBoundingSphere()
   return g

@@ -187,8 +187,7 @@ interface Ctx {
 }
 
 function quad(m: MeshData, ctx: Ctx, p: V3[], a: number[][], n: V3, c: number[], life: Life = ctx.life) {
-  for (const i of [0, 1, 2, 0, 2, 3]) m.vertex(p[i], n, a[i], ctx.b, life, c)
-  m.owner.push(ctx.owner, ctx.owner)
+  m.quad(p, n, a, ctx.b, life, c, ctx.owner)
 }
 
 function tri(m: MeshData, ctx: Ctx, p: V3[], a: number[][], n: V3, c: number[], life: Life = ctx.life) {
@@ -229,6 +228,35 @@ export function stripOffsets(ring: Pt[], flagged: boolean[]): { start: Pt[]; end
   return { start, end: endFor }
 }
 
+/**
+ * A ring whose `out` edges are pushed outward by c (corbelled upper floors),
+ * with short square returns where they meet edges that stay; `flags` follow
+ * their edges (returns get false).
+ */
+export function corbelRing(ring: Pt[], out: boolean[], flags: boolean[], c: number): { ring: Pt[]; flags: boolean[] } {
+  const { start, end } = stripOffsets(ring, out)
+  const n = ring.length
+  const r: Pt[] = []
+  const f: boolean[] = []
+  const off = (p: Pt, d: Pt): Pt => [p[0] + d[0] * c, p[1] + d[1] * c]
+  for (let i = 0; i < n; i++) {
+    const prev = (i + n - 1) % n
+    if (out[prev] && !out[i]) {
+      r.push(off(ring[i], end[prev]))
+      f.push(false)
+    }
+    if (out[i]) {
+      if (!out[prev]) {
+        r.push(ring[i])
+        f.push(false)
+      }
+      r.push(off(ring[i], start[i]))
+    } else r.push(ring[i])
+    f.push(flags[i])
+  }
+  return { ring: r, flags: f }
+}
+
 export interface StripProfile {
   /** Projection from the wall, metres. */
   depth: number
@@ -242,6 +270,8 @@ export interface StripProfile {
   slope?: number
   /** Close the ends where a strip stops. */
   caps?: boolean
+  /** A plaster cove from the wall at z0 out to the top edge, instead of a front and an underside. */
+  cove?: boolean
 }
 
 /** A projecting strip (cornice, string course, balcony slab) along the flagged edges of a ring. */
@@ -260,18 +290,30 @@ export function addStrip(m: MeshData, ctx: Ctx, ring: Pt[], flagged: boolean[], 
     const B: Pt = [b[0] + end[i][0] * d, b[1] + end[i][1] * d]
     const c = (side: number) => [prof.part, ctx.id, side, 0]
     const aa = (u: number, z: number) => [u, z, L, prof.w]
-    // Front
-    quad(m, ctx, [[A[0], A[1], z0], [B[0], B[1], z0], [B[0], B[1], z1], [A[0], A[1], z1]], [aa(0, z0), aa(L, z0), aa(L, z1), aa(0, z1)], [nn[0], nn[1], 0], c(SIDE.front))
-    // Underside
-    quad(m, ctx, [[a[0], a[1], z0], [b[0], b[1], z0], [B[0], B[1], z0], [A[0], A[1], z0]], [aa(0, z0), aa(L, z0), aa(L, z0 - d), aa(0, z0 - d)], [0, 0, -1], c(SIDE.under))
+    if (prof.cove) {
+      const l = Math.hypot(z1 - z0, d)
+      quad(m, ctx, [[a[0], a[1], z0], [b[0], b[1], z0], [B[0], B[1], z1], [A[0], A[1], z1]], [aa(0, z0), aa(L, z0), aa(L, z1), aa(0, z1)], [(nn[0] * (z1 - z0)) / l, (nn[1] * (z1 - z0)) / l, -d / l], c(SIDE.front))
+    } else {
+      // Front
+      quad(m, ctx, [[A[0], A[1], z0], [B[0], B[1], z0], [B[0], B[1], z1], [A[0], A[1], z1]], [aa(0, z0), aa(L, z0), aa(L, z1), aa(0, z1)], [nn[0], nn[1], 0], c(SIDE.front))
+      // Underside
+      quad(m, ctx, [[a[0], a[1], z0], [b[0], b[1], z0], [B[0], B[1], z0], [A[0], A[1], z0]], [aa(0, z0), aa(L, z0), aa(L, z0 - d), aa(0, z0 - d)], [0, 0, -1], c(SIDE.under))
+    }
     // Top, rising a little toward the wall
     const tn = Math.hypot(d, top - z1) || 1
     quad(m, ctx, [[A[0], A[1], z1], [B[0], B[1], z1], [b[0], b[1], top], [a[0], a[1], top]], [aa(0, z1), aa(L, z1), aa(L, z1 + d), aa(0, z1 + d)], [(nn[0] * (top - z1)) / tn, (nn[1] * (top - z1)) / tn, d / tn], c(SIDE.top))
     if (prof.caps) {
       const prev = (i + n - 1) % n
       const next = (i + 1) % n
-      if (!flagged[prev]) quad(m, ctx, [[a[0], a[1], z0], [A[0], A[1], z0], [A[0], A[1], z1], [a[0], a[1], top]], [aa(0, z0), aa(d, z0), aa(d, z1), aa(0, top)], [-(b[0] - a[0]) / L, -(b[1] - a[1]) / L, 0], c(SIDE.end))
-      if (!flagged[next]) quad(m, ctx, [[B[0], B[1], z0], [b[0], b[1], z0], [b[0], b[1], top], [B[0], B[1], z1]], [aa(d, z0), aa(0, z0), aa(0, top), aa(d, z1)], [(b[0] - a[0]) / L, (b[1] - a[1]) / L, 0], c(SIDE.end))
+      const ta: V3 = [-(b[0] - a[0]) / L, -(b[1] - a[1]) / L, 0]
+      const tb: V3 = [(b[0] - a[0]) / L, (b[1] - a[1]) / L, 0]
+      if (prof.cove) {
+        if (!flagged[prev]) tri(m, ctx, [[a[0], a[1], z0], [A[0], A[1], z1], [a[0], a[1], top]], [aa(0, z0), aa(d, z1), aa(0, top)], ta, c(SIDE.end))
+        if (!flagged[next]) tri(m, ctx, [[b[0], b[1], z0], [b[0], b[1], top], [B[0], B[1], z1]], [aa(0, z0), aa(0, top), aa(d, z1)], tb, c(SIDE.end))
+      } else {
+        if (!flagged[prev]) quad(m, ctx, [[a[0], a[1], z0], [A[0], A[1], z0], [A[0], A[1], z1], [a[0], a[1], top]], [aa(0, z0), aa(d, z0), aa(d, z1), aa(0, top)], ta, c(SIDE.end))
+        if (!flagged[next]) quad(m, ctx, [[B[0], B[1], z0], [b[0], b[1], z0], [b[0], b[1], top], [B[0], B[1], z1]], [aa(d, z0), aa(0, z0), aa(0, top), aa(d, z1)], tb, c(SIDE.end))
+      }
     }
   }
 }
@@ -303,7 +345,7 @@ export function addBalconyRail(m: MeshData, ctx: Ctx, ring: Pt[], flagged: boole
   }
 }
 
-/** A box applied to a wall between u0 and u1 (a shopfront casing): front, top and two sides. */
+/** A box applied to a wall between u0 and u1 (a shopfront casing): front and two sides. */
 export function addCasing(m: MeshData, ctx: Ctx, a: Pt, b: Pt, u0: number, u1: number, depth: number, z1: number, info: number, life: Life) {
   const L = Math.hypot(b[0] - a[0], b[1] - a[1])
   const t: Pt = [(b[0] - a[0]) / L, (b[1] - a[1]) / L]
@@ -316,8 +358,8 @@ export function addCasing(m: MeshData, ctx: Ctx, a: Pt, b: Pt, u0: number, u1: n
   const q1 = at(u1, depth)
   const c = (side: number) => [PART.casing, ctx.id, side, info]
   const aa = (x: number, z: number) => [x, z, W, z1]
+  // No top: 16 cm wide, it is never seen from the street and too thin to see from above.
   quad(m, ctx, [[q0[0], q0[1], 0], [q1[0], q1[1], 0], [q1[0], q1[1], z1], [q0[0], q0[1], z1]], [aa(0, 0), aa(W, 0), aa(W, z1), aa(0, z1)], [nn[0], nn[1], 0], c(SIDE.front), life)
-  quad(m, ctx, [[q0[0], q0[1], z1], [q1[0], q1[1], z1], [p1[0], p1[1], z1 + 0.04], [p0[0], p0[1], z1 + 0.04]], [aa(0, z1), aa(W, z1), aa(W, z1), aa(0, z1)], [0, 0, 1], c(SIDE.top), life)
   quad(m, ctx, [[p0[0], p0[1], 0], [q0[0], q0[1], 0], [q0[0], q0[1], z1], [p0[0], p0[1], z1]], [aa(0, 0), aa(depth, 0), aa(depth, z1), aa(0, z1)], [-t[0], -t[1], 0], c(SIDE.end), life)
   quad(m, ctx, [[q1[0], q1[1], 0], [p1[0], p1[1], 0], [p1[0], p1[1], z1], [q1[0], q1[1], z1]], [aa(depth, 0), aa(0, 0), aa(0, z1), aa(depth, z1)], [t[0], t[1], 0], c(SIDE.end), life)
 }

@@ -189,6 +189,26 @@ describe('relief', () => {
   })
 })
 
+describe('old houses', () => {
+  it('corbels the upper floors of some houses over the street, ground floor on the line', () => {
+    let found = 0
+    for (let i = 0; i < 400 && !found; i++) {
+      const seed = i / 400
+      if (ihash(sidOf(seed), 0, 52) >= 0.16) continue
+      const house = spec([normalisePoly([rect(0, 0, 6, 12)])!], { style: STYLE.old, roof: 'gable', roofMaterial: ROOF_MATERIAL.tile, height: 15, seed, life: [-1e4, 1860, 0, 0] })
+      const city = buildCity([house])
+      const ys = city.facades.position.filter((_, k) => k % 3 === 1)
+      const zs = city.facades.position.filter((_, k) => k % 3 === 2)
+      // Below the first floor nothing leaves the footprint; above, the walls stand out.
+      ys.forEach((y, k) => {
+        if (zs[k] < 3.2) expect(y).toBeGreaterThanOrEqual(-1e-6)
+      })
+      found = Math.min(...ys)
+    }
+    expect(found).toBeLessThan(-0.2)
+  })
+})
+
 describe('mansards between neighbours', () => {
   it('raises the party wall to the top of the roof instead of sloping toward it', () => {
     const inner = insetEdges(normalisePoly([rect(0, 0, 20, 12)])!, [[1.5, 0, 1.5, 1.5]])!
