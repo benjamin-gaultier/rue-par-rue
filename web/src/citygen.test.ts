@@ -193,3 +193,27 @@ describe('institutions', () => {
     expect(lifeOf({ kind: 'reconstructed', from: 1831, until: 1837 })).toEqual([1831, 1837, 0, 0])
   })
 })
+
+describe('wall families', () => {
+  it('splits walls by style into families, keeping owners and order', async () => {
+    const { splitByFamily, wallFamily, WALL_FAMILY } = await import('./citygen')
+    expect([0, 1, 3, 4, 6, 12, 25].map(wallFamily)).toEqual([0, 0, 0, WALL_FAMILY.bridges, 0, WALL_FAMILY.institutions, WALL_FAMILY.landmarks])
+    const m = new MeshData()
+    const life = [-1e4, 1e4, 0, 0]
+    const q: [number, number, number][] = [[0, 0, 0], [1, 0, 0], [1, 0, 1], [0, 0, 1]]
+    m.quad(q, [0, -1, 0], q.map((c) => [c[0], c[2], 1, 0]), [STYLE.old, 0.5, 2, 3], life, [0, 0, 0, 0], 4)
+    m.quad(q, [0, -1, 0], q.map((c) => [c[0], c[2], 1, 0]), [22, 0.5, 2, 3], life, [0, 0, 0, 0], 9)
+    const [plain, bridges, institutions, landmarks] = splitByFamily(m)
+    expect(plain.owner).toEqual([4, 4])
+    expect(landmarks.owner).toEqual([9, 9])
+    expect(bridges.triangles + institutions.triangles).toBe(0)
+    expect(landmarks.position.slice(0, 3)).toEqual([0, 0, 0])
+  })
+
+  it('cuts out the shader blocks of the other families', async () => {
+    const { shaderVariant } = await import('./cityshaders')
+    const src = 'a\n#ifdef WALL_BRIDGES\nbridge\n#endif\nb\n#ifdef WALL_LANDMARKS\nlandmark\n#endif\nc\n'
+    expect(shaderVariant(src, ['WALL_LANDMARKS'])).toBe('a\nb\nlandmark\nc\n')
+    expect(shaderVariant(src, [])).toBe('a\nb\nc\n')
+  })
+})
