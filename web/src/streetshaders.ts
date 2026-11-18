@@ -305,7 +305,9 @@ void main() {
   float variant = floor(a_part / 16.0 + 0.01);
   float mat = a_part - variant * 16.0;
   bool alive = u_year >= a_ilife.x && u_year < a_ilife.y && !(u_year >= a_ilife.z && u_year < a_ilife.w);
-  if (!alive || abs(variant - variantOf(a_type)) > 0.5) { gl_Position = vec4(0.0, 0.0, 2.0, 1.0); return; }
+  // Hidden: not this year, another variant, or too far to see (a few pixels at most).
+  bool far = distance(vec3(a_inst.xy, 2.0), u_camera) > 450.0;
+  if (!alive || far || abs(variant - variantOf(a_type)) > 0.5) { gl_Position = vec4(0.0, 0.0, 2.0, 1.0); return; }
   vec3 p = position;
   float k = a_inst.w;
   if (abs(mat - 6.0) < 0.5) p.x *= k;                               // rope across the street

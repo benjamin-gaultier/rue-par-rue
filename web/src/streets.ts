@@ -243,9 +243,9 @@ const MODELS: Record<number, () => Model> = {
       [0.18, -0.18]
     ])
       m.cyl(0.06, 0.08, 0.95, 2.0, MAT.iron, 6, x, y)
-    m.cyl(0.12, 0.44, 2.0, 2.35, MAT.iron)
-    m.cyl(0.03, 0.14, 2.35, 2.62, MAT.iron, 6)
-    m.dome(0.05, 0, 0, 2.62, MAT.iron, 1, 6)
+    m.cyl(0.44, 0.4, 1.98, 2.06, MAT.iron, 8)
+    m.dome(0.42, 0, 0, 2.06, MAT.iron, 0.75, 8)
+    m.cyl(0.02, 0.07, 2.36, 2.7, MAT.iron, 5)
     return m
   },
   [VARIANT.kiosk]: () =>

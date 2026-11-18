@@ -110,7 +110,7 @@ export class Model3D {
   enter(year: number, fly = true) {
     const map = this.map
     if (!this.added) {
-      map.addSource('model', { type: 'geojson', data: this.base + MODEL_URL, attribution: 'Massing model: APUR (ODbL), Vasserot cadastre/ALPAGE (ODbL); river and bridges: IGN BD TOPO; trees: Ville de Paris (ODbL)' })
+      map.addSource('model', { type: 'geojson', data: this.base + MODEL_URL, attribution: 'Massing model: APUR (ODbL), Vasserot cadastre/ALPAGE (ODbL); river and bridges: IGN BD TOPO; trees, pavements, street lamps and furniture: Ville de Paris (ODbL)' })
       map.addLayer(
         {
           id: 'model',

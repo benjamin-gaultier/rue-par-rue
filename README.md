@@ -51,7 +51,7 @@ About 600 m around the cathedral (`focus` in `AREAS`, about 2,000 buildings acro
 - **Facades by age.** Houses standing in 1836 get plaster in varied colours, narrow window bays, shutters and painted wooden shopfronts. Buildings of 1851–1914 get cut stone, a rusticated ground floor with arched openings, and balconies on the second and fifth floors. Later buildings get plainer, wider windows. Walls that touch a neighbour standing at the same time are left blind, as Paris gable walls are.
 - **Roofs from APUR.** `c_forme_toit` gives the shape: brisis-terrasson becomes a mansard with dormers lined up on the windows below, two-pitch roofs a ridge along the footprint's long axis, flat roofs a terrace. `c_toiture_mat` gives tile, zinc, stone or planting. Demolished houses get tile roofs with gables; chimney stacks rise from party walls.
 - **Notre-Dame.** Towers come from APUR (about 67 m). The west front is laid out along the line across the cathedral's westernmost points: three portals, the gallery of kings, the rose window between two traceried windows, the great gallery and the belfries. The spire stands from 1860 (Viollet-le-Duc), is missing from April 2019 and back in 2024.
-- **The river.** `python -m rpr site --area cite` fetches the Seine from IGN BD TOPO with its water level (27 m, against 34 m in the streets), so the river sits 7 m down between stone quays. Bridge decks come from the BD TOPO road segments marked as bridges; their side walls are pierced by arches. Streets and squares are paved with sandstone setts.
+- **The river.** `python -m rpr site --area cite` fetches the Seine from IGN BD TOPO with its water level (27 m, against 34 m in the streets), so the river sits 7 m down between stone quays. Bridge decks come from the BD TOPO road segments marked as bridges; their side walls are pierced by arches. Streets and squares are paved by year (see Streets through time below).
 - **Gardens and trees.** `python -m rpr greenery --area cite` takes the 1,038 trees in the area from the City of Paris tree register (species, height, girth) and the garden outlines from APUR. Neither has dates, so the dates are reasoned:
   - Gardens open in the year their history gives (square Jean-XXIII 1844, square de l'Île-de-France 1914, square René-Viviani 1928…). Five small gardens with no source found are shown from 1950 and flagged in the data.
   - Trees in a garden are planted when it opens, street trees with the Second Empire's tree-lined quays (from 1855).
@@ -62,6 +62,36 @@ About 600 m around the cathedral (`focus` in `AREAS`, about 2,000 buildings acro
 - **The year is a shader uniform**, so dragging the slider costs nothing: buildings that do not stand that year are dropped on the GPU.
 
 Facades are generated, not surveyed: they show the character of each period, not the real windows of each house.
+
+#### Streets through time
+
+`python -m rpr streets --area cite` (needs shapely) writes `web/public/data/3d/streets-cite.json` (about 415 kB) for the whole Cité area, and `web/src/streets.ts` draws it. There are two street networks:
+
+- **Before Haussmann (1780–1860): the Vasserot street space of about 1836.** A centreline is traced through every street (the medial axis of the street space, from a Voronoi diagram of its edges). Streets 2.4–14 m wide have a central gutter (ruisseau) and no pavements. Streets at least 10 m wide get 1.6 m pavements with granite kerbs from 1845: Prefect Chabrol required kerbed pavements on new streets from 1823, and the law of 7 June 1845 and the Paris rules of 1846 made them general; the 10 m rule is an approximation. The same streets are used before 1810.
+- **From 1860: today's streets.** Pavements and pedestrian crossings from the City of Paris road plan (plan de voirie), main roads from IGN BD TOPO. Streets that survived the clearances (around rue Chanoinesse) switch to today's pavements in 1860 too. Pavements over the river wait for the present bridge (Petit-Pont 1853, Pont Saint-Michel 1857, Pont au Double 1883…).
+
+Pavements are real geometry: a 15 cm step with granite kerbs and a gutter along them. The roadway is drawn by the ground shader by year: sandstone setts until 1970 (in 1907 about 6 of Paris's 10 million m² of roadway were still sandstone; granite setts mix in from 1900); main roads in macadam from 1860 and asphalt from 1900 (asphalt was first laid in rue Bergère in 1854); asphalt everywhere from 1970, as the setts were tarred over after 1968. These years are approximations.
+
+Street furniture, with the year each kind appears:
+
+| Item | Years | Where | Dates |
+| --- | --- | --- | --- |
+| Oil réverbères on a rope across the street, or on a post on squares and quays | until 1850 | every 45 m along the 1836 centrelines | Réverbères from 1766–1769. Gas replaced oil from 1839, oil was left on secondary streets in the early 1850s, the gas companies merged in 1855: gas on the Cité from 1850 is an approximation |
+| Gas lanterns on wall brackets and cast-iron candelabra | 1850–1960 | the same places until 1860, then today's lamp positions | The last gas lamps of Paris went out in 1962 |
+| Today's lamps (Paris lanterns, functional poles, wall lamps) | from 1960 | today's positions (éclairage public) | Functional poles from 1960 is an approximation |
+| Street names engraved on stone, then blue enamel plaques | from 1729; enamel from 1847 | block corners, on both facades, only while the wall stands | Ordered in 1728; enamel plaques under Rambuteau from 1847 |
+| Stone kerb stones (bornes) | until 1860 | corners of the 1836 blocks | |
+| Rambuteau columns, then Morris columns | from 1839; Morris from 1868 | wide pavements, about 180 m apart | Authorised 1839 (478 by 1841); Morris from 1868 |
+| Vespasiennes | 1868–1980 | wide pavements, about 300 m apart | Replaced by automatic toilets from 1980 (approximation) |
+| Newspaper kiosks | from 1860 | today's kiosks | Kiosks from 1857 |
+| Wallace fountains | from 1872 | today's fountains | First installed in 1872; the dataset has no installation dates |
+| Benches | from 1860 | every 35 m on pavements at least 4.5 m deep | Approximation |
+| Cast-iron tree grates | with each street tree | under the trees of the greenery step | |
+| Pedestrian crossings: studs, then white bars | from 1930; bars from 1963 | today's crossings | 78 studded crossings in Paris in 1928, over 12,000 in 1934; white bars after the instruction of 22 October 1963 |
+| Dashed centre lines | from 1963 | two-way main roads | Approximation |
+| Bollards | from 1980 | today's bollards (plan de voirie) | Approximation |
+
+Nothing stands inside a building standing that year: the app trims every life against the model's buildings, and plaques and wall lamps show only while their wall stands. Positions placed by rule (lanterns, kerb stones, plaques, columns, benches) show the character of each period, not surveyed positions. Each model changes with the year on the GPU (oil lantern to gas, stone plaque to enamel, Rambuteau column to Morris), and furniture of the other network is skipped as a whole mesh, so about seven furniture draw calls are made in any year.
 
 #### Photos in 3D and walking the streets
 
