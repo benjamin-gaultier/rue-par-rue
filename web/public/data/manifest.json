@@ -109,5 +109,30 @@
     "gardens": 13,
     "trees": 1038,
     "updated_at": "2026-11-18T08:56:37Z"
+  },
+  "streets_cite": {
+    "area": "cite",
+    "file": "3d/streets-cite.json",
+    "bytes": 415481,
+    "gutter runs": 451,
+    "lantern": 375,
+    "potence": 347,
+    "candelabra": 1352,
+    "old pavements": 247,
+    "column": 50,
+    "kerb_stone": 414,
+    "plaque": 1323,
+    "modern pavements": 1125,
+    "crossings": 391,
+    "main road areas": 7,
+    "centre lines": 13,
+    "pole": 397,
+    "wall_lamp": 705,
+    "wallace": 8,
+    "kiosk": 18,
+    "bollard": 8978,
+    "vespasienne": 12,
+    "bench": 326,
+    "updated_at": "2026-11-18T10:50:55Z"
   }
 }

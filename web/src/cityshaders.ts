@@ -10,6 +10,7 @@
 
 import { institutionFacades } from './institutionshaders'
 import { landmarkFacades } from './landmarkshaders'
+import { roadSurface } from './streetshaders'
 
 const common = /* glsl */ `
 uniform float u_year;
@@ -484,22 +485,15 @@ void main() {
 
 export const groundFragment = /* glsl */ `
 ${common}
+${roadSurface}
 varying vec3 v_world;
 varying float v_kind;
 void main() {
   vec2 p = v_world.xy;
   vec2 aa = fwidth(p) * 0.8 + 1e-4;
   float detail = 1.0 - smoothstep(0.03, 0.12, max(aa.x, aa.y));
-  // Sandstone setts in staggered rows.
-  vec2 size = vec2(0.24, 0.15);
-  float row = floor(p.y / size.y);
-  vec2 q = vec2(p.x / size.x + row * 0.5, p.y / size.y);
-  vec2 cell = floor(q);
-  vec2 f = fract(q);
-  vec3 stone = mix(vec3(0.56, 0.53, 0.48), vec3(0.47, 0.45, 0.42), hash(cell));
-  float joint = 1.0 - rect(f, vec2(0.08), vec2(0.92), aa / size * 1.5);
-  vec3 col = mix(stone, vec3(0.30, 0.28, 0.25), joint * 0.8);
-  col = mix(vec3(0.51, 0.49, 0.45), col, detail);
+  // The roadway of the year (streetshaders.ts): setts, macadam or asphalt. Bridge decks are main roads.
+  vec3 col = roadSurface(p, aa, detail, v_kind > 0.5 ? 1.0 : 0.0);
   // Dirt and wear at a larger scale.
   col *= 0.88 + 0.2 * noise(p * 0.08) - 0.06 * noise(p * 0.9);
   if (v_kind > 0.5) col *= 1.04; // bridge decks
@@ -707,7 +701,8 @@ void main() {
   float R = crownShape(a_tree.w).x * H * 1.15;
   vec2 away = -normalize(u_sun.xy) * H * 0.45;
   v_p = position.xy;
-  vec3 world = vec3(a_tree.xy + away + position.xy * 2.0 * R, 0.08);
+  // Above the pavements (15 cm, streets.ts) so street trees keep their shadow.
+  vec3 world = vec3(a_tree.xy + away + position.xy * 2.0 * R, 0.17);
   v_world = world;
   gl_Position = projectionMatrix * modelViewMatrix * vec4(world, 1.0);
 }
