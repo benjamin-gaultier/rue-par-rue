@@ -30,6 +30,16 @@ function spec(polys: Poly[], over: Partial<BuildingSpec> = {}): BuildingSpec {
 
 /** Highest z of a mesh. */
 const top = (m: MeshData) => Math.max(...m.position.filter((_, i) => i % 3 === 2))
+/** The first vertex of each triangle of a mesh. */
+const corners = (m: MeshData) => m.index.filter((_, i) => i % 3 === 0)
+/** Vertices of the plain walls of a mesh (a_c.x = 0), without the relief. */
+const plain = (m: MeshData) => {
+  const out = new MeshData()
+  for (let v = 0; v < m.position.length / 3; v++)
+    if (m.c[v * 4] === 0) out.vertex([m.position[v * 3], m.position[v * 3 + 1], m.position[v * 3 + 2]], [0, 0, 1], [0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0])
+  return out
+}
+const plainTriangles = (m: MeshData) => corners(m).filter((v) => m.c[v * 4] === 0).length
 
 describe('polygons', () => {
   it('orients outer rings counter-clockwise and holes clockwise, without the closing point', () => {
@@ -70,19 +80,19 @@ describe('buildings', () => {
     addBuilding(spec([normalisePoly([rect(0, 0, 12, 6)])!], { roof: 'gable', height: 14 }), 0, walls, roofs)
     // Half-width 3 m at 45°: a 3 m rise, eaves 1.5 m below the median height.
     expect(top(roofs)).toBeCloseTo(15.5)
-    expect(top(walls)).toBeCloseTo(15.5) // the gable walls reach the ridge
+    expect(top(plain(walls))).toBeCloseTo(15.5) // the gable walls reach the ridge
     // Two crossing points are added to the rectangle: six walls of two triangles.
-    expect(walls.triangles).toBe(12)
+    expect(plainTriangles(walls)).toBe(12)
   })
 
   it('puts a mansard with dormer faces on a Paris building', () => {
     const walls = new MeshData()
     const roofs = new MeshData()
     addBuilding(spec([normalisePoly([rect(0, 0, 20, 12)])!], { roof: 'mansard', height: 20, style: STYLE.haussmann }), 0, walls, roofs)
-    expect(top(walls)).toBeCloseTo(18)
+    expect(top(plain(walls))).toBeCloseTo(18)
     expect(top(roofs)).toBeCloseTo(21)
     const kinds = new Set(roofs.b.filter((_, i) => i % 4 === 1))
-    expect(kinds).toEqual(new Set([FACE.brisis, FACE.flat]))
+    expect(kinds).toEqual(new Set([FACE.brisis, FACE.flat, FACE.dormer]))
   })
 
   it('falls back to a flat roof when the footprint is too thin for a mansard', () => {
@@ -95,11 +105,11 @@ describe('buildings', () => {
   it('marks the walls between neighbours that stand at the same time as party walls', () => {
     const a = spec([normalisePoly([rect(0, 0, 10, 10)])!])
     const b = spec([normalisePoly([rect(10.3, 0, 20, 10)])!])
-    const party = (m: MeshData) => m.a.filter((_, i) => i % 4 === 3).filter((v) => v === 1).length / 6
-    expect(party(buildCity([a, b]).walls)).toBe(2)
+    const party = (m: MeshData) => corners(m).filter((v) => m.a[v * 4 + 3] === 1).length / 2
+    expect(party(buildCity([a, b]).facades)).toBe(2)
     const later = { ...b, life: [1900, 1e4, 0, 0] as [number, number, number, number] }
     const gone = { ...a, life: [-1e4, 1860, 0, 0] as [number, number, number, number] }
-    expect(party(buildCity([gone, later]).walls)).toBe(0)
+    expect(party(buildCity([gone, later]).facades)).toBe(0)
   })
 
   it('knows which lives overlap', () => {

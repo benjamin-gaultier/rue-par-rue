@@ -203,6 +203,7 @@ describe('packed meshes', () => {
     expect(p.vertices).toBe(6)
     const m2 = new MeshData()
     for (const k of [0, 1, 2, 0, 2, 3]) m2.vertex(q[k], [0, -1, 0], [q[k][0], q[k][2], 1, 0], [1, 0.5, 2, 3], life)
+    m2.owner.push(7, 7)
     const p2 = packMesh(m2)
     // ...while a real wall quad keeps four corners.
     expect(p2.vertices).toBe(4)
@@ -210,6 +211,12 @@ describe('packed meshes', () => {
     expect(Array.from(p2.life.slice(0, 4))).toEqual([-10000, 1860, 0, 0])
     expect(Array.from(p2.normal.slice(0, 3))).toEqual([0, -127, 0])
     expect(Array.from(p2.position.slice(6, 9))).toEqual([1, 0, 1])
+    // A quad written with MeshData.quad shares its corners the same way.
+    const m3 = new MeshData()
+    m3.quad(q, [0, -1, 0], q.map((c) => [c[0], c[2], 1, 0]), [1, 0.5, 2, 3], life, [0, 0, 0, 0], 7)
+    const p3 = packMesh(m3)
+    expect(p3.vertices).toBe(4)
+    expect(Array.from(p3.index)).toEqual([0, 1, 2, 0, 2, 3])
   })
 })
 

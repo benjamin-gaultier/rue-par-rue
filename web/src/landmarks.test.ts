@@ -24,7 +24,9 @@ function consistent(m: MeshData) {
   expect(m.a.length / 4).toBe(n)
   expect(m.b.length / 4).toBe(n)
   expect(m.life.length / 4).toBe(n)
-  expect(m.owner.length * 3).toBe(n)
+  // Triangles index their corners (quads share theirs): three per owner.
+  expect(m.index.length).toBe(m.owner.length * 3)
+  expect(m.index.every((i) => i >= 0 && i < n)).toBe(true)
   expect(m.position.every(Number.isFinite)).toBe(true)
 }
 
