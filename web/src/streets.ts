@@ -290,7 +290,7 @@ export function modelGeometry(variants: number[]): THREE.BufferGeometry {
 
 interface ModelFeature {
   geometry: { type: string; coordinates: unknown }
-  properties: { kind?: string; from?: number; until?: number; focus?: boolean }
+  properties: { id?: string; kind?: string; from?: number; until?: number; focus?: boolean }
 }
 
 /** Years a model building stands (as lifeOf in city3d.ts). */
@@ -300,19 +300,29 @@ function buildingLife(p: ModelFeature['properties']): Life {
   return [p.from ?? 1851, OPEN, 0, 0]
 }
 
-/** Every building of the model near the box: the detailed ones as built (modules may have changed them), the rest from the model file. */
+/**
+ * Every building of the model near the box: the detailed ones as built (a
+ * module may have changed their life), and from the model file those drawn
+ * elsewhere (plain blocks, or landmarks a module draws itself).
+ */
 function buildingsOf(ctx: CityContext, box: [number, number, number, number]): Buildings {
   const b = new Buildings()
-  ctx.buildings.specs.forEach((s) => b.add(s.polys, s.life))
+  const specById = new Map<string, (typeof ctx.buildings.specs)[number]>()
+  ctx.buildings.specs.forEach((s, i) => {
+    if (s.polys.length) b.add(s.polys, s.life)
+    const id = ctx.buildings.props[i]?.id
+    if (id) specById.set(id, s)
+  })
   for (const f of ctx.model.features as unknown as ModelFeature[]) {
-    if (f.properties.focus) continue
+    const spec = f.properties.id ? specById.get(f.properties.id) : undefined
+    if (spec?.polys.length) continue
     const g = f.geometry
     if (g.type !== 'Polygon' && g.type !== 'MultiPolygon') continue
     const list = (g.type === 'Polygon' ? [g.coordinates] : g.coordinates) as number[][][][]
     const first = ctx.project(list[0][0][0])
     if (!inBox(first, box, MARGIN + 150)) continue
     const polys = list.map((rings) => normalisePoly(rings.map((r) => r.map(ctx.project)))).filter((p): p is Poly => p !== null)
-    b.add(polys, buildingLife(f.properties))
+    b.add(polys, spec?.life ?? buildingLife(f.properties))
   }
   return b
 }
