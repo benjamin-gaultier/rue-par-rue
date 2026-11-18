@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest'
 import { MeshData, ROOF_MATERIAL, STYLE, type BuildingSpec, type Poly, type Pt } from './citygen'
 import * as G from './landmarkgen'
 import { applyLandmarks, buildParts, parcelOf, replacedUntil, samplePoints, type LandmarkFile } from './landmarks'
+import { landmarkFacades } from './landmarkshaders'
 
 const square = (x0: number, y0: number, x1: number, y1: number): Poly => [
   [
@@ -218,5 +219,19 @@ describe('landmark geometry', () => {
     for (let i = 0; i < props.b.length; i += 4) if (props.b[i + 3] === G.PROP.clock) clock.push(props.position[(i / 4) * 3])
     expect(clock.length).toBe(6)
     expect(clock.every((x) => Math.abs(x - 50.08) < 1e-6)).toBe(true)
+  })
+})
+
+describe('landmark shaders', () => {
+  // Given z and the band's bounds, which its callers had just tested, lmBalustrade sent
+  // Direct3D's shader compiler (Chrome and Edge on Windows) into endless recursion: the GPU
+  // process crashed and the detailed island could not be drawn.
+  it('gives the balustrade heights within its band', () => {
+    const calls = [...landmarkFacades.matchAll(/lmBalustrade\((.*?), aa\)/g)].map((m) => m[1].split(',').map((a) => a.trim()))
+    expect(calls.length).toBe(3)
+    for (const [, , dz, h] of calls) {
+      expect(dz).toMatch(/^z - \(.+\)$/)
+      expect(Number(h)).toBeGreaterThan(0)
+    }
   })
 })

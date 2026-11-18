@@ -31,8 +31,7 @@ import {
   type Poly,
   type Pt,
   type RoofShape,
-  type TreeSpec
-} from './citygen'
+  type TreeSpec, splitByFamily } from './citygen'
 import * as S from './cityshaders'
 import { addBridgeHistory, type BridgeProps } from './bridges'
 import { packMesh } from './meshpack'
@@ -436,19 +435,25 @@ export class City3D implements CustomLayerInterface {
       trees = treesOf(greenery, this.project)
       this.trees = trees.length
     }
-    const material = (vertexShader: string, fragmentShader: string, order: number) => {
-      const m = new THREE.ShaderMaterial({ vertexShader, fragmentShader, uniforms: this.uniforms, side: THREE.DoubleSide, transparent: true })
+    const material = (name: string, vertexShader: string, fragmentShader: string, order: number, families: string[] = []) => {
+      const m = new THREE.ShaderMaterial({ name, vertexShader, fragmentShader: S.shaderVariant(fragmentShader, families), uniforms: this.uniforms, side: THREE.DoubleSide, transparent: true })
       return { m, order }
     }
+    // Walls by family, each with a shader holding only its own facades.
+    const [plainWalls, bridgeWalls, institutionWalls, landmarkWalls] = splitByFamily(walls)
     const meshes: [MeshData, ReturnType<typeof material>, boolean][] = [
-      [water, material(S.groundVertex, S.waterFragment, 0), true],
-      [ground, material(S.groundVertex, S.groundFragment, 1), true],
-      [lawns, material(S.gardenVertex, S.gardenFragment, 1), false],
-      [walls, material(S.wallVertex, S.wallFragment, 2), true],
-      [facades, material(S.wallVertex, S.facadeFragment, 2), true],
-      [details, material(S.wallVertex, S.detailFragment, 2), true],
-      [roofs, material(S.roofVertex, S.roofFragment, 3), true]
+      [water, material('water', S.groundVertex, S.waterFragment, 0), true],
+      [ground, material('ground', S.groundVertex, S.groundFragment, 1), true],
+      [lawns, material('lawns', S.gardenVertex, S.gardenFragment, 1), false],
+      [plainWalls, material('walls', S.wallVertex, S.wallFragment, 2), true],
+      [bridgeWalls, material('walls-bridges', S.wallVertex, S.wallFragment, 2, ['WALL_BRIDGES']), true],
+      [institutionWalls, material('walls-institutions', S.wallVertex, S.wallFragment, 2, ['WALL_INSTITUTIONS']), true],
+      [landmarkWalls, material('walls-landmarks', S.wallVertex, S.wallFragment, 2, ['WALL_LANDMARKS']), true],
+      [facades, material('facades', S.wallVertex, S.facadeFragment, 2), true],
+      [details, material('details', S.wallVertex, S.detailFragment, 2), true],
+      [roofs, material('roofs', S.roofVertex, S.roofFragment, 3), true]
     ]
+    this.plainWalls = meshes[3][1].m
     for (const [data, { m, order }, pickable] of meshes) {
       if (!data.triangles) continue
       const mesh = new THREE.Mesh(geometry(data), m)
@@ -524,9 +529,21 @@ export class City3D implements CustomLayerInterface {
     // report it, so the app can show the plain blocks and say why.
     this.renderer.debug.onShaderError = (g, program, vs, fs) => {
       const log = [g.getShaderInfoLog(vs), g.getShaderInfoLog(fs), g.getProgramInfoLog(program)].filter((s) => s && s.trim()).join(' ')
-      this.fail(`a shader did not compile on this device (${log.trim().slice(0, 300) || 'no log'})`)
+      const source = g.getShaderSource(fs) ?? ''
+      const name = /#define SHADER_NAME (.*)/.exec(source)?.[1]?.trim() || 'unnamed'
+      // A family of walls with special facades falls back to the ordinary wall shader.
+      if (this.plainWalls && (name.startsWith('walls-') || name === 'landmarks-2')) {
+        console.warn(`The "${name}" shader did not compile on this device: drawing those walls plain.`, log)
+        this.fallbacks.add(name)
+        return
+      }
+      this.fail(`the "${name}" shader (${Math.round(source.length / 1000)} kB) did not compile on this device (${log.trim().slice(0, 300) || 'no log'})`)
     }
   }
+
+  /** The ordinary wall material, for walls whose own shader does not compile. */
+  private plainWalls?: THREE.Material
+  private fallbacks = new Set<string>()
 
   /** Called once if the city cannot be drawn on this device. */
   onFail?: (reason: string) => void
@@ -573,6 +590,15 @@ export class City3D implements CustomLayerInterface {
       this.treeLod?.(this.uniforms.u_camera.value)
       this.renderer.resetState()
       this.renderer.render(this.scene, this.camera)
+      if (this.fallbacks.size) {
+        const plain = this.plainWalls!
+        this.scene.traverse((o) => {
+          const mesh = o as THREE.Mesh
+          if (mesh.isMesh && this.fallbacks.has((mesh.material as THREE.Material).name)) mesh.material = plain
+        })
+        this.fallbacks.clear()
+        this.map?.triggerRepaint()
+      }
     } catch (err) {
       this.fail(`drawing failed (${err instanceof Error ? err.message : String(err)})`)
       return

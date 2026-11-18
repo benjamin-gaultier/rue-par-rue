@@ -1030,3 +1030,30 @@ export function addQuay(m: MeshData, line: Pt[], z0: number, z1: number, lowTop:
 }
 
 // Bridges, with their history: see bridges.ts.
+
+/** Wall families that compile their own shader (see wallFragment): plain, bridges, institutions, landmarks. */
+export const WALL_FAMILY = { plain: 0, bridges: 1, institutions: 2, landmarks: 3 } as const
+
+export function wallFamily(style: number): number {
+  if (style > 19.5) return WALL_FAMILY.landmarks
+  if (style > 9.5) return WALL_FAMILY.institutions
+  if (style > 3.5 && style < 4.5) return WALL_FAMILY.bridges
+  return WALL_FAMILY.plain
+}
+
+/** Split a mesh into one mesh per wall family, by each triangle's style; triangles keep their order and owners. */
+export function splitByFamily(m: MeshData): MeshData[] {
+  const out = [new MeshData(), new MeshData(), new MeshData(), new MeshData()]
+  const tris = m.owner.length
+  const indexed = m.index.length === tris * 3
+  const at = (v: number, size: number, arr: number[]) => arr.slice(v * size, v * size + size)
+  for (let t = 0; t < tris; t++) {
+    const corners = [0, 1, 2].map((k) => (indexed ? m.index[t * 3 + k] : t * 3 + k))
+    const target = out[wallFamily(m.b[corners[0] * 4])]
+    for (const v of corners) {
+      target.vertex(at(v, 3, m.position) as [number, number, number], at(v, 3, m.normal) as [number, number, number], at(v, 4, m.a), at(v, 4, m.b), at(v, 4, m.life), m.c.length ? at(v, 4, m.c) : NO_C)
+    }
+    target.owner.push(m.owner[t])
+  }
+  return out
+}

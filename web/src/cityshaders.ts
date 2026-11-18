@@ -327,9 +327,19 @@ vec4 westFront(float s, float z, float eave, vec3 stone, vec2 aa) {
   return vec4(col, glass);
 }
 
+// Each family of walls compiles only the code it needs (city3d.ts splits the
+// walls by style and sets these): with every facade in one shader, Direct3D's
+// compiler (Chrome and Edge on Windows) took about 5 s, against 0.4 s for
+// ordinary walls alone.
+#ifdef WALL_LANDMARKS
 ${landmarkFacades}
+#endif
+#ifdef WALL_INSTITUTIONS
 ${institutionFacades}
+#endif
+#ifdef WALL_BRIDGES
 ${bridgeFacades}
+#endif
 
 void main() {
   float u = v_a.x, z = v_a.y, L = v_a.z, flags = v_a.w;
@@ -386,15 +396,22 @@ void main() {
     vec4 f = westFront(dot(rel, t), z, eave, vec3(0.83, 0.79, 0.70) * (0.95 + 0.06 * noise(v_world.xy * 0.4)), aa);
     col = f.rgb;
     glass = f.a;
-  } else if (st > 19.5) {
+  }
+#ifdef WALL_LANDMARKS
+  else if (st > 19.5) {
     vec4 f = landmarkFacade(st, u, z, L, eave, seed, v_world, v_normal, aa);
     col = f.rgb;
     glass = f.a;
-  } else if (st > 9.5) {
+  }
+#endif
+#ifdef WALL_INSTITUTIONS
+  else if (st > 9.5) {
     vec4 f = institutionFacade(st, u, z, L, eave, seed, v_world, v_normal, aa);
     col = f.rgb;
     glass = f.a;
-  } else if (st > 6.5 && st < 7.5) {
+  }
+#endif
+  else if (st > 6.5 && st < 7.5) {
     // Cast-iron garden railing: bars every 14 cm between a bottom and a top rail.
     float d = (0.5 - abs(fract(u / 0.14) - 0.5)) * 0.14;
     bool rail = z < 0.1 || (z > 0.86 && z < 0.93);
@@ -409,10 +426,14 @@ void main() {
     col *= 1.0 - 0.18 * course * detail;
     col *= mix(0.62, 1.0, smoothstep(-6.4, -5.2, z));
     if (z > 0.75) col *= 1.12;
-  } else if (st > 3.5 && st < 4.5) {
+  }
+#ifdef WALL_BRIDGES
+  else if (st > 3.5 && st < 4.5) {
     // Bridges, by kind and period: see bridgeshaders.ts.
     col = bridgeSurface(u, z, L, flags, seed, eave, fh, v_world, v_normal, aa, detail);
-  } else if (part > 0) {
+  }
+#endif
+  else if (part > 0) {
     // Relief parts are drawn by detailFragment (their own mesh).
     col = wall;
   } else if (flags > 0.5) {
@@ -1636,3 +1657,12 @@ void main() {
   gl_FragColor = vec4(0.05, 0.07, 0.04, a);
 }
 `
+
+/**
+ * A shader with its \`#ifdef NAME ... #endif\` blocks kept for the names
+ * given and cut out for the others, before the driver sees it: a smaller
+ * program for each family of walls, whatever the driver's preprocessor does.
+ */
+export function shaderVariant(source: string, enabled: string[]): string {
+  return source.replace(/^#ifdef (WALL_\w+)\n([\s\S]*?)^#endif\n/gm, (_all, name: string, body: string) => (enabled.includes(name) ? body : ''))
+}
