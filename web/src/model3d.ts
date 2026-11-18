@@ -16,7 +16,8 @@ export const MODEL_URL = 'data/3d/cite-1836.geojson'
 export const CITE_CAMERA = { from: [2.3455, 48.8522] as [number, number], altitude: 160, to: [2.3488, 48.8535] as [number, number] }
 /** The same view as plain camera options (bearing 59°, pitch 60°). */
 export const CITE_VIEW = { center: [2.3488, 48.8535] as [number, number], zoom: 17.3, pitch: 60, bearing: 59 }
-export const CITE_BOUNDS: [number, number, number, number] = [2.3395, 48.8505, 2.3565, 48.859]
+/** The model's box (AREAS["cite"]["bbox"] in the pipeline): the whole island, its bridges and the facing quays. */
+export const CITE_BOUNDS: [number, number, number, number] = [2.3385, 48.8505, 2.3565, 48.859]
 
 export const MODEL_COLORS = {
   standing: '#ece2cc',
@@ -63,7 +64,7 @@ export interface ModelProps {
   name?: string
   plan_url?: string
   iou?: number
-  /** History of an institution (Hôtel-Dieu, archbishop's palace…). */
+  /** History of an institution (Hôtel-Dieu, archbishop's palace…), or the first popup line for buildings not standing in 1836, such as houses on bridges. */
   note?: string
 }
 
@@ -72,7 +73,8 @@ export function describeBuilding(p: ModelProps): { title: string; lines: string[
   const title =
     p.address || p.name || (p.kind === 'standing' ? 'Building standing in 1836' : p.kind === 'reconstructed' ? 'Demolished building' : 'Later building')
   const lines: string[] = []
-  if (p.kind === 'standing') lines.push(`Built ${p.period}${p.built ? ` (${p.built})` : ''}, still standing`)
+  if (p.note) lines.push(p.note)
+  else if (p.kind === 'standing') lines.push(`Built ${p.period}${p.built ? ` (${p.built})` : ''}, still standing`)
   else if (p.kind === 'reconstructed') lines.push('Standing in 1836, demolished since')
   else lines.push(`Built ${p.period}`)
   lines.push(

@@ -651,33 +651,4 @@ export function addQuay(m: MeshData, line: Pt[], z0: number, z1: number, lowTop:
   }
 }
 
-/**
- * A bridge: the deck as paving, and two stone side walls from the water to
- * the parapet, pierced by arches in the shader (style `bridge`).
- */
-export function addBridge(walls: MeshData, ground: MeshData, deck: Poly, waterZ: number, landEnd = 4) {
-  const ring = deck[0]
-  addSurface(ground, deck, 0.06, 1)
-  const box = orientedBox(ring)
-  for (let i = 0; i < ring.length; i++) {
-    const a = ring[i]
-    const b = ring[(i + 1) % ring.length]
-    const L = Math.hypot(b[0] - a[0], b[1] - a[1])
-    if (L < 1) continue
-    const dx = (b[0] - a[0]) / L
-    const dy = (b[1] - a[1]) / L
-    if (Math.abs(dx * box.dir[0] + dy * box.dir[1]) < 0.9) continue // the ends: open to the road
-    const arches = Math.max(1, Math.round((L - 2 * landEnd) / 30))
-    const n: [number, number, number] = [dy, -dx, 0]
-    const bv = [STYLE.bridge, 0.5, arches, landEnd]
-    const life = [-1e4, 1e4, 0, 0]
-    const z1 = 1.0
-    walls.vertex([a[0], a[1], waterZ], n, [0, waterZ, L, 2], bv, life)
-    walls.vertex([b[0], b[1], waterZ], n, [L, waterZ, L, 2], bv, life)
-    walls.vertex([b[0], b[1], z1], n, [L, z1, L, 2], bv, life)
-    walls.vertex([a[0], a[1], waterZ], n, [0, waterZ, L, 2], bv, life)
-    walls.vertex([b[0], b[1], z1], n, [L, z1, L, 2], bv, life)
-    walls.vertex([a[0], a[1], z1], n, [0, z1, L, 2], bv, life)
-    walls.owner.push(-1, -1)
-  }
-}
+// Bridges, with their history: see bridges.ts.

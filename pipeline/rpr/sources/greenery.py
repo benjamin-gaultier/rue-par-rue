@@ -43,6 +43,13 @@ GARDENS: dict[int, tuple[str, int, str]] = {
     750003829: ("Jardin de l'Hôtel de Ville", 1848, "The prefect's garden, which survived the fire of 1871"),
     750000312: ("Jardin du cloître Saint-Séverin", 1700, "The church's old charnel-house cloister"),
     750000207: ("Jardin du parvis Notre-Dame", 1970, "Planted when the parvis was replanned, about 1970"),
+    # Added with the whole island (searches of November 2026).
+    750006626: ("Square du Vert-Galant", 1884, "The island's tip became a municipal garden in 1884 (paris.fr)"),
+    750000199: (
+        "Square de la Tour Saint-Jacques",
+        1856,
+        "The first Haussmannian square, laid out by Alphand and opened in 1856 (paris.fr, napoleon.org)",
+    ),
 }
 
 # Tree groups the app draws differently, by genus.

@@ -1,7 +1,8 @@
 /**
- * The detailed focus area around Notre-Dame: procedural buildings with
- * storeys, windows, shopfronts, mansard and tile roofs, chimneys, paved
- * streets, and the Seine sunk between its quays with arched bridges.
+ * The detailed island (the Île de la Cité and the facing quays): procedural
+ * buildings with storeys, windows, shopfronts, mansard and tile roofs,
+ * chimneys, paved streets, and the Seine sunk between its quays with each
+ * bridge as it stood that year (bridges.ts).
  *
  * A MapLibre custom layer drawn with three.js in the map's WebGL context,
  * sharing its depth buffer with the plain blocks of the rest of the model.
@@ -16,7 +17,6 @@
 import * as THREE from 'three'
 import { MercatorCoordinate, type CustomLayerInterface, type CustomRenderMethodInput, type Map as MapLibreMap } from 'maplibre-gl'
 import {
-  addBridge,
   addQuay,
   addRailing,
   addSpire,
@@ -34,6 +34,8 @@ import {
   type TreeSpec
 } from './citygen'
 import * as S from './cityshaders'
+import { addBridgeHistory, type BridgeProps } from './bridges'
+import { packMesh } from './meshpack'
 import type { ModelProps } from './model3d'
 
 export const SITE_URL = 'data/3d/site-cite.geojson'
@@ -71,6 +73,53 @@ function treeGeometry(base: THREE.BufferGeometry, trees: TreeSpec[]): THREE.Inst
   g.setAttribute('a_tree2', new THREE.InstancedBufferAttribute(b, 4))
   g.instanceCount = trees.length
   return g
+}
+
+/**
+ * Crown detail by distance from the camera (metres): icosahedra of detail 2
+ * (180 faces) within the first radius, 1 (80) within the second, 0 (20)
+ * beyond, where the haze has begun and a crown is a few pixels wide.
+ */
+export const TREE_LEVELS_M = [160, 450]
+/** The trees are sorted again when the camera has moved this far. */
+const TREE_RESORT_M = 30
+
+/** Indices of the trees in each distance band from (x, y): one list per radius, and one for the rest. */
+export function partitionTrees(trees: Pick<TreeSpec, 'x' | 'y'>[], x: number, y: number, radii: number[] = TREE_LEVELS_M): number[][] {
+  const out = [...radii, Infinity].map(() => [] as number[])
+  const r2 = radii.map((r) => r * r)
+  trees.forEach((t, i) => {
+    const d2 = (t.x - x) ** 2 + (t.y - y) ** 2
+    let level = r2.findIndex((r) => d2 < r)
+    if (level < 0) level = radii.length
+    out[level].push(i)
+  })
+  return out
+}
+
+/**
+ * A cheap level of detail for the crowns: every crown mesh holds every
+ * tree's attributes and draws only the trees of its distance band, refilled
+ * when the camera has moved TREE_RESORT_M.
+ */
+function treeLevels(trees: TreeSpec[], levels: THREE.InstancedBufferGeometry[]) {
+  const src = ['a_tree', 'a_tree2'].map((k) => Float32Array.from((levels[0].getAttribute(k) as THREE.InstancedBufferAttribute).array as Float32Array))
+  let last: [number, number] | undefined
+  return (camera: THREE.Vector3) => {
+    if (last && Math.hypot(camera.x - last[0], camera.y - last[1]) < TREE_RESORT_M) return
+    last = [camera.x, camera.y]
+    const bands = partitionTrees(trees, camera.x, camera.y)
+    levels.forEach((g, level) => {
+      const list = bands[level]
+      ;['a_tree', 'a_tree2'].forEach((k, j) => {
+        const attr = g.getAttribute(k) as THREE.InstancedBufferAttribute
+        const out = attr.array as Float32Array
+        list.forEach((i, n) => out.set(src[j].subarray(i * 4, i * 4 + 4), n * 4))
+        attr.needsUpdate = true
+      })
+      g.instanceCount = list.length
+    })
+  }
 }
 
 export interface CityProps extends ModelProps {
@@ -150,13 +199,16 @@ export function aliveIn(life: [number, number, number, number], year: number): b
   return year >= life[0] && year < life[1] && !(year >= life[2] && year < life[3])
 }
 
+/** GPU geometry for a mesh, with shared vertices merged behind an index (see meshpack.ts). */
 function geometry(m: MeshData): THREE.BufferGeometry {
+  const p = packMesh(m)
   const g = new THREE.BufferGeometry()
-  g.setAttribute('position', new THREE.Float32BufferAttribute(m.position, 3))
-  g.setAttribute('normal', new THREE.Float32BufferAttribute(m.normal, 3))
-  g.setAttribute('a_a', new THREE.Float32BufferAttribute(m.a, 4))
-  g.setAttribute('a_b', new THREE.Float32BufferAttribute(m.b, 4))
-  g.setAttribute('a_life', new THREE.Float32BufferAttribute(m.life, 4))
+  g.setIndex(new THREE.BufferAttribute(p.index, 1))
+  g.setAttribute('position', new THREE.BufferAttribute(p.position, 3))
+  g.setAttribute('normal', new THREE.BufferAttribute(p.normal, 3, true))
+  g.setAttribute('a_a', new THREE.BufferAttribute(p.a, 4))
+  g.setAttribute('a_b', new THREE.BufferAttribute(p.b, 4))
+  g.setAttribute('a_life', new THREE.BufferAttribute(p.life, 4))
   g.computeBoundingSphere()
   return g
 }
@@ -254,6 +306,7 @@ export class City3D implements CustomLayerInterface {
   count = 0
   trees = 0
   private extras: THREE.Mesh[] = []
+  private treeLod?: (camera: THREE.Vector3) => void
   private blockers: ((p: Pt, year: number) => boolean)[] = []
   private steps: ((seconds: number) => boolean)[] = []
   /** Modules that failed to load, by name (shown in the console only). */
@@ -328,10 +381,16 @@ export class City3D implements CustomLayerInterface {
     const ground = new MeshData()
     const water = new MeshData()
     const siteFeatures = site.features as Feature<{ kind: string; [k: string]: unknown }>[]
+    // Quay walls stop under the decks of bridges still standing; a deck of the past leaves no gap.
+    const standing: Poly[] = []
     for (const f of siteFeatures) {
-      if (f.properties.kind === 'bridge') this.bridges.push(...this.polys(f.geometry as Geometry))
+      if (f.properties.kind !== 'bridge') continue
+      const polys = this.polys(f.geometry as Geometry)
+      this.bridges.push(...polys)
+      const history = (f.properties as unknown as BridgeProps).history
+      if (!history?.length || history[history.length - 1].until == null) standing.push(...polys)
     }
-    const underDeck = (p: Pt) => this.bridges.some((b) => insidePoly(p, b))
+    const underDeck = (p: Pt) => standing.some((b) => insidePoly(p, b))
     for (const f of siteFeatures) {
       const k = f.properties.kind
       if (k === 'ground') for (const poly of this.polys(f.geometry as Geometry)) addSurface(ground, poly, 0)
@@ -347,7 +406,12 @@ export class City3D implements CustomLayerInterface {
         addSpire(roofs, -1, this.project(f.geometry.coordinates), 3.0, p.base_m, p.base_m + 9, p.height_m, life)
       }
     }
-    for (const deck of this.bridges) addBridge(walls, ground, deck, waterZ - 0.3)
+    // Bridges through time: each structure of each crossing in the years it stood (bridges.ts).
+    for (const f of siteFeatures) {
+      if (f.properties.kind !== 'bridge') continue
+      const history = (f.properties as unknown as BridgeProps).history
+      for (const deck of this.polys(f.geometry as Geometry)) addBridgeHistory(walls, deck, waterZ - 0.3, history)
+    }
 
     // Gardens: lawns inside cast-iron railings, from the year they opened.
     const lawns = new MeshData()
@@ -384,12 +448,15 @@ export class City3D implements CustomLayerInterface {
       else this.extras.push(mesh)
     }
     if (trees.length) {
-      // Trees: three instanced meshes (crowns, trunks, ground shadows), one draw call each.
+      // Trees: instanced meshes (crowns, trunks, ground shadows), one draw call each. Crowns
+      // come in three levels of detail by distance (TREE_LEVELS_M).
+      const crownShapes = [2, 1, 0].map((detail) => new THREE.IcosahedronGeometry(1, detail))
       const parts: [THREE.BufferGeometry, string, string, number, boolean][] = [
-        [new THREE.IcosahedronGeometry(1, 2), S.crownVertex, S.crownFragment, 4, false],
+        ...crownShapes.map((g): [THREE.BufferGeometry, string, string, number, boolean] => [g, S.crownVertex, S.crownFragment, 4, false]),
         [new THREE.CylinderGeometry(1, 1, 1, 7, 1, true), S.trunkVertex, S.trunkFragment, 4, false],
         [new THREE.PlaneGeometry(1, 1), S.treeShadowVertex, S.treeShadowFragment, 1.5, true]
       ]
+      const crowns: THREE.InstancedBufferGeometry[] = []
       for (const [base, vs, fs, order, shadow] of parts) {
         const m = new THREE.ShaderMaterial({
           vertexShader: vs,
@@ -399,12 +466,15 @@ export class City3D implements CustomLayerInterface {
           transparent: shadow,
           depthWrite: !shadow
         })
-        const mesh = new THREE.Mesh(treeGeometry(base, trees), m)
+        const g = treeGeometry(base, trees)
+        if (crownShapes.includes(base as THREE.IcosahedronGeometry)) crowns.push(g)
+        const mesh = new THREE.Mesh(g, m)
         mesh.renderOrder = order
         mesh.frustumCulled = false
         this.scene.add(mesh)
         this.extras.push(mesh)
       }
+      this.treeLod = treeLevels(trees, crowns)
     }
     const ctx: CityContext = {
       ...prepare,
@@ -468,6 +538,7 @@ export class City3D implements CustomLayerInterface {
     // The camera sits where clip space has x = y = w = 0.
     const c = new THREE.Vector4(0, 0, 1, 0).applyMatrix4(this.inverse)
     if (Math.abs(c.w) > 1e-12) this.uniforms.u_camera.value.set(c.x / c.w, c.y / c.w, c.z / c.w)
+    this.treeLod?.(this.uniforms.u_camera.value)
     this.renderer.resetState()
     this.renderer.render(this.scene, this.camera)
     if (this.steps.length) {

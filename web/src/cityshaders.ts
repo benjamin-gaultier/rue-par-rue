@@ -9,6 +9,7 @@
  */
 
 import { institutionFacades } from './institutionshaders'
+import { bridgeFacades } from './bridgeshaders'
 import { landmarkFacades } from './landmarkshaders'
 
 const common = /* glsl */ `
@@ -210,6 +211,7 @@ vec4 westFront(float s, float z, float eave, vec3 stone, vec2 aa) {
 
 ${landmarkFacades}
 ${institutionFacades}
+${bridgeFacades}
 
 void main() {
   float u = v_a.x, z = v_a.y, L = v_a.z, flags = v_a.w;
@@ -269,21 +271,8 @@ void main() {
     col *= mix(0.62, 1.0, smoothstep(-6.4, -5.2, z));
     if (z > 0.75) col *= 1.12;
   } else if (st > 3.5 && st < 4.5) {
-    // Bridges: arches between piers, cut out of the side walls.
-    float n = eave, landEnd = fh;
-    float span = (L - 2.0 * landEnd) / n;
-    float i = clamp(floor((u - landEnd) / span), 0.0, n - 1.0);
-    float du = u - (landEnd + (i + 0.5) * span);
-    float hw = span * 0.5 - 1.8;
-    float spring = -4.4, crown = -1.4;
-    float e = (du / hw) * (du / hw) + ((z - spring) / (crown - spring)) * ((z - spring) / (crown - spring));
-    bool opening = u > landEnd && u < L - landEnd && abs(du) < hw && (z < spring || e < 1.0);
-    if (opening) discard;
-    float voussoir = (z > spring && e < 1.35 && abs(du) < hw + 0.8) ? 0.9 : 1.0;
-    col *= voussoir;
-    float course = smoothstep(0.0, aa.y * 2.0 + 0.02, abs(fract(z / 0.55) - 0.5) - 0.46);
-    col *= 1.0 - 0.15 * course * detail;
-    if (z > 0.0) col *= 1.1;
+    // Bridges, by kind and period: see bridgeshaders.ts.
+    col = bridgeSurface(u, z, L, flags, seed, eave, fh, v_world, v_normal, aa, detail);
   } else if (flags > 0.5) {
     // Party wall: blind, a little darker.
     col *= 0.9;

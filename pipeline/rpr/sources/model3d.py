@@ -25,12 +25,16 @@ from typing import Any, Callable
 from rpr import net, paths
 
 AREAS = {
-    # Île de la Cité and the quays facing it. `focus` is the showcase rendered
-    # with detailed buildings (facades, roofs) in the app.
+    # Île de la Cité and the quays facing it. `focus` is the area rendered
+    # with detailed buildings (facades, roofs) in the app: with
+    # `focus_river_m`, only the islands and the banks within that many metres
+    # of the Seine inside it (site.focus_area), so the whole island and the
+    # facing quays are detailed and the streets behind stay plain blocks.
     "cite": {
         "name": "Île de la Cité",
-        "bbox": (2.3395, 48.8505, 2.3565, 48.8590),
-        "focus": (2.3450, 48.8512, 2.3535, 48.8560),
+        "bbox": (2.3385, 48.8505, 2.3565, 48.8590),
+        "focus": (2.3385, 48.8505, 2.3565, 48.8590),
+        "focus_river_m": 90,
     },
 }
 
@@ -241,7 +245,11 @@ def build(area: str, log: Callable[[str], Any] = print) -> dict:
     cfg = AREAS[area]
     bbox = cfg["bbox"]
     area_box = box(*bbox)
-    focus_box = box(*cfg["focus"]) if cfg.get("focus") else None
+    focus_box = None
+    if cfg.get("focus"):
+        from rpr.sources.site import focus_area  # imported here: site imports AREAS from this module
+
+        focus_box = focus_area(area)
 
     # Equal-area metres for coverage maths: Lambert 93.
     to_l93 = Transformer.from_crs(4326, 2154, always_xy=True).transform
