@@ -164,6 +164,64 @@ function geometry(m: MeshData): THREE.BufferGeometry {
 /** The sun from the south-west, about 40° up: light on the Seine-facing facades of the Cité. */
 const SUN = new THREE.Vector3(-0.55, -0.6, 0.64).normalize()
 
+/** Shader uniforms shared by every mesh of the city: pass this object to a ShaderMaterial as is. */
+export interface CityUniforms {
+  [name: string]: THREE.IUniform
+  /** The year shown. Hide what does not stand: see `alive()` in cityshaders.ts. */
+  u_year: { value: number }
+  /** The camera, in local metres (for haze, reflections). */
+  u_camera: { value: THREE.Vector3 }
+  /** Unit vector toward the sun. */
+  u_sun: { value: THREE.Vector3 }
+  /** The detailed ground box (x0, y0, x1, y1), where everything fades out at the edge. */
+  u_box: { value: THREE.Vector4 }
+  u_fog: { value: THREE.Color }
+  u_front: { value: THREE.Vector4 }
+  u_frontHalf: { value: number }
+}
+
+/** What every city module can read before and after the buildings are built. */
+export interface PrepareContext {
+  /** Local metres (x east, y north) for [lon, lat]. */
+  project: (lonlat: number[]) => Pt
+  /** URL prefix for data files: fetch(`${ctx.base}data/3d/…`). */
+  base: string
+  model: { features: Feature<CityProps>[]; metadata?: Record<string, unknown> }
+  site: { features: Feature<Record<string, unknown>>[]; metadata?: Record<string, unknown> }
+  /** The detailed buildings; index i is the owner id of their wall and roof triangles. */
+  buildings: { specs: BuildingSpec[]; props: CityProps[] }
+}
+
+/** What a module gets once the core city is built. */
+export interface CityContext extends PrepareContext {
+  uniforms: CityUniforms
+  water: Poly[]
+  bridges: Poly[]
+  /** Water surface height, metres relative to the street (about -6.6). */
+  waterZ: number
+  /** Add an object to the scene. Core render orders: water 0, ground 1, walls 2, roofs 3, trees 4. */
+  add(object: THREE.Object3D): void
+  /** Walking: return true where nobody can stand in `year` (local metres). */
+  block(test: (p: Pt, year: number) => boolean): void
+  /** Called before each frame; return true to ask for another frame (animation). Keep it cheap. */
+  animate(step: (seconds: number) => boolean): void
+  /** Ask the map for a new frame. */
+  repaint(): void
+}
+
+/**
+ * A layer of detail added to the city in its own file (registered in
+ * citymodules.ts). `prepare` runs before the buildings are built and may
+ * change their specs (style, roof, height, or empty `polys` to draw a
+ * building itself); `build` runs after and adds meshes. A module that throws
+ * is skipped with a warning: the rest of the city still shows.
+ */
+export interface CityModule {
+  name: string
+  prepare?(ctx: PrepareContext): void | Promise<void>
+  build?(ctx: CityContext): void | Promise<void>
+}
+
 export class City3D implements CustomLayerInterface {
   readonly id = 'city-3d'
   readonly type = 'custom' as const
@@ -183,7 +241,7 @@ export class City3D implements CustomLayerInterface {
   private pickables: { mesh: THREE.Mesh; owner: Int32Array }[] = []
   private water: Poly[] = []
   private bridges: Poly[] = []
-  private uniforms = {
+  private uniforms: CityUniforms = {
     u_year: { value: 1836 },
     u_camera: { value: new THREE.Vector3() },
     u_sun: { value: SUN },
@@ -196,6 +254,10 @@ export class City3D implements CustomLayerInterface {
   count = 0
   trees = 0
   private extras: THREE.Mesh[] = []
+  private blockers: ((p: Pt, year: number) => boolean)[] = []
+  private steps: ((seconds: number) => boolean)[] = []
+  /** Modules that failed to load, by name (shown in the console only). */
+  failed: string[] = []
 
   constructor(center: [number, number]) {
     this.origin = MercatorCoordinate.fromLngLat(center, 0)
@@ -213,8 +275,8 @@ export class City3D implements CustomLayerInterface {
     return list.map((rings) => normalisePoly(rings.map((r) => r.map(this.project)))).filter((p): p is Poly => p !== null)
   }
 
-  /** Build every mesh from the model and site files. */
-  async load(modelUrl: string, siteUrl: string, greeneryUrl?: string) {
+  /** Build every mesh from the model and site files, then let each module add its own. */
+  async load(modelUrl: string, siteUrl: string, greeneryUrl?: string, modules: CityModule[] = [], base = '') {
     const [model, site, greenery] = await Promise.all([
       fetch(modelUrl).then((r) => r.json()),
       fetch(siteUrl).then((r) => r.json()),
@@ -238,6 +300,15 @@ export class City3D implements CustomLayerInterface {
       }
       this.specs.push(spec)
       this.props.push(f.properties)
+    }
+    const prepare: PrepareContext = { project: this.project, base, model, site, buildings: { specs: this.specs, props: this.props } }
+    for (const mod of modules) {
+      try {
+        await mod.prepare?.(prepare)
+      } catch (err) {
+        this.failed.push(mod.name)
+        console.warn(`City module ${mod.name} failed to prepare:`, err)
+      }
     }
     if (cathedral?.axis_bearing !== undefined && cathedralPolys.length) {
       const front = westFront(cathedralPolys, cathedral.axis_bearing)
@@ -335,6 +406,32 @@ export class City3D implements CustomLayerInterface {
         this.extras.push(mesh)
       }
     }
+    const ctx: CityContext = {
+      ...prepare,
+      uniforms: this.uniforms,
+      water: this.water,
+      bridges: this.bridges,
+      waterZ,
+      add: (object) => {
+        this.scene.add(object)
+        if (object instanceof THREE.Mesh) this.extras.push(object)
+      },
+      block: (test) => this.blockers.push(test),
+      animate: (step) => this.steps.push(step),
+      repaint: () => this.map?.triggerRepaint()
+    }
+    await Promise.all(
+      modules
+        .filter((mod) => !this.failed.includes(mod.name))
+        .map(async (mod) => {
+          try {
+            await mod.build?.(ctx)
+          } catch (err) {
+            this.failed.push(mod.name)
+            console.warn(`City module ${mod.name} failed to build:`, err)
+          }
+        })
+    )
     this.map?.triggerRepaint()
   }
 
@@ -373,6 +470,12 @@ export class City3D implements CustomLayerInterface {
     if (Math.abs(c.w) > 1e-12) this.uniforms.u_camera.value.set(c.x / c.w, c.y / c.w, c.z / c.w)
     this.renderer.resetState()
     this.renderer.render(this.scene, this.camera)
+    if (this.steps.length) {
+      const t = performance.now() / 1000
+      let more = false
+      for (const step of this.steps) more = step(t) || more
+      if (more) this.map?.triggerRepaint()
+    }
   }
 
   /** The building under a screen point, if a detailed one is visible there. */
@@ -410,5 +513,13 @@ export class City3D implements CustomLayerInterface {
   inWater(lonlat: [number, number]): boolean {
     const p = this.project(lonlat)
     return this.water.some((w) => insidePoly(p, w)) && !this.bridges.some((b) => insidePoly(p, b))
+  }
+
+  /** True where nobody can stand in `year`: the river, or anything a module blocks. */
+  isBlocked(lonlat: [number, number], year: number): boolean {
+    if (this.inWater(lonlat)) return true
+    if (!this.blockers.length) return false
+    const p = this.project(lonlat)
+    return this.blockers.some((test) => test(p, year))
   }
 }

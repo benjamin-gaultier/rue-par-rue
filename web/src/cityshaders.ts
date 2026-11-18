@@ -8,6 +8,8 @@
  * (the ground box, where everything fades out at the edge).
  */
 
+import { landmarkFacades } from './landmarkshaders'
+
 const common = /* glsl */ `
 uniform float u_year;
 uniform vec3 u_camera;
@@ -205,6 +207,8 @@ vec4 westFront(float s, float z, float eave, vec3 stone, vec2 aa) {
   return vec4(col, glass);
 }
 
+${landmarkFacades}
+
 void main() {
   float u = v_a.x, z = v_a.y, L = v_a.z, flags = v_a.w;
   float st = v_b.x, seed = v_b.y, eave = v_b.z, fh = v_b.w;
@@ -239,7 +243,11 @@ void main() {
     vec4 f = westFront(dot(rel, t), z, eave, vec3(0.83, 0.79, 0.70) * (0.95 + 0.06 * noise(v_world.xy * 0.4)), aa);
     col = f.rgb;
     glass = f.a;
-  } else if (st > 6.5) {
+  } else if (st > 19.5) {
+    vec4 f = landmarkFacade(st, u, z, L, eave, seed, v_world, v_normal, aa);
+    col = f.rgb;
+    glass = f.a;
+  } else if (st > 6.5 && st < 7.5) {
     // Cast-iron garden railing: bars every 14 cm between a bottom and a top rail.
     float d = (0.5 - abs(fract(u / 0.14) - 0.5)) * 0.14;
     bool rail = z < 0.1 || (z > 0.86 && z < 0.93);
