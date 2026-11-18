@@ -147,5 +147,13 @@
     "buildings": 52,
     "parts": 15,
     "updated_at": "2026-11-18T11:58:17Z"
+  },
+  "vehicles_cite": {
+    "area": "cite",
+    "file": "3d/vehicles-cite.json",
+    "parked": 7300,
+    "moving": 561,
+    "bytes": 353948,
+    "updated_at": "2026-11-18T12:03:18Z"
   }
 }
