@@ -9,3 +9,4 @@ __pycache__/
 pipeline/cache/vasserot/
 pipeline/cache/models/
 pipeline/cache/verniquet/
+pipeline/cache/streets/

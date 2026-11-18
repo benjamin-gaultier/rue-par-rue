@@ -115,5 +115,30 @@
     "file": "3d/institutions-cite.geojson",
     "buildings": 12,
     "updated_at": "2026-11-18T11:36:32Z"
+  },
+  "streets_cite": {
+    "area": "cite",
+    "file": "3d/streets-cite.json",
+    "bytes": 442312,
+    "gutter runs": 471,
+    "lantern": 399,
+    "potence": 361,
+    "candelabra": 1383,
+    "old pavements": 264,
+    "column": 55,
+    "kerb_stone": 417,
+    "plaque": 1367,
+    "modern pavements": 1188,
+    "crossings": 415,
+    "main road areas": 19,
+    "centre lines": 16,
+    "pole": 406,
+    "wall_lamp": 774,
+    "wallace": 8,
+    "kiosk": 20,
+    "bollard": 9551,
+    "vespasienne": 14,
+    "bench": 332,
+    "updated_at": "2026-11-18T11:45:47Z"
   }
 }
