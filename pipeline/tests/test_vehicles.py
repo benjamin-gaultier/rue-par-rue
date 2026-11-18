@@ -155,3 +155,25 @@ def test_bow_and_heading_helpers_agree():
     # A vehicle heading north-east in the data points along (cos, sin) of its heading.
     h = V.heading_deg(1, 1)
     assert math.cos(math.radians(h)) == pytest.approx(math.sqrt(0.5))
+
+
+def test_last_pass_clears_lanes_and_shared_spots():
+    pytest.importorskip("shapely")
+    ident = lambda x, y: (x, y)  # rows in metres for the test
+    cart = V.TYPE_INDEX["cart"]
+    parked = [
+        [cart, 0.0, 0.0, 0.0, 1800, 1900, 0],
+        [cart, 1.0, 0.0, 0.0, 1850, 1950, 0],  # on top of the first from 1850 to 1900
+        [cart, 50.0, 0.0, 0.0, 1800, 1900, 0],  # in the lane of a moving cart from 1860
+        [cart, 50.0, 10.0, 0.0, 1800, 1900, 0],  # well clear
+    ]
+    paths = [[[0.0, 0.0], [100.0, 0.0]]]
+    moving = [[cart, 0, 1860, 1890, 2.0, 0.0, 1, 0.0]]
+    out = V.resolve(parked, moving, paths, ident)
+    spans = {(r[1], r[2]): [] for r in out}
+    for r in out:
+        spans[(r[1], r[2])].append((r[4], r[5]))
+    assert spans[(0.0, 0.0)] == [(1800, 1860), (1890, 1900)]  # the moving cart passes here too
+    assert spans[(1.0, 0.0)] == [(1900, 1950)]
+    assert spans[(50.0, 0.0)] == [(1800, 1860), (1890, 1900)]
+    assert spans[(50.0, 10.0)] == [(1800, 1900)]

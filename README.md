@@ -63,6 +63,57 @@ About 600 m around the cathedral (`focus` in `AREAS`, about 2,000 buildings acro
 
 Facades are generated, not surveyed: they show the character of each period, not the real windows of each house.
 
+#### Vehicles and boats
+
+`python -m rpr vehicles --area cite` places the vehicles and boats of each period, and `web/src/vehicles.ts` draws them (models in `vehiclemodels.ts`, shaders in `vehicleshaders.ts`). No particular cart or boat is documented: the types, their years and how many stand in the street come from the archive photographs and transport history, the places from the streets and quays of the period.
+
+**What the photographs show.** About 70 photographs of the app's collection were looked at in full size (Paris Musées, ids below; years as catalogued), from Marville's 1858 street furniture series to Atget's views of the 1920s:
+
+| Type | Photographs | What they show |
+| --- | --- | --- |
+| Handcart (voiture à bras) | 320001003, 320001893, 320002447 (Marville, 1865–68); 320043535 (Atget, 1898); 320042066 (Atget, 1923) | Parked in the narrow streets of the Cité and on the quai aux Fleurs; in 1923 a "Location de voitures à bras" sign at the corner of the rue des Chantres |
+| Two-wheeled cart, tip-cart | 320002779 (Marville, 1858); 320043327, 320042234, 320042041 (Atget, undated); 320021697, 320021701 (Atget, 1913); 320176695 (Atget, 1914) | Tip-carts with their horses at the place du Châtelet, a coal cart by Notre-Dame on the quai de la Tournelle, unhitched carts resting on their shafts at the ports |
+| Covered cart (charrette bâchée) | 320002447, 320002449 (Marville, 1865–68) | Parked at the kerb, rue Constantine and rue de la Cité |
+| Horse cab (fiacre) | 320043314, 320043317 (Atget, about 1910); 320180275 (Atget, 1885–1925) | Coupé and victoria of the Compagnie générale des voitures with taximeters; a cab waiting by the bouquinistes, quai Malaquais |
+| Horse omnibus | 320003760, 320004595 (Marville, 1858–78); 320039297 (Atget, 1898) | Compagnie générale des omnibus offices; a Madeleine–Bastille omnibus with its upper deck; in 1898 a three-horse omnibus with the curved stair to the impériale |
+| Motor car, bus | 320176584 (Atget, 1885–1925); Albert-Kahn A 73 555 (1917), A 24 347–348 (1920), titles only | A car parked on the quai d'Orléans; a Renault parked on a quay; a bus station of the Compagnie générale des omnibus |
+| Barge (péniche) | 320166588, 320042520, 320389039, 320175693, 320040645 (Atget, 1903); 320043217, 320042041 (Atget, undated) | Wooden barges, often with a mast, moored at the ports of the quai des Orfèvres, quai des Grands-Augustins and quai des Célestins, and opposite Notre-Dame |
+| Wash-boat, floating baths | 320164787, 320041900 (Atget, before 1906); 320020894 (1910); 320040245, 320040650 (undated); Albert-Kahn A 7 506 (1914), A 39 019–020 (1923), titles only | A long boat-house moored at the quai des Orfèvres by the pont Saint-Michel; the bains de la Samaritaine and bains Vigier; wash-boats by the pont Marie and the quai de Bourbon into the 1920s |
+| River steamer, rowing boat | 320020887 (Atget, 1911); 320021701 (1913); 320166588, 320040245 | A small steamer moored by the quai de l'Horloge, another under way; skiffs alongside barges and baths |
+| Empty streets | 320002333, 320002450, 320002473, 320002478, 320002496 (Marville, 1865–68); 320178842, 320044265 (Atget, 1922–23) | Few vehicles in the Cité's streets. Marville's long exposures lose whatever moved, and Atget worked early in the morning, so the photographs undercount traffic |
+
+Seen but not drawn: horse trams (320043333) and heavy stone drays (fardiers, 320043133, 320043322) on other quays.
+
+**Years.** Each type is shown in the years history gives it, rounded conservatively where the end was gradual:
+
+| Type | Years | Why |
+| --- | --- | --- |
+| Handcart, cart, covered cart | 1780–1940, –1935, –1930 | Throughout the photographs; ends reasoned (motor vans took over in the 1920s–30s) |
+| Fiacre | 1780–1930 | Horse cabs dwindled through the 1920s |
+| Horse omnibus | 1828–1913, upper deck from 1853 | Paris omnibuses from 1828 (Entreprise générale des omnibus), the Compagnie générale des omnibus from 1855, the last horse omnibus on 11 January 1913 |
+| Motor taxi | 1905–1932 | Motor cabs with taximeters from 1905 (the Renault AG kind) |
+| Early motor bus | 1906–1937 | First motor bus line of the CGO in 1906; Schneider buses into the 1930s |
+| Early car, van | 1900–1936, 1910–1955 | Rare before 1900 |
+| Mid-century car, van, platform bus | 1934–1980, 1950–1990, 1934–1971 | The last rear-platform buses ran in 1971 |
+| Modern car, van, bus | from 1972, 1985, 1971 | |
+| Barge, rowing boat | always | A houseboat cabin replaces the cargo from 1950; the mast goes in 1930 |
+| Wash-boat, floating baths | 1780–1936, 1780–1930 | Still at the quai de Bourbon in 1923 (Albert-Kahn); the last Paris wash-boats went in the 1930s, the end is approximate |
+| Steam river bus (bateau-mouche) | 1867–1934 | Introduced for the 1867 Exposition universelle; the river bus service ended in 1934 (approximate) |
+| Sightseeing boat | from 1950 | Bateaux-mouches again from 1949 |
+
+**Where they stand.**
+
+- **1780–1859:** along the edges of the Vasserot street space (1810–1836, ALPAGE), where the street is at least 4.5 m wide; before 1810 this is an approximation. Few: one kerb place in twenty in the narrow streets, one in ten on the quays and squares.
+- **From 1860:** along the kerbs of the IGN BD TOPO road centrelines, offset by half the carriageway width: both kerbs from 6 m, one kerb from 3.5 m (4.5 m from 2000, when the Cité's lanes are kept for residents). Kerbs fill from 7–14 % (1860s) to 55–70 % (1950s–60s), then 30–40 % today.
+- **Junctions and bridges:** a few vehicles stand in the carriageway near junctions and on bridges, never where traffic runs. Bridges carry vehicles only from the year they did: the pont d'Arcole from 1855 (a footbridge before), the pont au Double from 1883, the pont de l'Archevêché from 1828; none on the pont Saint-Louis.
+- **Moving traffic** follows through-routes (road segments joined at the straightest continuation), one line down the middle of streets under 10 m, two lanes keeping right on wider ones, respecting today's one-way streets from 1935. Before 1860 only along today's centrelines that run inside the Vasserot street space.
+- **Boats** moor along the banks of today's river, clear of the bridges and leaving a channel; moving boats keep 26 m from the banks before 1950 (so only in the grand bras: the petit bras was the wash-boats' arm), 14 m after.
+- **Never inside a building:** each vehicle's years are cut to those when no building of the massing model stands on its footprint (old Hôtel-Dieu wards over the water included), and again in the app against the buildings of the detailed area; a last pass keeps parked vehicles out of moving lanes and off each other.
+
+**Drawing.** Each type is a low-poly model of a few hundred triangles (horses included: about 100 each) and one instanced draw call; the year is checked in the vertex shader, per vehicle and per part (the omnibus's upper deck, a barge's mast). Horses' legs swing as they walk, spoked wheels are cut out in the fragment shader, unhitched carts tip onto their shafts, and a soft shadow lies under each street vehicle. Paint colours are reasoned (the photographs are black and white): dark lacquer for cabs, the blue and weathered wood of carts, green and cream buses.
+
+**Cost on phones.** Only vehicles within a few years of the one shown and inside the detailed ground are uploaded: 1960, the busiest year, draws about 800 (some 200,000 triangles), 1840 about 200. The 50 to 80 moving in a given year are animated on the CPU, at most 30 times a second and fewer when frames are slow, and only while one of them is on screen in the 3D view; otherwise the map is left idle. Data: `web/public/data/3d/vehicles-cite.json` (340 kB, about 7,000 parked and 550 moving vehicles across all years).
+
 #### Photos in 3D and walking the streets
 
 In the 3D view the archive photographs stand as picture frames where they were taken, from the years around the one you pick. Buildings hide the frames behind them, the frames turn to face you, and photos sharing a spot become one frame with a count. Click a frame to open the photo.

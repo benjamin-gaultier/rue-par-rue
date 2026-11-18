@@ -156,7 +156,7 @@ BOAT_ERAS: list[dict[str, Any]] = [
     {"from": 1906, "until": 1936, "moor": 0.35, "move": 1.0,
      "mix": {"barge": 4, "lavoir": 1, "bath": 0.3, "skiff": 1.5, "steamer": 0.4}},
     {"from": 1936, "until": 1950, "moor": 0.30, "move": 0.6, "mix": {"barge": 5, "skiff": 1}},
-    {"from": 1950, "until": OPEN, "moor": 0.20, "move": 1.0, "mix": {"barge": 3, "tourboat": 0.5, "skiff": 0.4}},
+    {"from": 1950, "until": OPEN, "moor": 0.20, "move": 0.6, "mix": {"barge": 3, "tourboat": 0.5, "skiff": 0.4}},
 ]
 MOVING_BOATS = {"barge": 2, "steamer": 3, "tourboat": 3, "skiff": 0.5}  # weights among moving boats
 SPEED = {"handcart": 1.2, "cart": 1.6, "tiltcart": 1.6, "fiacre": 2.6, "omnibus": 2.0, "car_early": 3.5, "taxi": 3.8,
@@ -584,8 +584,10 @@ def load_roads(raw: list[dict], fwd, decks: list[tuple[Any, tuple[int, int]]]) -
     return roads
 
 
-def park_roads(placer: Placer, roads: list[Road], log: Callable[[str], Any]) -> int:
-    """Kerbside parking, vehicles standing at junctions and on bridges (BD TOPO, from 1860)."""
+def park_roads(placer: Placer, roads: list[Road], busy: set[tuple[int, int]], log: Callable[[str], Any]) -> int:
+    """Kerbside parking, vehicles standing at junctions and on bridges (BD TOPO,
+    from 1860). Vehicles stand in the carriageway only on segments where no
+    traffic moves in that era (`busy`), so nothing drives through them."""
     rows = 0
     for road in roads:
         line, w = road.line, road.width
@@ -599,7 +601,7 @@ def park_roads(placer: Placer, roads: list[Road], log: Callable[[str], Any]) -> 
                 if w < 5:
                     continue
                 mix = era_type_mix(era["mix"], span, lambda k: k != "handcart")
-                lane = min(w / 4, 1.8)
+                kerb = (span[0], road.i) in busy  # traffic on the bridge: stop by the parapet
                 for k, s in enumerate(range(6, int(line.length) - 6, 14)):
                     if stable(key, span[0], k, "b") > 0.12 * era["move"]:
                         continue
@@ -611,6 +613,8 @@ def park_roads(placer: Placer, roads: list[Road], log: Callable[[str], Any]) -> 
                         d = road.oneway
                     p = line.interpolate(s)
                     tx, ty = tangent(line, s)
+                    vw = TYPES[TYPE_INDEX[kind]]["width"]
+                    lane = w / 2 - KERB_GAP - vw / 2 if kerb else max(1.0, min(w / 4, w / 2 - 3.6))
                     off = -lane * d  # keep right
                     rows += placer.street(kind, p.x - ty * off, p.y + tx * off, heading_deg(tx * d, ty * d), span,
                                           bridge_ok=True)
@@ -625,11 +629,10 @@ def park_roads(placer: Placer, roads: list[Road], log: Callable[[str], Any]) -> 
             mix = era_type_mix(era["mix"], span, lambda k: k not in LONG or long_ok)
             sides = [1, -1] if w >= 6 else [1 if stable(key, "side") < 0.5 else -1]
             facing = road.oneway if road.oneway and era["from"] >= 1935 else 0
-            for side in sides:
-                rows += fill_kerb(placer, key, line, side, lambda vw: w / 2 - KERB_GAP - vw / 2, span, density, mix,
-                                  facing, JUNCTION_CLEAR, line.length - JUNCTION_CLEAR)
-            # Now and then a vehicle stands in the carriageway near a junction.
-            if w >= 7 and road.importance <= 4 and line.length > 30:
+            # Now and then a vehicle stands in the carriageway near a junction,
+            # where no traffic runs through it; the kerb beside it stays clear.
+            clear = {(1, 0): JUNCTION_CLEAR, (-1, 0): JUNCTION_CLEAR, (1, 1): JUNCTION_CLEAR, (-1, 1): JUNCTION_CLEAR}
+            if w >= 7 and road.importance <= 4 and line.length > 40 and (span[0], road.i) not in busy:
                 movers = era_type_mix(era["mix"], span, lambda k: k != "handcart")
                 for end in (0, 1):
                     if stable(key, span[0], end, "j") > 0.18 * era["move"]:
@@ -646,7 +649,13 @@ def park_roads(placer: Placer, roads: list[Road], log: Callable[[str], Any]) -> 
                     p = line.interpolate(s)
                     tx, ty = tangent(line, s)
                     lane = min(w / 4, 1.8)  # keep right
-                    rows += placer.street(kind, p.x + ty * d * lane, p.y - tx * d * lane, heading_deg(tx * d, ty * d), span)
+                    if placer.street(kind, p.x + ty * d * lane, p.y - tx * d * lane, heading_deg(tx * d, ty * d), span):
+                        rows += 1
+                        # The kerb on its right (the line's right when heading to the end, its left otherwise).
+                        clear[(-d, end)] = 4 + t["length"] + 2
+            for side in sides:
+                rows += fill_kerb(placer, key, line, side, lambda vw: w / 2 - KERB_GAP - vw / 2, span, density, mix,
+                                  facing, clear[(side, 0)], line.length - clear[(side, 1)])
     log(f"vehicles: {rows} rows from BD TOPO kerbs, junctions and bridges")
     return rows
 
@@ -815,15 +824,21 @@ def segment_ok(placer: Placer, r: Road, span: tuple[float, float], voirie_p) -> 
     return free == [span]
 
 
-def drive(placer: Placer, roads: list[Road], voirie, log: Callable[[str], Any]) -> int:
-    """Vehicles moving along through-routes, era by era."""
+TWO_WAY_WIDTH = 10.0  # narrower streets carry one line of moving traffic, down the middle
+MOVING_WIDTH = 6.0  # narrower ones have parked vehicles in the way
+
+
+def drive(placer: Placer, roads: list[Road], voirie, log: Callable[[str], Any]) -> set[tuple[int, int]]:
+    """Vehicles moving along through-routes, era by era. Returns the (era
+    start, segment) pairs that carry traffic, so nothing stands in its way."""
     from shapely.prepared import prep
 
     voirie_p = prep(voirie.buffer(1.0))
     rows = 0
+    busy: set[tuple[int, int]] = set()
     for era in ERAS:
         span = (era["from"], era["until"])
-        ok = [r for r in roads if r.width >= 4 and segment_ok(placer, r, span, voirie_p)]
+        ok = [r for r in roads if r.width >= MOVING_WIDTH and segment_ok(placer, r, span, voirie_p)]
         movers = era_type_mix(era["mix"], span, lambda k: k != "handcart")
         for ci, chain in enumerate(chains(ok)):
             line = chain_line(chain)
@@ -837,15 +852,20 @@ def drive(placer: Placer, roads: list[Road], voirie, log: Callable[[str], Any]) 
             if not n:
                 continue
             path = placer.path(line)
-            lane = min(width / 4, 1.8) if width >= 5.5 else 0.0
+            two_way = width >= TWO_WAY_WIDTH
+            # Two lanes between the parked rows (a parked cart takes 0.25 + 1.9 m of each kerb).
+            lane = max(1.0, min(width / 4, width / 2 - 3.6)) if two_way else 0.0
             oneway = 0
             if era["from"] >= 1935:
                 votes = sum(r.oneway * d for r, d in chain)
                 oneway = 1 if votes > 0 else -1 if votes < 0 else 0
+            if not two_way and not oneway:
+                oneway = 1 if stable("drive", span[0], ci, "one") < 0.5 else -1
+            busy.update((span[0], r.i) for r, _ in chain)
             groups: dict[int, list[str]] = {}
             for k in range(n):
                 kind = pick(movers, stable("drive", span[0], ci, k))
-                if not kind or (kind in LONG and width < 6):
+                if not kind or (kind in LONG and width < 7):
                     continue
                 d = oneway or (1 if stable("drive", span[0], ci, k, "d") < 0.5 else -1)
                 groups.setdefault(d, []).append(kind)
@@ -861,7 +881,7 @@ def drive(placer: Placer, roads: list[Road], voirie, log: Callable[[str], Any]) 
                                           round(phase, 3), d, round(lane, 2)])
                     rows += 1
     log(f"vehicles: {rows} moving vehicles")
-    return rows
+    return busy
 
 
 # ----------------------------------------------------------------- river
@@ -956,6 +976,53 @@ def sail(placer: Placer, river, clip, log: Callable[[str], Any]) -> int:
     return rows
 
 
+# ------------------------------------------------------------- conflicts
+
+
+def resolve(parked: list[list], moving: list[list], paths: list, fwd) -> list[list]:
+    """Last pass: no parked vehicle in the lane of a moving one, nor two
+    parked vehicles on the same spot, in the same years. Earlier rows win;
+    a later one keeps only its years free of conflict."""
+    from shapely.geometry import LineString
+    from shapely.strtree import STRtree
+
+    lines = [LineString([fwd(*c) for c in p]) for p in paths]
+    bands, band_years = [], []
+    for m in moving:
+        t = TYPES[m[0]]
+        if t["id"] in BOATS:
+            continue
+        lane = m[7] * (1 if m[6] > 0 else -1)
+        line = lines[m[1]]
+        off = line.offset_curve(-lane) if lane else line
+        bands.append(off.buffer(t["width"] / 2 + 0.2))
+        band_years.append((m[2], m[3]))
+    tree = STRtree(bands) if bands else None
+    out: list[list] = []
+    taken: dict[tuple[int, int], list[tuple[Any, tuple[int, int]]]] = {}
+    for r in parked:
+        t = TYPES[r[0]]
+        x, y = fwd(r[1], r[2])
+        fp = rect(x, y, r[3], t["length"], t["width"])
+        spans = [(r[4], r[5])]
+        if tree is not None and t["id"] not in BOATS:
+            for i in tree.query(fp):
+                if bands[i].intersection(fp).area > 0.3:
+                    spans = [s for sp in spans for s in subtract([sp], band_years[i])]
+        cells = {(int(x // 20) + dx, int(y // 20) + dy) for dx in (-1, 0, 1) for dy in (-1, 0, 1)}
+        for c in cells:
+            for other, years in taken.get(c, []):
+                if spans and other.intersects(fp) and other.intersection(fp).area > 0.3:
+                    spans = [s for sp in spans for s in subtract([sp], years)]
+        for s0, s1 in spans:
+            if s1 - s0 < 2:
+                continue
+            row = [*r[:4], int(s0), int(s1), r[6]]
+            out.append(row)
+            taken.setdefault((int(x // 20), int(y // 20)), []).append((fp, (s0, s1)))
+    return out
+
+
 # ----------------------------------------------------------------- build
 
 
@@ -1006,14 +1073,14 @@ def build(area: str = "cite", log: Callable[[str], Any] = print, refresh: bool =
 
     roads = [r for r in load_roads(raw_roads, fwd, decks) if r.line.intersects(clip)]
     park_voirie(placer, voirie, river, log)
-    park_roads(placer, roads, log)
-    drive(placer, roads, voirie, log)
+    busy = drive(placer, roads, voirie, log)
+    park_roads(placer, roads, busy, log)
     moor(placer, river, clip, log)
     sail(placer, river, clip, log)
 
     # Keep what lies inside the area.
     inside = lambda lon, lat: bbox[0] <= lon <= bbox[2] and bbox[1] <= lat <= bbox[3]
-    parked = sorted(r for r in placer.parked if inside(r[1], r[2]))
+    parked = sorted(r for r in resolve(placer.parked, placer.moving, placer.paths, fwd) if inside(r[1], r[2]))
     counts: dict[str, int] = {}
     for r in parked + placer.moving:
         counts[TYPES[r[0]]["id"]] = counts.get(TYPES[r[0]]["id"], 0) + 1

@@ -113,9 +113,9 @@
   "vehicles_cite": {
     "area": "cite",
     "file": "3d/vehicles-cite.json",
-    "parked": 7483,
-    "moving": 809,
-    "bytes": 374857,
-    "updated_at": "2026-11-18T10:15:06Z"
+    "parked": 6988,
+    "moving": 552,
+    "bytes": 337639,
+    "updated_at": "2026-11-18T11:37:49Z"
   }
 }
