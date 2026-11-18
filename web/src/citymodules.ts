@@ -9,7 +9,7 @@ import type { CityModule } from './city3d'
 export const CITY_MODULES: (() => Promise<{ default: CityModule }>)[] = [
   () => import('./institutions'),
 
-  // () => import('./landmarks'),
+  () => import('./landmarks'),
 
   // () => import('./streets'),
 

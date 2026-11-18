@@ -109,5 +109,12 @@
     "gardens": 13,
     "trees": 1038,
     "updated_at": "2026-11-18T08:56:37Z"
+  },
+  "landmarks_cite": {
+    "area": "cite",
+    "file": "3d/landmarks-cite.json",
+    "buildings": 52,
+    "parts": 15,
+    "updated_at": "2026-11-18T10:29:08Z"
   }
 }
