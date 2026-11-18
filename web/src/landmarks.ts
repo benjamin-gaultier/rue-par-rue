@@ -300,14 +300,14 @@ const landmarks: CityModule = {
       if (!s.polys.length) continue
       blockers.push({ polys: s.polys, bbox: polyBbox(s.polys), when: (y) => aliveIn(s.life, y) && !aliveIn(before, y) })
     }
-    const materials: [MeshData, string, string, number][] = [
-      [meshes.walls, S.wallVertex, S.wallFragment, 2],
-      [meshes.roofs, S.roofVertex, S.roofFragment, 3],
-      [meshes.props, propVertex, propFragment, 2]
+    const materials: [MeshData, string, string, number, string[]][] = [
+      [meshes.walls, S.wallVertex, S.wallFragment, 2, ['WALL_LANDMARKS']],
+      [meshes.roofs, S.roofVertex, S.roofFragment, 3, []],
+      [meshes.props, propVertex, propFragment, 2, []]
     ]
-    for (const [data, vs, fs, order] of materials) {
+    for (const [data, vs, fs, order, families] of materials) {
       if (!data.triangles) continue
-      const m = new THREE.ShaderMaterial({ vertexShader: vs, fragmentShader: fs, uniforms: ctx.uniforms, side: THREE.DoubleSide, transparent: true })
+      const m = new THREE.ShaderMaterial({ name: `landmarks-${order}`, vertexShader: vs, fragmentShader: S.shaderVariant(fs, families), uniforms: ctx.uniforms, side: THREE.DoubleSide, transparent: true })
       const mesh = new THREE.Mesh(geometry(data), m)
       mesh.renderOrder = order
       mesh.frustumCulled = false
