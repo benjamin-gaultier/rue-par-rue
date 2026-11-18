@@ -9,7 +9,7 @@ import {
   type MapGeoJSONFeature
 } from 'maplibre-gl'
 import { BASEMAPS, basemapForYear, YEAR_MAX } from './timeline'
-import { CITE_BOUNDS, CITE_VIEW, describeBuilding, Model3D, MODEL_COLORS, MODEL_LABELS, MODEL_URL, type ModelProps } from './model3d'
+import { CITE_BOUNDS, CITE_CAMERA, CITE_VIEW, describeBuilding, Model3D, MODEL_COLORS, MODEL_LABELS, MODEL_URL, type ModelProps } from './model3d'
 import type { PhotoFrames } from './frames3d'
 import type { City3D } from './city3d'
 import type { DepthIndex } from './depth'
@@ -42,6 +42,13 @@ const controls: ControlState = { cadastre: true, photos: true, allYears: false, 
 const map = createMap($('#map'), [initial.lon!, initial.lat!], initial.zoom!)
 map.addControl(new NavigationControl({ showCompass: false }), 'top-right')
 map.addControl(new AttributionControl({ compact: true }), 'bottom-right')
+
+/** On phones, keep the credits folded behind their (i) button: open, they cover the controls. */
+function foldCredits() {
+  if (!window.matchMedia('(max-width: 720px)').matches) return
+  map.getContainer().querySelector('.maplibregl-ctrl-attrib')?.classList.remove('maplibregl-compact-show')
+}
+map.once('idle', foldCredits)
 map.addControl(new ScaleControl({ unit: 'metric' }), 'bottom-left')
 
 const basemaps = new BasemapSwitcher(map, BASE)
@@ -323,6 +330,8 @@ function enter3D(fly = true) {
   state.view3d = true
   banner3d.hidden = false
   btn3d.setAttribute('aria-pressed', 'true')
+  document.body.classList.add('is-3d')
+  map.once('idle', foldCredits) // the 3D sources add their credits
   setYear(state.year) // reapply the basemap rule for 3D
   photoDotsVisible()
   city?.setVisible(true)
@@ -336,6 +345,7 @@ function exit3D() {
   state.view3d = false
   banner3d.hidden = true
   btn3d.setAttribute('aria-pressed', 'false')
+  document.body.classList.remove('is-3d')
   frames?.setGroups([])
   city?.setVisible(false)
   setYear(state.year)
@@ -352,11 +362,16 @@ async function startWalk() {
   await ensureCity() // so the river blocks the way from the first step
   const c = map.getCenter()
   const inside = c.lng > CITE_BOUNDS[0] && c.lng < CITE_BOUNDS[2] && c.lat > CITE_BOUNDS[1] && c.lat < CITE_BOUNDS[3]
-  const start: [number, number] = inside ? [c.lng, c.lat] : DEFAULT_WALK_START
-  await walker.start(start, inside ? map.getBearing() : 115)
+  // Straight after the fly-in the centre is the camera target, at the foot of
+  // Notre-Dame's tower: start on the parvis instead, facing the west front.
+  const [tx, ty] = CITE_CAMERA.to
+  const atTarget = Math.hypot((c.lng - tx) * 73300, (c.lat - ty) * 111200) < 40
+  const here = inside && !atTarget
+  await walker.start(here ? [c.lng, c.lat] : DEFAULT_WALK_START, here ? map.getBearing() : 115)
   basemaps.setDimmed(true)
   walkUi.hidden = false
   banner3d.classList.add('is-walking')
+  document.body.classList.add('is-walking-mode')
   refreshFrames()
 }
 
@@ -366,6 +381,7 @@ function stopWalk(rise = true) {
   basemaps.setDimmed(false)
   walkUi.hidden = true
   banner3d.classList.remove('is-walking')
+  document.body.classList.remove('is-walking-mode')
   if (rise) map.easeTo({ zoom: 18, pitch: 62, duration: 900 })
 }
 

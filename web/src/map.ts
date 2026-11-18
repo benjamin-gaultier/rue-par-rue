@@ -58,7 +58,10 @@ export function createMap(container: HTMLElement, center: [number, number], zoom
       [1.9, 48.6],
       [2.8, 49.1]
     ],
-    attributionControl: false
+    attributionControl: false,
+    // Phones have 3x screens: drawing every pixel of the 3D city there costs
+    // more than it shows. Two device pixels per CSS pixel is plenty.
+    pixelRatio: Math.min(window.devicePixelRatio || 1, 2)
   })
 }
 

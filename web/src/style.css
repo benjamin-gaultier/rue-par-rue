@@ -109,7 +109,7 @@ button, input { font: inherit; color: inherit; }
 
 .banner-3d-actions { display: grid; gap: 6px; flex: none; }
 .walk-btn { background: var(--plaque) !important; color: #fff !important; border-color: var(--plaque) !important; }
-.banner-3d.is-walking .banner-3d-text > span { display: none; }
+.banner-3d.is-walking .banner-3d-text > span, .banner-3d.is-walking #walk-3d { display: none; }
 .walk-ui {
   position: absolute; z-index: 3; left: 50%; bottom: 16px; transform: translateX(-50%);
   display: grid; justify-items: center; gap: 8px; pointer-events: none;
@@ -122,6 +122,13 @@ button, input { font: inherit; color: inherit; }
   font-size: 18px; cursor: pointer; touch-action: none; user-select: none; box-shadow: var(--shadow);
 }
 .walk-pad button:active { background: var(--plaque); color: #fff; }
+.walk-help-touch { display: none; }
+@media (pointer: coarse) {
+  .walk-help-keys { display: none; }
+  .walk-help-touch { display: inline; }
+  .walk-pad { grid-template-columns: repeat(3, 58px); grid-template-rows: repeat(2, 58px); gap: 6px; }
+  .walk-pad button { font-size: 22px; }
+}
 .walk-up { grid-column: 2; grid-row: 1; }
 .walk-left { grid-column: 1; grid-row: 2; }
 .walk-down { grid-column: 2; grid-row: 2; }
@@ -257,9 +264,16 @@ button.today-item:hover img { outline: 2px solid var(--accent); outline-offset: 
 .maplibregl-ctrl-attrib { font-size: 11px; }
 
 @media (max-width: 720px) {
-  .btn-3d { display: none; }
-  .banner-3d { top: 70px; width: calc(100% - 24px); }
-  .banner-3d-text > span { display: none; }
+  /* 3D on phones: a compact button above the layers; in 3D, the layers make way for the view. */
+  .btn-3d { order: -1; display: flex; justify-content: center; padding: 10px 12px; }
+  .btn-3d small { display: none; }
+  .is-3d .side { display: none; }
+  .banner-3d { top: 66px; width: calc(100% - 24px); padding: 8px 10px; align-items: center; }
+  .banner-3d-text > span, .legend-3d { display: none; }
+  .banner-3d-text strong { font-size: 14px; }
+  .banner-3d-actions { grid-auto-flow: column; }
+  .banner-3d-actions .tb-btn { padding: 0 10px; font-size: 13px; }
+  .walk-ui { bottom: 10px; }
   .tn-controls { grid-template-columns: minmax(0, 1fr); }
   .tn-buttons { justify-content: flex-start; }
   .tn-title h2 { font-size: 17px; }
