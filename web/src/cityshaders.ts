@@ -1207,7 +1207,9 @@ void main() {
       int info = int(v_c.w + 0.5);
       int trade = info - (info / 32) * 32;
       int key = wid * 32 + info / 32;
-      bool modern = u_year >= 1952.0 + 40.0 * ihash(bid, key, 31) && ihash(bid, key, 32) >= 0.18;
+      float hm = ihash(bid, key, 31);
+      // Shopfronts were modernised mostly in the 1960s and 1970s; a few old ones survive.
+      bool modern = u_year >= 1950.0 + 45.0 * hm * hm && ihash(bid, key, 32) >= 0.18;
       float hc = ihash(bid, key, 33);
       vec3 c1 = hc < 0.25 ? vec3(0.62, 0.12, 0.10) : hc < 0.5 ? vec3(0.16, 0.38, 0.22) : hc < 0.7 ? vec3(0.15, 0.22, 0.42) : hc < 0.85 ? vec3(0.55, 0.32, 0.12) : vec3(0.42, 0.12, 0.16);
       vec3 ecru = vec3(0.88, 0.84, 0.74);
@@ -1234,7 +1236,9 @@ void main() {
       int trade = info - (info / 32) * 32;
       int key = wid * 32 + info / 32;
       float W = L, top = flags, x = u;
-      bool modern = u_year >= 1952.0 + 40.0 * ihash(bid, key, 31) && ihash(bid, key, 32) >= 0.18;
+      float hm = ihash(bid, key, 31);
+      // Shopfronts were modernised mostly in the 1960s and 1970s; a few old ones survive.
+      bool modern = u_year >= 1950.0 + 45.0 * hm * hm && ihash(bid, key, 32) >= 0.18;
       vec3 paint = shopColour(ihash(bid, key, 3));
       vec3 metal = vec3(0.24, 0.25, 0.26);
       float fz0 = top - 0.62;
@@ -1284,10 +1288,13 @@ void main() {
             float bar = max(max(mull * (inDoor ? 0.0 : 1.0), frame), panel);
             // Behind the glass: a dim shop with goods on shelves; brighter and lit in modern shops.
             vec3 goods = shopColour(hash(floor(q * vec2(3.0, 5.0)) + float(bid))) * 0.7 + 0.15;
-            vec3 room = modern ? vec3(0.62, 0.56, 0.46) : mix(vec3(0.16, 0.13, 0.11), goods, step(0.5, hash(floor(q * vec2(6.0, 9.0)) + float(key))) * step(q.y, lo.y + 0.9) * (inDoor ? 0.0 : 0.7));
+            // Modern shops are lit: pale shelves of goods, a bright back wall.
+            float shelf = step(0.45, hash(floor(q * vec2(5.0, 6.0)) + float(key))) * step(q.y, 2.1) * (inDoor ? 0.0 : 1.0);
+            vec3 room = modern ? mix(vec3(0.80, 0.76, 0.68), goods * 1.1, 0.6 * shelf) * (1.0 - 0.25 * step(0.85, fract(q.y / 0.45)) * shelf)
+                               : mix(vec3(0.16, 0.13, 0.11), goods, step(0.5, hash(floor(q * vec2(6.0, 9.0)) + float(key))) * step(q.y, lo.y + 0.9) * (inDoor ? 0.0 : 0.7));
             inside = mix(room, modern ? metal : paint * 0.95, bar);
-            gl = (1.0 - bar) * (modern ? 0.45 : 0.6);
-            emissive = modern ? (1.0 - bar) * 0.35 : 0.0;
+            gl = (1.0 - bar) * (modern ? 0.32 : 0.6);
+            emissive = modern ? (1.0 - bar) * 0.5 : 0.0;
           } else {
             inside = (modern ? metal : paint) * (1.0 - 0.3 * r.w);
           }

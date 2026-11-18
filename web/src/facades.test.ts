@@ -52,6 +52,20 @@ function partVertices(m: MeshData, part: number): number[][] {
   return out
 }
 
+describe('mesh data', () => {
+  it('shares the corners of a quad and keeps one index triple per owner', () => {
+    const m = new MeshData()
+    m.vertex([0, 0, 0], [0, 0, 1], [0, 0, 0, 0], [0, 0, 0, 0], OPEN)
+    m.vertex([1, 0, 0], [0, 0, 1], [0, 0, 0, 0], [0, 0, 0, 0], OPEN)
+    m.vertex([1, 1, 0], [0, 0, 1], [0, 0, 0, 0], [0, 0, 0, 0], OPEN)
+    m.owner.push(0)
+    m.quad([[0, 0, 1], [1, 0, 1], [1, 1, 1], [0, 1, 1]], [0, 0, 1], [[0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0]], [0, 0, 0, 0], OPEN, [0, 0, 0, 0], 1)
+    expect(m.position.length / 3).toBe(7)
+    expect(m.index).toEqual([0, 1, 2, 3, 4, 5, 3, 5, 6])
+    expect(m.index.length).toBe(m.triangles * 3)
+  })
+})
+
 describe('hashes shared with the shader', () => {
   it('matches 32-bit unsigned arithmetic', () => {
     for (const [a, b, c] of [
