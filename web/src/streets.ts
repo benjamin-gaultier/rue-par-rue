@@ -462,6 +462,64 @@ function instanced(base: THREE.BufferGeometry, f: BuiltStreets['furniture'][numb
   return g
 }
 
+/** Street furniture is drawn within this distance of the camera (metres)... */
+export const FURNITURE_RADIUS_M = 260
+/** ...and chosen again when the camera has moved this far. */
+const FURNITURE_REFILL_M = 25
+
+interface FurnitureSet {
+  mesh: THREE.Mesh
+  geometry: THREE.InstancedBufferGeometry
+  span: [number, number]
+  inst: number[]
+  life: number[]
+  type: number[]
+}
+
+/** Indices of the items standing in `year` within FURNITURE_RADIUS_M of the camera. */
+export function nearItems(inst: ArrayLike<number>, life: ArrayLike<number>, year: number, camera: { x: number; y: number; z: number }): number[] {
+  const out: number[] = []
+  const r2 = FURNITURE_RADIUS_M * FURNITURE_RADIUS_M
+  const n = life.length / 4
+  for (let i = 0; i < n; i++) {
+    const l = i * 4
+    if (!(year >= life[l] && year < life[l + 1]) || (year >= life[l + 2] && year < life[l + 3])) continue
+    const dx = inst[l] - camera.x
+    const dy = inst[l + 1] - camera.y
+    const dz = 2 - camera.z
+    if (dx * dx + dy * dy + dz * dz < r2) out.push(i)
+  }
+  return out
+}
+
+function refill(s: FurnitureSet, year: number, camera: THREE.Vector3) {
+  if (!(year >= s.span[0] && year < s.span[1])) {
+    s.mesh.visible = false
+    return
+  }
+  const keep = nearItems(s.inst, s.life, year, camera)
+  const inst = s.geometry.getAttribute('a_inst') as THREE.InstancedBufferAttribute
+  const life = s.geometry.getAttribute('a_ilife') as THREE.InstancedBufferAttribute
+  const type = s.geometry.getAttribute('a_type') as THREE.InstancedBufferAttribute
+  const a = inst.array as Float32Array
+  const b = life.array as Float32Array
+  const t = type.array as Float32Array
+  keep.forEach((i, k) => {
+    for (let j = 0; j < 4; j++) {
+      a[k * 4 + j] = s.inst[i * 4 + j]
+      b[k * 4 + j] = s.life[i * 4 + j]
+    }
+    t[k] = s.type[i]
+  })
+  for (const attr of [inst, life, type]) {
+    attr.clearUpdateRanges()
+    attr.addUpdateRange(0, keep.length * attr.itemSize)
+    attr.needsUpdate = true
+  }
+  s.geometry.instanceCount = keep.length
+  s.mesh.visible = keep.length > 0
+}
+
 const streets: CityModule = {
   name: 'streets',
   async build(ctx: CityContext) {
@@ -506,22 +564,28 @@ const streets: CityModule = {
     }
     const material = new THREE.ShaderMaterial({ vertexShader: SS.furnitureVertex, fragmentShader: SS.furnitureFragment, uniforms: u, side: THREE.DoubleSide })
     const models = new Map<number, THREE.BufferGeometry>()
-    const timed: { mesh: THREE.Mesh; span: [number, number] }[] = []
+    const sets: FurnitureSet[] = []
     for (const f of built.furniture) {
       if (!f.type.length) continue
       const group = GROUPS[f.group]
       if (!models.has(f.group)) models.set(f.group, modelGeometry(group.variants))
-      const mesh = new THREE.Mesh(instanced(models.get(f.group)!, f), material)
+      const geometry = instanced(models.get(f.group)!, f)
+      const mesh = new THREE.Mesh(geometry, material)
       mesh.frustumCulled = false
       mesh.renderOrder = 2.5
       ctx.add(mesh)
-      timed.push({ mesh, span: f.span })
+      sets.push({ mesh, geometry, span: f.span, inst: f.inst, life: f.life, type: f.type })
     }
-    // Skip whole meshes whose items all stand in other years (the old network today, for instance).
+    // Draw only the items standing in the year shown and near the camera:
+    // there are thousands of lamps and bollards, a few pixels each from afar.
+    let last: [number, number, number, number] | undefined
     ctx.animate(() => {
       const year = u.u_year.value
-      for (const t of timed) t.mesh.visible = year >= t.span[0] && year < t.span[1]
-      return false
+      const c = u.u_camera.value
+      if (last && last[3] === year && Math.hypot(c.x - last[0], c.y - last[1], c.z - last[2]) < FURNITURE_REFILL_M) return false
+      last = [c.x, c.y, c.z, year]
+      for (const s of sets) refill(s, year, c)
+      return true
     })
     console.info(`streets: built in ${Math.round(performance.now() - t0)} ms`, JSON.stringify(built.counts))
   }

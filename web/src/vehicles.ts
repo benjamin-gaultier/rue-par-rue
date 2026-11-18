@@ -262,12 +262,19 @@ export function keepOutOfBuildings(vehicles: Vehicle[], index: BuildingIndex): V
 }
 
 /** Is the vehicle uploaded for this year? (Shown in the window around it, inside the detailed ground.) */
-export function wanted(v: Vehicle, year: number, box: THREE.Vector4, half = WINDOW): boolean {
+export function wanted(v: Vehicle, year: number, box: THREE.Vector4, half = WINDOW, camera?: { x: number; y: number; z: number }): boolean {
   if (v.until <= year - half || v.from > year + half) return false
   if (v.move) return true // anywhere along its route
   const m = 5
-  return v.x > box.x - m && v.x < box.z + m && v.y > box.y - m && v.y < box.w + m
+  if (!(v.x > box.x - m && v.x < box.z + m && v.y > box.y - m && v.y < box.w + m)) return false
+  // Parked vehicles far from the camera are a few pixels each: left out.
+  return !camera || Math.hypot(v.x - camera.x, v.y - camera.y, v.z - camera.z) < VEHICLE_RADIUS_M
 }
+
+/** Parked vehicles are drawn within this distance of the camera (metres)... */
+export const VEHICLE_RADIUS_M = 380
+/** ...and chosen again when the camera has moved this far. */
+const VEHICLE_REFILL_M = 40
 
 function fract(x: number): number {
   return x - Math.floor(x)
@@ -311,6 +318,7 @@ class VehicleLayer {
   private shadow?: { geometry: THREE.InstancedBufferGeometry; inst: THREE.InstancedBufferAttribute; info: THREE.InstancedBufferAttribute; dim: THREE.InstancedBufferAttribute; list: Vehicle[] }
   private time = { value: 0 }
   private year = NaN
+  private uploadedFrom = new THREE.Vector3(1e9, 1e9, 1e9)
   private matrix = new THREE.Matrix4()
   private clip = new THREE.Vector4()
   private pending = false
@@ -414,11 +422,13 @@ class VehicleLayer {
   private upload(year: number) {
     this.year = year
     const box = this.ctx.uniforms.u_box.value
+    const camera = this.ctx.uniforms.u_camera.value
+    this.uploadedFrom.copy(camera)
     const shadows: Vehicle[] = []
     for (const m of this.meshes) {
       const parked: Vehicle[] = []
       const moving: Vehicle[] = []
-      for (const v of m.all) if (wanted(v, year, box)) (v.move ? moving : parked).push(v)
+      for (const v of m.all) if (wanted(v, year, box, WINDOW, camera)) (v.move ? moving : parked).push(v)
       m.shown = parked.concat(moving)
       m.firstMoving = parked.length
       const a = m.inst.array as Float32Array
@@ -456,7 +466,7 @@ class VehicleLayer {
   /** Called after each frame: refresh the set when the year moved, move what moves. */
   private step(t: number): boolean {
     const year = this.ctx.uniforms.u_year.value
-    if (!(Math.abs(year - this.year) < WINDOW - 2)) {
+    if (!(Math.abs(year - this.year) < WINDOW - 2) || this.uploadedFrom.distanceTo(this.ctx.uniforms.u_camera.value) > VEHICLE_REFILL_M) {
       this.upload(year)
       this.ctx.repaint()
     }
