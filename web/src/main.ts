@@ -294,15 +294,28 @@ let cityLoading: Promise<void> | undefined
 function ensureCity(): Promise<void> {
   cityLoading ??= (async () => {
     try {
-      const { City3D, SITE_URL, GREENERY_URL } = await import('./city3d')
+      const [{ City3D, SITE_URL, GREENERY_URL }, { CITY_MODULES }] = await Promise.all([import('./city3d'), import('./citymodules')])
+      const modules = (
+        await Promise.all(
+          CITY_MODULES.map((load) =>
+            load()
+              .then((m) => m.default)
+              .catch((err) => {
+                console.warn('City module unavailable:', err)
+                return undefined
+              })
+          )
+        )
+      ).filter((m): m is NonNullable<typeof m> => m !== undefined)
       const layer = new City3D(CITE_CENTER)
-      await layer.load(BASE + MODEL_URL, BASE + SITE_URL, BASE + GREENERY_URL)
+      await layer.load(BASE + MODEL_URL, BASE + SITE_URL, BASE + GREENERY_URL, modules, BASE)
       map.addLayer(layer, map.getLayer('photo-frames') ? 'photo-frames' : undefined)
       city = layer
       city.setYear(state.year)
       city.setVisible(model.active)
       model.setHideFocus(true)
-      walker.extraBlock = (p) => city?.inWater(p) ?? false
+      walker.extraBlock = (p) => city?.isBlocked(p, state.year) ?? false
+      walker.skipIds = city.buildingIds
     } catch (err) {
       console.warn('Detailed 3D area unavailable:', err)
     }

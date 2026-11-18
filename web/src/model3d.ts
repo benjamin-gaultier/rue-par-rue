@@ -16,7 +16,8 @@ export const MODEL_URL = 'data/3d/cite-1836.geojson'
 export const CITE_CAMERA = { from: [2.3455, 48.8522] as [number, number], altitude: 160, to: [2.3488, 48.8535] as [number, number] }
 /** The same view as plain camera options (bearing 59°, pitch 60°). */
 export const CITE_VIEW = { center: [2.3488, 48.8535] as [number, number], zoom: 17.3, pitch: 60, bearing: 59 }
-export const CITE_BOUNDS: [number, number, number, number] = [2.3395, 48.8505, 2.3565, 48.859]
+/** The model's box (AREAS["cite"]["bbox"] in the pipeline): the whole island, its bridges and the facing quays. */
+export const CITE_BOUNDS: [number, number, number, number] = [2.3385, 48.8505, 2.3565, 48.859]
 
 export const MODEL_COLORS = {
   standing: '#ece2cc',
@@ -39,7 +40,7 @@ export function modelFilter(year: number): FilterSpecification {
   return [
     'any',
     ['==', ['get', 'kind'], 'standing'],
-    ['all', ['==', ['get', 'kind'], 'reconstructed'], ['<', year, ['get', 'until']]],
+    ['all', ['==', ['get', 'kind'], 'reconstructed'], ['<', year, ['get', 'until']], ['>=', year, ['coalesce', ['get', 'from'], -10000]]],
     ['all', ['in', ['get', 'kind'], ['literal', ['later', 'undated']]], ['<=', ['get', 'from'], year]]
   ]
 }
@@ -47,7 +48,7 @@ export function modelFilter(year: number): FilterSpecification {
 /** Same rule as modelFilter, for tests and counts. */
 export function existsIn(p: { kind: string; until?: number; from?: number }, year: number): boolean {
   if (p.kind === 'standing') return true
-  if (p.kind === 'reconstructed') return year < (p.until ?? Infinity)
+  if (p.kind === 'reconstructed') return year < (p.until ?? Infinity) && year >= (p.from ?? -Infinity)
   return (p.from ?? Infinity) <= year
 }
 
@@ -63,6 +64,8 @@ export interface ModelProps {
   name?: string
   plan_url?: string
   iou?: number
+  /** History of an institution (Hôtel-Dieu, archbishop's palace…), or the first popup line for buildings not standing in 1836, such as houses on bridges. */
+  note?: string
 }
 
 /** Plain-language lines for the building popup. */
@@ -70,7 +73,8 @@ export function describeBuilding(p: ModelProps): { title: string; lines: string[
   const title =
     p.address || p.name || (p.kind === 'standing' ? 'Building standing in 1836' : p.kind === 'reconstructed' ? 'Demolished building' : 'Later building')
   const lines: string[] = []
-  if (p.kind === 'standing') lines.push(`Built ${p.period}${p.built ? ` (${p.built})` : ''}, still standing`)
+  if (p.note) lines.push(p.note)
+  else if (p.kind === 'standing') lines.push(`Built ${p.period}${p.built ? ` (${p.built})` : ''}, still standing`)
   else if (p.kind === 'reconstructed') lines.push('Standing in 1836, demolished since')
   else lines.push(`Built ${p.period}`)
   lines.push(
@@ -78,6 +82,7 @@ export function describeBuilding(p: ModelProps): { title: string; lines: string[
       ? `Height: about ${Math.round(p.height)} m (estimated)`
       : `Height: ${Math.round(p.height)} m median${p.height_max ? `, ${Math.round(p.height_max)} m at the highest` : ''} (measured)`
   )
+  if (p.note) lines.push(p.note)
   lines.push(p.source + (p.traced && p.iou ? ` · fit ${Math.round(p.iou * 100)}%` : ''))
   const link = p.plan_url ? { href: p.plan_url, text: 'Vasserot’s plan at the Archives nationales' } : undefined
   return { title, lines, link }
@@ -110,7 +115,7 @@ export class Model3D {
   enter(year: number, fly = true) {
     const map = this.map
     if (!this.added) {
-      map.addSource('model', { type: 'geojson', data: this.base + MODEL_URL, attribution: 'Massing model: APUR (ODbL), Vasserot cadastre/ALPAGE (ODbL); river and bridges: IGN BD TOPO; trees: Ville de Paris (ODbL)' })
+      map.addSource('model', { type: 'geojson', data: this.base + MODEL_URL, attribution: 'Massing model: APUR (ODbL), Vasserot cadastre/ALPAGE (ODbL); river and bridges: IGN BD TOPO; trees, pavements, street lamps and furniture: Ville de Paris (ODbL)' })
       map.addLayer(
         {
           id: 'model',

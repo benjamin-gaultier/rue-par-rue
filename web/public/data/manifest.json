@@ -64,12 +64,12 @@
   "model3d_cite": {
     "file": "3d/cite-1836.geojson",
     "area": "Île de la Cité",
-    "standing": 1443,
-    "later": 779,
-    "reconstructed": 6242,
+    "standing": 1606,
+    "later": 813,
+    "reconstructed": 6099,
     "traced": 48,
     "license": "Vasserot parcels: ODbL (ALPAGE). APUR buildings: ODbL.",
-    "updated_at": "2026-11-17T22:44:01Z"
+    "updated_at": "2026-11-18T11:38:11Z"
   },
   "traced_cite": {
     "area": "cite",
@@ -99,15 +99,61 @@
   "site_cite": {
     "area": "cite",
     "file": "3d/site-cite.geojson",
-    "water_level_m": 27.0,
-    "bridges": 11,
-    "updated_at": "2026-11-17T22:45:25Z"
+    "water_level_m": 27.1,
+    "bridges": 13,
+    "updated_at": "2026-11-18T10:27:15Z"
   },
   "greenery_cite": {
     "area": "cite",
     "file": "3d/greenery-cite.json",
-    "gardens": 13,
-    "trees": 1038,
-    "updated_at": "2026-11-18T08:56:37Z"
+    "gardens": 26,
+    "trees": 2493,
+    "updated_at": "2026-11-18T11:38:32Z"
+  },
+  "institutions_cite": {
+    "area": "cite",
+    "file": "3d/institutions-cite.geojson",
+    "buildings": 12,
+    "updated_at": "2026-11-18T11:36:32Z"
+  },
+  "streets_cite": {
+    "area": "cite",
+    "file": "3d/streets-cite.json",
+    "bytes": 442312,
+    "gutter runs": 471,
+    "lantern": 399,
+    "potence": 361,
+    "candelabra": 1383,
+    "old pavements": 264,
+    "column": 55,
+    "kerb_stone": 417,
+    "plaque": 1367,
+    "modern pavements": 1188,
+    "crossings": 415,
+    "main road areas": 19,
+    "centre lines": 16,
+    "pole": 406,
+    "wall_lamp": 774,
+    "wallace": 8,
+    "kiosk": 20,
+    "bollard": 9551,
+    "vespasienne": 14,
+    "bench": 332,
+    "updated_at": "2026-11-18T11:45:47Z"
+  },
+  "landmarks_cite": {
+    "area": "cite",
+    "file": "3d/landmarks-cite.json",
+    "buildings": 52,
+    "parts": 15,
+    "updated_at": "2026-11-18T11:58:17Z"
+  },
+  "vehicles_cite": {
+    "area": "cite",
+    "file": "3d/vehicles-cite.json",
+    "parked": 7300,
+    "moving": 561,
+    "bytes": 353948,
+    "updated_at": "2026-11-18T12:03:18Z"
   }
 }

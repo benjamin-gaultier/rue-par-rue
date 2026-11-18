@@ -63,9 +63,29 @@ export function toObstacles(geojson: { features: { geometry: { type: string; coo
   return out
 }
 
+/**
+ * One step of `metres` towards `heading`, sliding along whatever blocks the
+ * way: if the straight step is blocked, try headings turned towards the wall's
+ * line, shortened as the turn grows (the part of the step along the wall).
+ * Walking into a wall at a slant keeps you moving along it, as in a street;
+ * walking straight into it stops you. Returns null if no step is free.
+ */
+export function slide(from: [number, number], heading: number, metres: number, isBlocked: (p: [number, number]) => boolean): [number, number] | null {
+  const ahead = offset(from, heading, metres)
+  if (!isBlocked(ahead)) return ahead
+  for (const turn of SLIDE_TURNS)
+    for (const side of [1, -1]) {
+      const p = offset(from, heading + side * turn, metres * Math.cos((turn * Math.PI) / 180))
+      if (!isBlocked(p)) return p
+    }
+  return null
+}
+const SLIDE_TURNS = [20, 40, 60, 75]
+
 /** True if a building standing in `year` covers the point. */
-export function blocked(p: [number, number], year: number, obstacles: Obstacle[]): boolean {
+export function blocked(p: [number, number], year: number, obstacles: Obstacle[], skip?: Set<string>): boolean {
   for (const o of obstacles) {
+    if (skip?.has((o.props as { id?: string }).id ?? '')) continue
     const [x0, y0, x1, y1] = o.bbox
     if (p[0] < x0 || p[0] > x1 || p[1] < y0 || p[1] > y1) continue
     if (!existsIn(o.props, year)) continue
@@ -87,6 +107,8 @@ export class Walker {
   private obstacles: Obstacle[] = []
   /** More places you cannot walk, such as the river (set by the detailed layer). */
   extraBlock?: (p: [number, number]) => boolean
+  /** Buildings whose blocking extraBlock takes over (the detailed layer, with its own dates). */
+  skipIds?: Set<string>
 
   constructor(
     private map: MapLibreMap,
@@ -179,7 +201,7 @@ export class Walker {
   }
 
   private isBlocked(p: [number, number]): boolean {
-    return blocked(p, this.year(), this.obstacles) || (this.extraBlock?.(p) ?? false)
+    return blocked(p, this.year(), this.obstacles, this.skipIds) || (this.extraBlock?.(p) ?? false)
   }
 
   private freeSpotNear(at: [number, number]): [number, number] {
@@ -216,9 +238,11 @@ export class Walker {
     if (turn || forward || side) {
       this.heading = (this.heading + turn * TURN_SPEED * dt + 360) % 360
       const speed = k.has('shift') ? RUN_SPEED : WALK_SPEED
-      let next = offset(this.pos, this.heading, forward * speed * dt)
-      if (side) next = offset(next, this.heading + 90, side * speed * dt)
-      if (!this.isBlocked(next)) this.pos = next
+      if (forward || side) {
+        const way = this.heading + (Math.atan2(side, forward) * 180) / Math.PI
+        const next = slide(this.pos, way, speed * dt, (p) => this.isBlocked(p))
+        if (next) this.pos = next
+      }
       this.place()
     }
     this.raf = requestAnimationFrame(this.tick)

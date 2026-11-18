@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { blocked, insidePolygon, offset, toObstacles } from '../src/walk'
+import { blocked, insidePolygon, offset, slide, toObstacles } from '../src/walk'
 
 const square = (x: number, y: number, d: number): [number, number][] => [[x, y], [x + d, y], [x + d, y + d], [x, y + d], [x, y]]
 
@@ -31,5 +31,20 @@ describe('walking', () => {
     expect(blocked(inOld, 1900, obstacles)).toBe(false) // demolished by then
     expect(blocked(inNew, 1836, obstacles)).toBe(false) // not built yet
     expect(blocked(inNew, 1900, obstacles)).toBe(true)
+  })
+
+  it('slides along a wall met at a slant, and stops at one met head on', () => {
+    // A wall north of latitude 48.8501: walking north-east slides east along it.
+    const wall = (p: [number, number]) => p[1] > 48.8501
+    const start: [number, number] = [2.35, 48.85009]
+    const p = slide(start, 45, 2, wall)!
+    expect(p).not.toBeNull()
+    expect(p[0]).toBeGreaterThan(start[0])
+    expect(wall(p)).toBe(false)
+    // Head on, the step is too short along the wall to get anywhere much.
+    const q = slide(start, 0, 2, wall)
+    if (q) expect(Math.abs(q[0] - start[0]) * 73300).toBeLessThan(2)
+    // Boxed in: no step.
+    expect(slide(start, 0, 2, () => true)).toBeNull()
   })
 })

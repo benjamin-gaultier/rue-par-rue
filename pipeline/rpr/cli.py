@@ -86,10 +86,34 @@ def cmd_site(args: argparse.Namespace) -> None:
     _update_manifest(f"site_{args.area}", site.build(args.area))
 
 
+def cmd_institutions(args: argparse.Namespace) -> None:
+    from rpr.sources import institutions
+
+    _update_manifest(f"institutions_{args.area}", institutions.build(args.area))
+
+
 def cmd_greenery(args: argparse.Namespace) -> None:
     from rpr.sources import greenery
 
     _update_manifest(f"greenery_{args.area}", greenery.build(args.area))
+
+
+def cmd_streets(args: argparse.Namespace) -> None:
+    from rpr.sources import streets
+
+    _update_manifest(f"streets_{args.area}", streets.build(args.area))
+
+
+def cmd_landmarks(args: argparse.Namespace) -> None:
+    from rpr.sources import landmarks
+
+    _update_manifest(f"landmarks_{args.area}", landmarks.build(args.area))
+
+
+def cmd_vehicles(args: argparse.Namespace) -> None:
+    from rpr.sources import vehicles
+
+    _update_manifest(f"vehicles_{args.area}", vehicles.build(args.area, refresh=args.refresh))
 
 
 def cmd_index(args: argparse.Namespace) -> None:
@@ -138,9 +162,26 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--area", choices=["cite"], default="cite")
     p.set_defaults(func=cmd_site)
 
+    p = sub.add_parser("institutions", help="Hôtel-Dieu and archbishop's palace traced from Verniquet's atlas (needs [geo,vision] and the atlas screenshots)")
+    p.add_argument("--area", choices=["cite"], default="cite")
+    p.set_defaults(func=cmd_institutions)
+
     p = sub.add_parser("greenery", help="gardens and trees of a model area (Paris tree register, APUR; needs shapely)")
     p.add_argument("--area", choices=["cite"], default="cite")
     p.set_defaults(func=cmd_greenery)
+
+    p = sub.add_parser("streets", help="streets and street furniture of a model area through time (Vasserot, plan de voirie; needs shapely)")
+    p.add_argument("--area", choices=["cite"], default="cite")
+    p.set_defaults(func=cmd_streets)
+
+    p = sub.add_parser("landmarks", help="landmarks of a model area through time: styles, dates, spires, towers, statues (needs shapely)")
+    p.add_argument("--area", choices=["cite"], default="cite")
+    p.set_defaults(func=cmd_landmarks)
+
+    p = sub.add_parser("vehicles", help="period vehicles and boats of a model area (BD TOPO, Vasserot; needs shapely)")
+    p.add_argument("--area", choices=["cite"], default="cite")
+    p.add_argument("--refresh", action="store_true", help="download BD TOPO roads and river again")
+    p.set_defaults(func=cmd_vehicles)
 
     p = sub.add_parser("index", help="rebuild photos.geojson and manifest.json")
     p.set_defaults(func=cmd_index)
