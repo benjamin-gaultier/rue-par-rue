@@ -34,6 +34,7 @@ import {
   type TreeSpec
 } from './citygen'
 import * as S from './cityshaders'
+import { signAtlas } from './signs'
 import type { ModelProps } from './model3d'
 
 export const SITE_URL = 'data/3d/site-cite.geojson'
@@ -156,6 +157,7 @@ function geometry(m: MeshData): THREE.BufferGeometry {
   g.setAttribute('normal', new THREE.Float32BufferAttribute(m.normal, 3))
   g.setAttribute('a_a', new THREE.Float32BufferAttribute(m.a, 4))
   g.setAttribute('a_b', new THREE.Float32BufferAttribute(m.b, 4))
+  if (m.c.length) g.setAttribute('a_c', new THREE.Float32BufferAttribute(m.c, 4))
   g.setAttribute('a_life', new THREE.Float32BufferAttribute(m.life, 4))
   g.computeBoundingSphere()
   return g
@@ -178,6 +180,8 @@ export interface CityUniforms {
   u_fog: { value: THREE.Color }
   u_front: { value: THREE.Vector4 }
   u_frontHalf: { value: number }
+  /** Lettering for shop signs and house numbers (signs.ts), drawn on a canvas at load. */
+  u_signs: { value: THREE.Texture }
 }
 
 /** What every city module can read before and after the buildings are built. */
@@ -248,7 +252,8 @@ export class City3D implements CustomLayerInterface {
     u_box: { value: new THREE.Vector4(-1e5, -1e5, 1e5, 1e5) },
     u_fog: { value: new THREE.Color('#e6e1d6') },
     u_front: { value: new THREE.Vector4() },
-    u_frontHalf: { value: 0 }
+    u_frontHalf: { value: 0 },
+    u_signs: { value: signAtlas() }
   }
   /** Number of detailed buildings and trees, for the legend and tests. */
   count = 0
@@ -316,7 +321,7 @@ export class City3D implements CustomLayerInterface {
       this.uniforms.u_frontHalf.value = front.half
     }
     this.count = this.specs.length
-    const { walls, roofs } = buildCity(this.specs)
+    const { walls, facades, roofs, details } = buildCity(this.specs)
 
     const meta = site.metadata ?? {}
     const waterZ = (meta.water_level_m ?? 27) - (meta.street_level_m ?? 34) + 0.4
@@ -372,6 +377,8 @@ export class City3D implements CustomLayerInterface {
       [ground, material(S.groundVertex, S.groundFragment, 1), true],
       [lawns, material(S.gardenVertex, S.gardenFragment, 1), false],
       [walls, material(S.wallVertex, S.wallFragment, 2), true],
+      [facades, material(S.wallVertex, S.facadeFragment, 2), true],
+      [details, material(S.wallVertex, S.detailFragment, 2), true],
       [roofs, material(S.roofVertex, S.roofFragment, 3), true]
     ]
     for (const [data, { m, order }, pickable] of meshes) {
@@ -446,6 +453,7 @@ export class City3D implements CustomLayerInterface {
       mesh.geometry.dispose()
       ;(mesh.material as THREE.Material).dispose()
     }
+    this.uniforms.u_signs.value.dispose()
   }
 
   setYear(year: number) {
