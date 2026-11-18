@@ -1,7 +1,8 @@
 /**
- * The detailed focus area around Notre-Dame: procedural buildings with
- * storeys, windows, shopfronts, mansard and tile roofs, chimneys, paved
- * streets, and the Seine sunk between its quays with arched bridges.
+ * The detailed island (the Île de la Cité and the facing quays): procedural
+ * buildings with storeys, windows, shopfronts, mansard and tile roofs,
+ * chimneys, paved streets, and the Seine sunk between its quays with each
+ * bridge as it stood that year (bridges.ts).
  *
  * A MapLibre custom layer drawn with three.js in the map's WebGL context,
  * sharing its depth buffer with the plain blocks of the rest of the model.
