@@ -100,7 +100,8 @@ SIDEWALKS_M = 8.0  # both pavements together; BD TOPO gives the carriageway widt
 # Each generation: years [from, until) (None: open-ended; before 1780 the app
 # starts anyway), kind, arches (a list for a bridge that crosses both arms:
 # longest crossing first), width in metres where it differed from today's
-# deck, and `houses_until` for the rows of houses it carried. Dates were
+# deck, and `houses_until` for the rows of houses it carried (`houses`: how
+# many, where a source counts them; `house_height` when built alike). Dates were
 # checked against the sources listed with each bridge; where a figure is an
 # estimate the note says so. Search results consulted in November 2026.
 BRIDGES: dict[str, dict[str, Any]] = {
@@ -149,9 +150,11 @@ BRIDGES: dict[str, dict[str, Any]] = {
                 "kind": "stone-old",
                 "arches": 6,
                 "houses_until": 1787,
+                "houses": 68,
+                "house_height": 14.0,
                 "note": "Stone bridge of 1500-1507 (Fra Giocondo) carrying 68 uniform houses; their demolition was "
                 "ordered in 1786 and done in 1786-1787, so 1786 is the last year shown with houses. "
-                "Six arches is an estimate.",
+                "Six arches and the houses' height (14 m, built alike) are estimates.",
             },
             {
                 "from": 1853,
@@ -230,6 +233,7 @@ BRIDGES: dict[str, dict[str, Any]] = {
                 "kind": "stone-old",
                 "arches": 4,
                 "houses_until": 1808,
+                "houses": 32,
                 "note": "Stone bridge of 1616 carrying 32 houses, removed after an imperial decree of 1807 "
                 "(demolished 1808). Four arches is an estimate.",
             },
