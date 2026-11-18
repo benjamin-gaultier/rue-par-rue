@@ -308,6 +308,16 @@ function ensureCity(): Promise<void> {
         )
       ).filter((m): m is NonNullable<typeof m> => m !== undefined)
       const layer = new City3D(CITE_CENTER)
+      layer.onFail = (reason) => {
+        // Fall back to the plain blocks, and say why.
+        model.setHideFocus(false)
+        walker.extraBlock = undefined
+        walker.skipIds = undefined
+        const note = document.createElement('p')
+        note.className = 'banner-3d-error'
+        note.textContent = `The detailed island cannot be drawn on this device: ${reason}. Showing plain blocks instead.`
+        banner3d.querySelector('.banner-3d-text')?.append(note)
+      }
       await layer.load(BASE + MODEL_URL, BASE + SITE_URL, BASE + GREENERY_URL, modules, BASE)
       map.addLayer(layer, map.getLayer('photo-frames') ? 'photo-frames' : undefined)
       city = layer
