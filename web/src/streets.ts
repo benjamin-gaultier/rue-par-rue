@@ -338,6 +338,13 @@ export function buildStreets(data: StreetsData, project: (lonlat: number[]) => P
   const counts: Record<string, number> = {}
   const count = (k: string) => (counts[k] = (counts[k] ?? 0) + 1)
 
+  // Decals draw in this order (they do not write depth): main roads, then
+  // gutters (with the pavements), crossings, lines and grates over them.
+  for (const [from, rings] of data.main_roads.rows) {
+    const pr = rings.map(pts)
+    if (!touchesBox(pr[0], box, MARGIN)) continue
+    addArea(decals, pr, PART.mainRoad, [from, OPEN, 0, 0])
+  }
   for (const [kind, from, until, rings, kerbs] of data.pavements.rows) {
     const pr = rings.map(pts)
     if (!pr.length || !touchesBox(pr[0], box, MARGIN)) continue
@@ -356,11 +363,6 @@ export function buildStreets(data: StreetsData, project: (lonlat: number[]) => P
     if (!touchesBox(p, box, MARGIN)) continue
     addCentreGutter(decals, p, (mid) => avoid([from, until], buildings.at(mid)))
     count('gutters')
-  }
-  for (const [from, rings] of data.main_roads.rows) {
-    const pr = rings.map(pts)
-    if (!touchesBox(pr[0], box, MARGIN)) continue
-    addArea(decals, pr, PART.mainRoad, [from, OPEN, 0, 0])
   }
   for (const [from, angle, ring] of data.crossings.rows) {
     const p = pts(ring)

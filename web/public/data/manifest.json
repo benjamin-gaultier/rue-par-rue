@@ -113,7 +113,7 @@
   "streets_cite": {
     "area": "cite",
     "file": "3d/streets-cite.json",
-    "bytes": 415481,
+    "bytes": 419993,
     "gutter runs": 451,
     "lantern": 375,
     "potence": 347,
@@ -124,7 +124,7 @@
     "plaque": 1323,
     "modern pavements": 1125,
     "crossings": 391,
-    "main road areas": 7,
+    "main road areas": 16,
     "centre lines": 13,
     "pole": 397,
     "wall_lamp": 705,
@@ -133,6 +133,6 @@
     "bollard": 8978,
     "vespasienne": 12,
     "bench": 326,
-    "updated_at": "2026-11-18T10:50:55Z"
+    "updated_at": "2026-11-18T11:29:11Z"
   }
 }

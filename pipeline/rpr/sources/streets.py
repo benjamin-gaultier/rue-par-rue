@@ -34,7 +34,6 @@ import json
 import math
 import urllib.parse
 from collections import defaultdict
-from pathlib import Path
 from typing import Any, Callable, Iterable
 
 from rpr import net, paths
@@ -185,7 +184,6 @@ ITEM = {
     "kiosk": 11,
     "bench": 12,
 }
-ITEM_FIELDS = ["type", "x", "y", "angle_deg", "from", "until", "param"]
 
 # Today's lamps: luminaires "de style" (Paris lanterns on cast-iron posts) or functional.
 STYLE_LAMP_WORDS = ("FONTES DE PARIS", "LANT", "LYRE", "LENZI", "DUBUISSON", "RAGNI", "R2", "R4", "R5", "PONT NEUF", "HOT VIL")
@@ -458,7 +456,7 @@ def _polygon_out(poly, to_wgs, origin, blocked) -> tuple[list[list[int]], list[s
 
     poly = orient(poly, 1.0)
     rings, flags = [], []
-    for k, ring in enumerate([poly.exterior, *poly.interiors]):
+    for ring in [poly.exterior, *poly.interiors]:
         coords = list(ring.coords)[:-1]
         if len(coords) < 3:
             continue
@@ -581,7 +579,7 @@ def build(area: str = "cite", log: Callable[[str], Any] = print) -> dict:
     stats["old pavements"] = len(old_pavements)
 
     # Columns on the old pavements.
-    _place_on_pavements([p for p in _rings(band)], "column", 180.0, 0.6, 0.8, [], RAMBUTEAU_FROM, OLD_UNTIL, item, kerb_side=lambda p: True)
+    _place_on_pavements(_rings(band), "column", 180.0, 0.6, 0.8, [], RAMBUTEAU_FROM, OLD_UNTIL, item)
 
     # Block corners: kerb stones and the street-name plaques on both facades.
     for poly in _rings(streets):
@@ -703,10 +701,11 @@ def build(area: str = "cite", log: Callable[[str], Any] = print) -> dict:
         if str(p.get("position_par_rapport_au_sol")) != "0" or str(p.get("importance")) not in ("3", "4"):
             continue
         width = float(p.get("largeur_de_chaussee") or 0) or 6.0
-        main_parts.append(ln.buffer(width / 2 + 0.5, cap_style="flat"))
+        # BD TOPO widths fall short of the kerbs: grow, then cut back to the pavements and facades.
+        main_parts.append(ln.buffer(width / 2 + 2.5, cap_style="flat"))
         if p.get("sens_de_circulation") == "Double sens" and width >= 7:
             centre.append([CENTRE_LINES_FROM, encode([to_wgs(x, y) for x, y in ln.simplify(0.3).coords], origin)])
-    main = unary_union(main_parts).difference(pav_union).difference(water).simplify(0.3)
+    main = unary_union(main_parts).difference(pav_union).difference(water).difference(unary_union(today_shapes)).simplify(0.3)
     main_roads = []
     for poly in _rings(main):
         if poly.area < 6:
@@ -912,7 +911,7 @@ def _road_facing(p, index, road_lines) -> float:
     return math.atan2(q.y - p.y, q.x - p.x)
 
 
-def _place_on_pavements(polys, kind, spacing, radius, offset, avoid, start, end, item, kerbs=None, depth=0.0, face_road=False, kerb_side=None):
+def _place_on_pavements(polys, kind, spacing, radius, offset, avoid, start, end, item, kerbs=None, depth=0.0, face_road=False):
     """Rule-placed furniture: walk each pavement's kerb, every 2 m try a spot
     `offset` metres in from it, keep it if the pavement is at least `depth`
     deep there, a disc of `radius` fits, nothing else stands within 2 m and no
