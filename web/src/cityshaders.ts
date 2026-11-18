@@ -328,8 +328,9 @@ vec4 westFront(float s, float z, float eave, vec3 stone, vec2 aa) {
 }
 
 // Each family of walls compiles only the code it needs (city3d.ts splits the
-// walls by style and sets these): one shader with every facade is too big for
-// some graphics drivers, which then draw nothing.
+// walls by style and sets these): with every facade in one shader, Direct3D's
+// compiler (Chrome and Edge on Windows) took about 5 s, against 0.4 s for
+// ordinary walls alone.
 #ifdef WALL_LANDMARKS
 ${landmarkFacades}
 #endif

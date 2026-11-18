@@ -58,10 +58,13 @@ float lmArch(vec2 p, float hw, float z0, float zs, vec2 aa) {
   return max(sides, top);
 }
 
-// A balustrade band between z0 and z1: balusters on a dark ground.
-vec3 lmBalustrade(vec3 col, float u, float z, float z0, float z1, vec2 aa) {
-  if (z < z0 || z > z1) return col;
-  float t = (z - z0) / (z1 - z0);
+// A balustrade band h high, dz above its foot: balusters on a dark ground.
+// Takes heights within the band, not z and its bounds: callers test z against
+// the same bounds, and those repeated tests send Direct3D's shader compiler
+// (Chrome and Edge on Windows) into endless recursion, which crashes the GPU process.
+vec3 lmBalustrade(vec3 col, float u, float dz, float h, vec2 aa) {
+  if (dz < 0.0 || dz > h) return col;
+  float t = dz / h;
   if (t < 0.18 || t > 0.82) return col * 1.08;
   float bx = abs(fract(u / 0.32) - 0.5);
   float w = 0.17 + 0.12 * sin(t * 3.14159);
@@ -81,7 +84,7 @@ vec4 lmChapel(float u, float z, float L, float eave, vec2 aa, float detail) {
     col = mix(col, stone * 0.5, (1.0 - smoothstep(rr - 0.05, rr + aa.x, r)) * step(rr * 0.55, r));
     col *= 0.92 + 0.1 * step(0.5, fract((h + abs(x)) / 0.5));
   } else if (z > eave - 1.2) {
-    col = lmBalustrade(col, u, z, eave - 1.2, eave - 0.1, aa);
+    col = lmBalustrade(col, u, z - (eave - 1.2), 1.1, aa);
     if (z > eave - 0.1) col *= 1.1;
   } else if (z > 9.0) {
     float hw = L * 0.5 - (L > 4.0 ? 0.55 : 0.35);
@@ -134,7 +137,7 @@ vec4 lmChapelFront(float u, float z, float L, float eave, float porchH, vec2 aa,
       col = mix(col, dark * 1.4, pointed(vec2(bx, z), hw, 9.0, top - hw * 1.3, hw * 1.7, aa));
       col = mix(col, stone * 0.85, lmTracery(vec2(bx, z), hw, top - hw * 1.3, 2.0, aa) * pointed(vec2(bx, z), hw, 9.0, top - hw * 1.3, hw * 1.7, aa) * detail);
     } else {
-      col = lmBalustrade(col, u, z, porchH - 1.3, porchH, aa);
+      col = lmBalustrade(col, u, z - (porchH - 1.3), 1.3, aa);
     }
   } else if (z < eave) {
     // The rose (flamboyant, late 15th century) in a square frame.
@@ -157,7 +160,7 @@ vec4 lmChapelFront(float u, float z, float L, float eave, float porchH, vec2 aa,
     glass = inside * (1.0 - tr) * 0.2;
   } else {
     // The gable: a balustrade at its foot, blind tracery above.
-    col = lmBalustrade(col, u, z, eave - 0.2, eave + 0.9, aa);
+    col = lmBalustrade(col, u, z - (eave - 0.2), 1.1, aa);
     if (z > eave + 1.2) {
       float g = pointed(vec2(x, z), L * 0.2, eave + 1.6, eave + 4.5, L * 0.35, aa);
       col = mix(col, stone * 0.74, g * detail);
