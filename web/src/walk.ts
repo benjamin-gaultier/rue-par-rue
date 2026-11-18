@@ -82,7 +82,8 @@ export class Walker {
   private keys = new Set<string>()
   private raf = 0
   private last = 0
-  private drag?: { x: number; y: number; heading: number; lookUp: number }
+  private drag?: { x: number; y: number; heading: number; lookUp: number; id: number }
+  private touchAction = ''
   private obstacles: Obstacle[] = []
   /** More places you cannot walk, such as the river (set by the detailed layer). */
   extraBlock?: (p: [number, number]) => boolean
@@ -121,9 +122,14 @@ export class Walker {
     window.addEventListener('keyup', this.onKeyUp)
     window.addEventListener('blur', this.clearKeys)
     const c = m.getCanvas()
+    // With the map's own gestures off, MapLibre lets the browser pan and zoom
+    // the page on touch, which cancels our drag: keep touches for the walk.
+    this.touchAction = c.style.touchAction
+    c.style.touchAction = 'none'
     c.addEventListener('pointerdown', this.onPointerDown)
     c.addEventListener('pointermove', this.onPointerMove)
     c.addEventListener('pointerup', this.onPointerUp)
+    c.addEventListener('pointercancel', this.onPointerUp)
     this.place()
     this.last = performance.now()
     this.raf = requestAnimationFrame(this.tick)
@@ -141,6 +147,9 @@ export class Walker {
     c.removeEventListener('pointerdown', this.onPointerDown)
     c.removeEventListener('pointermove', this.onPointerMove)
     c.removeEventListener('pointerup', this.onPointerUp)
+    c.removeEventListener('pointercancel', this.onPointerUp)
+    c.style.touchAction = this.touchAction
+    this.drag = undefined
     const m = this.map
     m.dragPan.enable()
     m.dragRotate.enable()
@@ -231,11 +240,17 @@ export class Walker {
   private clearKeys = () => this.keys.clear()
 
   private onPointerDown = (e: PointerEvent) => {
-    this.drag = { x: e.clientX, y: e.clientY, heading: this.heading, lookUp: this.lookUp }
+    if (this.drag) return // a second finger: keep following the first
+    this.drag = { x: e.clientX, y: e.clientY, heading: this.heading, lookUp: this.lookUp, id: e.pointerId }
+    try {
+      this.map.getCanvas().setPointerCapture(e.pointerId)
+    } catch {
+      // Synthetic or already-released pointers cannot be captured.
+    }
   }
 
   private onPointerMove = (e: PointerEvent) => {
-    if (!this.drag) return
+    if (!this.drag || e.pointerId !== this.drag.id) return
     // Drag the scene, as in street-level viewers: right turns left, down looks up.
     this.heading = (this.drag.heading - (e.clientX - this.drag.x) * 0.3 + 360) % 360
     const [lo, hi] = LOOK_RANGE
@@ -243,7 +258,7 @@ export class Walker {
     this.place()
   }
 
-  private onPointerUp = () => {
-    this.drag = undefined
+  private onPointerUp = (e: PointerEvent) => {
+    if (this.drag && e.pointerId === this.drag.id) this.drag = undefined
   }
 }
