@@ -299,3 +299,9 @@ button.today-item:hover img { outline: 2px solid var(--accent); outline-offset: 
 @media (prefers-reduced-motion: reduce) {
   * { transition: none !important; animation: none !important; }
 }
+
+.banner-3d-error {
+  margin: 6px 0 0;
+  color: #a8231a;
+  font-size: 12px;
+}

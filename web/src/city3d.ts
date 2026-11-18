@@ -520,6 +520,25 @@ export class City3D implements CustomLayerInterface {
     this.map = map
     this.renderer = new THREE.WebGLRenderer({ canvas: map.getCanvas(), context: gl as WebGL2RenderingContext, antialias: true })
     this.renderer.autoClear = false
+    // A shader this device's driver will not compile leaves the city blank:
+    // report it, so the app can show the plain blocks and say why.
+    this.renderer.debug.onShaderError = (g, program, vs, fs) => {
+      const log = [g.getShaderInfoLog(vs), g.getShaderInfoLog(fs), g.getProgramInfoLog(program)].filter((s) => s && s.trim()).join(' ')
+      this.fail(`a shader did not compile on this device (${log.trim().slice(0, 300) || 'no log'})`)
+    }
+  }
+
+  /** Called once if the city cannot be drawn on this device. */
+  onFail?: (reason: string) => void
+  private broken = false
+
+  private fail(reason: string) {
+    if (this.broken) return
+    this.broken = true
+    this.visible = false
+    console.error('Detailed 3D area cannot be drawn:', reason)
+    this.onFail?.(reason)
+    this.map?.triggerRepaint()
   }
 
   onRemove() {
@@ -536,7 +555,7 @@ export class City3D implements CustomLayerInterface {
   }
 
   setVisible(v: boolean) {
-    this.visible = v
+    this.visible = v && !this.broken
     this.map?.triggerRepaint()
   }
 
@@ -550,9 +569,15 @@ export class City3D implements CustomLayerInterface {
     // The camera sits where clip space has x = y = w = 0.
     const c = new THREE.Vector4(0, 0, 1, 0).applyMatrix4(this.inverse)
     if (Math.abs(c.w) > 1e-12) this.uniforms.u_camera.value.set(c.x / c.w, c.y / c.w, c.z / c.w)
-    this.treeLod?.(this.uniforms.u_camera.value)
-    this.renderer.resetState()
-    this.renderer.render(this.scene, this.camera)
+    try {
+      this.treeLod?.(this.uniforms.u_camera.value)
+      this.renderer.resetState()
+      this.renderer.render(this.scene, this.camera)
+    } catch (err) {
+      this.fail(`drawing failed (${err instanceof Error ? err.message : String(err)})`)
+      return
+    }
+    if (this.broken) return
     if (this.steps.length) {
       const t = performance.now() / 1000
       let more = false
