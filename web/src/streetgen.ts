@@ -152,6 +152,42 @@ export class Buildings {
     return out
   }
 
+  /**
+   * The nearest facade within `max` metres of a point, among buildings that
+   * stand at some time in `span`: the point on it, its outward normal, and the
+   * years that building stands. For hanging plaques and lamps on real walls.
+   */
+  nearestWall(p: Pt, max: number, span: Span): { at: Pt; normal: Pt; spans: Span[] } | null {
+    let best: { at: Pt; normal: Pt; spans: Span[]; d: number } | null = null
+    const seen = new Set<number>()
+    for (const dx of [-max, 0, max])
+      for (const dy of [-max, 0, max])
+        for (const i of this.grid.near([p[0] + dx, p[1] + dy])) {
+          if (seen.has(i)) continue
+          seen.add(i)
+          const b = this.list[i]
+          if (!b.spans.some(([a, e]) => a < span[1] && e > span[0])) continue
+          for (const poly of b.polys)
+            for (const ring of poly)
+              for (let k = 0; k < ring.length; k++) {
+                const a = ring[k]
+                const c = ring[(k + 1) % ring.length]
+                const ex = c[0] - a[0]
+                const ey = c[1] - a[1]
+                const L2 = ex * ex + ey * ey
+                if (L2 < 1e-6) continue
+                const t = Math.max(0, Math.min(1, ((p[0] - a[0]) * ex + (p[1] - a[1]) * ey) / L2))
+                const q: Pt = [a[0] + ex * t, a[1] + ey * t]
+                const d = Math.hypot(p[0] - q[0], p[1] - q[1])
+                if (d > max || (best && d >= best.d)) continue
+                const L = Math.sqrt(L2)
+                // Outer rings run counter-clockwise and holes clockwise: outside is to the right.
+                best = { at: q, normal: [ey / L, -ex / L], spans: b.spans, d }
+              }
+        }
+    return best && { at: best.at, normal: best.normal, spans: best.spans }
+  }
+
   get size() {
     return this.list.length
   }

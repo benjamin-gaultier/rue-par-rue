@@ -91,7 +91,7 @@ Street furniture, with the year each kind appears:
 | Dashed centre lines | from 1963 | two-way main roads | Approximation |
 | Bollards | from 1980 | today's bollards (plan de voirie) | Approximation |
 
-Nothing stands inside a building standing that year: the app trims every life against the model's buildings, and plaques and wall lamps show only while their wall stands. Positions placed by rule (lanterns, kerb stones, plaques, columns, benches) show the character of each period, not surveyed positions. Each model changes with the year on the GPU (oil lantern to gas, stone plaque to enamel, Rambuteau column to Morris), and furniture of the other network is skipped as a whole mesh, so about seven furniture draw calls are made in any year.
+Nothing stands inside a building standing that year: the app trims every life against the model's buildings, and plaques and wall lamps are moved onto the nearest facade of their years and show only while that wall stands. Positions placed by rule (lanterns, kerb stones, plaques, columns, benches) show the character of each period, not surveyed positions. Each model changes with the year on the GPU (oil lantern to gas, stone plaque to enamel, Rambuteau column to Morris), and furniture of the other network is skipped as a whole mesh, so about seven furniture draw calls are made in any year.
 
 #### Photos in 3D and walking the streets
 

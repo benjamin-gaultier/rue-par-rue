@@ -109,6 +109,21 @@ describe('buildings', () => {
   })
 })
 
+describe('walls', () => {
+  it('finds the nearest facade of a building standing in the years asked', () => {
+    const b = new Buildings()
+    b.add([[square(0, 0, 10, 10)]], [-OPEN, 1860, 0, 0])
+    b.add([[square(0, 10.4, 10, 20)]], [1900, OPEN, 0, 0])
+    const old = b.nearestWall([5, 10.2], 1.5, [1729, 1860])!
+    expect(old.at[1]).toBeCloseTo(10)
+    expect(old.normal[1]).toBeCloseTo(1) // facing north, out of the house
+    const today = b.nearestWall([5, 10.3], 1.5, [1860, OPEN])!
+    expect(today.at[1]).toBeCloseTo(10.4)
+    expect(today.normal[1]).toBeCloseTo(-1)
+    expect(b.nearestWall([30, 30], 1.5, [1860, OPEN])).toBeNull()
+  })
+})
+
 describe('pavements', () => {
   it('mitres the kerb inset where two kerb edges meet', () => {
     const ring = square(0, 0, 10, 10)

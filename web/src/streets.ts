@@ -404,8 +404,15 @@ export function buildStreets(data: StreetsData, project: (lonlat: number[]) => P
       const param = params[i] ?? 0
       let life: Life | null
       if (type === ITEM.plaque || type === ITEM.wallLamp) {
-        // On a wall: shown only while the building behind it stands.
-        life = need([from, until], buildings.at([p[0] - Math.cos(a) * 0.5, p[1] - Math.sin(a) * 0.5]))
+        // On a wall: moved onto the nearest facade of its years, shown only while that building stands.
+        const wall = buildings.nearestWall(p, 1.5, [from, until])
+        if (!wall) return
+        const facing = Math.cos(a) * wall.normal[0] + Math.sin(a) * wall.normal[1]
+        if (facing < 0.3) return
+        p[0] = wall.at[0] + wall.normal[0] * 0.03
+        p[1] = wall.at[1] + wall.normal[1] * 0.03
+        a = Math.atan2(wall.normal[1], wall.normal[0])
+        life = need([from, until], wall.spans)
       } else {
         life = avoid([from, until], buildings.at(p))
       }
@@ -457,6 +464,7 @@ const streets: CityModule = {
         .then((r) => (r.ok ? (r.json() as Promise<Greenery>) : undefined))
         .catch(() => undefined)
     ])
+    const t0 = performance.now()
     const b = ctx.uniforms.u_box.value
     const box: [number, number, number, number] = [b.x, b.y, b.z, b.w]
     const built = buildStreets(data, ctx.project, buildingsOf(ctx, box), box, greenery)
@@ -505,7 +513,7 @@ const streets: CityModule = {
       for (const t of timed) t.mesh.visible = year >= t.span[0] && year < t.span[1]
       return false
     })
-    console.info('streets:', built.counts)
+    console.info(`streets: built in ${Math.round(performance.now() - t0)} ms`, JSON.stringify(built.counts))
   }
 }
 
