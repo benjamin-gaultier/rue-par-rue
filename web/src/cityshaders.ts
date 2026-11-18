@@ -239,7 +239,7 @@ void main() {
   wall *= 1.0 - 0.07 * noise(vec2(u * 0.6, z * 0.12) + seed * 17.0);
   vec3 col = wall;
   float glass = 0.0;
-  bool cathedral = st > 5.5;
+  bool cathedral = st > 5.5 && st < 6.5; // only the cathedral style: landmark styles (20+) west of Notre-Dame are not its front
   vec2 rel = v_world.xy - u_front.xy;
   bool front = cathedral && u_frontHalf > 0.0 && dot(normalize(v_normal.xy), -u_front.zw) > 0.9 && dot(rel, u_front.zw) < 4.0;
 

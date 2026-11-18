@@ -140,5 +140,12 @@
     "vespasienne": 14,
     "bench": 332,
     "updated_at": "2026-11-18T11:45:47Z"
+  },
+  "landmarks_cite": {
+    "area": "cite",
+    "file": "3d/landmarks-cite.json",
+    "buildings": 52,
+    "parts": 15,
+    "updated_at": "2026-11-18T11:58:17Z"
   }
 }
