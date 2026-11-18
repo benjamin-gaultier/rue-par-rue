@@ -102,5 +102,12 @@
     "water_level_m": 27.0,
     "bridges": 11,
     "updated_at": "2026-11-17T22:45:25Z"
+  },
+  "greenery_cite": {
+    "area": "cite",
+    "file": "3d/greenery-cite.json",
+    "gardens": 13,
+    "trees": 1038,
+    "updated_at": "2026-11-18T08:56:37Z"
   }
 }

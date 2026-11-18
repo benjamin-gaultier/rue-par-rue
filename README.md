@@ -52,6 +52,12 @@ About 600 m around the cathedral (`focus` in `AREAS`, about 2,000 buildings acro
 - **Roofs from APUR.** `c_forme_toit` gives the shape: brisis-terrasson becomes a mansard with dormers lined up on the windows below, two-pitch roofs a ridge along the footprint's long axis, flat roofs a terrace. `c_toiture_mat` gives tile, zinc, stone or planting. Demolished houses get tile roofs with gables; chimney stacks rise from party walls.
 - **Notre-Dame.** Towers come from APUR (about 67 m). The west front is laid out along the line across the cathedral's westernmost points: three portals, the gallery of kings, the rose window between two traceried windows, the great gallery and the belfries. The spire stands from 1860 (Viollet-le-Duc), is missing from April 2019 and back in 2024.
 - **The river.** `python -m rpr site --area cite` fetches the Seine from IGN BD TOPO with its water level (27 m, against 34 m in the streets), so the river sits 7 m down between stone quays. Bridge decks come from the BD TOPO road segments marked as bridges; their side walls are pierced by arches. Streets and squares are paved with sandstone setts.
+- **Gardens and trees.** `python -m rpr greenery --area cite` takes the 1,038 trees in the area from the City of Paris tree register (species, height, girth) and the garden outlines from APUR. Neither has dates, so the dates are reasoned:
+  - Gardens open in the year their history gives (square Jean-XXIII 1844, square de l'Île-de-France 1914, square René-Viviani 1928…). Five small gardens with no source found are shown from 1950 and flagged in the data.
+  - Trees in a garden are planted when it opens, street trees with the Second Empire's tree-lined quays (from 1855).
+  - No tree grows inside a building standing that year, so trees on the site of demolished houses are planted after 1860.
+  - Trees grow with the slider: young when planted, full size after about 40 years.
+  - Lawns sit inside cast-iron railings. Plane trees, chestnuts, poplars, limes and conifers each have their own shape, colour and bark, and cast a soft shadow.
 - **Walking.** The river blocks the way except on the bridges.
 - **The year is a shader uniform**, so dragging the slider costs nothing: buildings that do not stand that year are dropped on the GPU.
 
@@ -138,7 +144,7 @@ For Paris Musées, create a free token at <https://apicollections.parismusees.pa
 1. **Phase 1, time-slider map** (this release): basemap timeline, cadastre, Panoramax "today" view, photo pipeline.
 2. **Phase 2, then-and-now viewer** (this release): archive photo over the nearest Panoramax panorama, with alignment saved in the URL.
 3. **Phase 3, pose refinement**: geocode Marville and Atget captions against historical street names and the 1836/1888 street networks; infer headings (Kahn records have positions but no direction, so the viewer cannot yet face the subject automatically); refine poses by matching against Panoramax imagery; let people submit the alignments they make in the viewer.
-4. **Phase 4, 3D**: the Île de la Cité as a massing model, with footprints traced from Vasserot's plans, photos in the streets, an eye-level walk, and a detailed area around Notre-Dame (see above). Next: gardens and trees, the Hôtel-Dieu and the bishop's palace of 1836, photo-textured landmark facades, then more quarters.
+4. **Phase 4, 3D**: the Île de la Cité as a massing model, with footprints traced from Vasserot's plans, photos in the streets, an eye-level walk, and a detailed area around Notre-Dame (see above). Next: the Hôtel-Dieu and the archbishop's palace of 1836, photo-textured landmark facades, then more quarters.
 
 ## Licences
 

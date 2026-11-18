@@ -145,3 +145,26 @@ describe('city layer rules', () => {
     expect(f.axis[0]).toBeCloseTo(1)
   })
 })
+
+describe('gardens and trees', () => {
+  it('rings a garden with a railing that the wall shader draws', async () => {
+    const { addRailing } = await import('./citygen')
+    const m = new MeshData()
+    addRailing(m, normalisePoly([rect(0, 0, 10, 4)])!, 1, [1844, 1e4, 0, 0])
+    expect(m.triangles).toBe(8)
+    expect(new Set(m.b.filter((_, i) => i % 4 === 0))).toEqual(new Set([STYLE.railing]))
+    expect(m.life.slice(0, 4)).toEqual([1844, 1e4, 0, 0])
+  })
+
+  it('reads trees from the compact rows of the greenery file', async () => {
+    const { treesOf } = await import('./city3d')
+    const trees = treesOf(
+      {
+        gardens: { features: [] },
+        trees: { fields: ['lon', 'lat', 'height_m', 'group', 'planted', 'girth_cm', 'in_garden'], rows: [[2.35, 48.85, 18, 0, 1857, 210, 0]] }
+      },
+      ([lon, lat]) => [lon * 10, lat * 10]
+    )
+    expect(trees).toEqual([{ x: 23.5, y: 488.5, height: 18, group: 0, planted: 1857, girth: 210 }])
+  })
+})
