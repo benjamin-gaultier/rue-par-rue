@@ -13,7 +13,7 @@ export const CITY_MODULES: (() => Promise<{ default: CityModule }>)[] = [
 
   // () => import('./streets'),
 
-  // () => import('./vehicles'),
+  () => import('./vehicles'),
 
   // () => import('./island')
 ]

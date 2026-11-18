@@ -109,5 +109,13 @@
     "gardens": 13,
     "trees": 1038,
     "updated_at": "2026-11-18T08:56:37Z"
+  },
+  "vehicles_cite": {
+    "area": "cite",
+    "file": "3d/vehicles-cite.json",
+    "parked": 7483,
+    "moving": 809,
+    "bytes": 374857,
+    "updated_at": "2026-11-18T10:15:06Z"
   }
 }
