@@ -86,6 +86,12 @@ def cmd_site(args: argparse.Namespace) -> None:
     _update_manifest(f"site_{args.area}", site.build(args.area))
 
 
+def cmd_greenery(args: argparse.Namespace) -> None:
+    from rpr.sources import greenery
+
+    _update_manifest(f"greenery_{args.area}", greenery.build(args.area))
+
+
 def cmd_index(args: argparse.Namespace) -> None:
     manifest = build_index()
     print(f"index: {manifest['photos']['count']} photos from {len(manifest['photos']['sources'])} sources")
@@ -131,6 +137,10 @@ def main(argv: list[str] | None = None) -> int:
     p = sub.add_parser("site", help="the Seine, bridges and landmark details of a model area (IGN BD TOPO, needs shapely)")
     p.add_argument("--area", choices=["cite"], default="cite")
     p.set_defaults(func=cmd_site)
+
+    p = sub.add_parser("greenery", help="gardens and trees of a model area (Paris tree register, APUR; needs shapely)")
+    p.add_argument("--area", choices=["cite"], default="cite")
+    p.set_defaults(func=cmd_greenery)
 
     p = sub.add_parser("index", help="rebuild photos.geojson and manifest.json")
     p.set_defaults(func=cmd_index)

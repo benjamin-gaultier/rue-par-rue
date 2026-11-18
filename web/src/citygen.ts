@@ -19,7 +19,7 @@ export type Ring = Pt[]
 export type Poly = Ring[]
 
 /** Facade styles understood by the shader. */
-export const STYLE = { old: 0, haussmann: 1, modern: 2, monument: 3, bridge: 4, quay: 5, cathedral: 6 } as const
+export const STYLE = { old: 0, haussmann: 1, modern: 2, monument: 3, bridge: 4, quay: 5, cathedral: 6, railing: 7 } as const
 /** Roof materials understood by the shader. */
 export const ROOF_MATERIAL = { tile: 0, zinc: 1, mineral: 2, planted: 3, lead: 4, stone: 5, chimney: 6 } as const
 /** Roof face kinds: flat tops, mansard slopes (with dormers), plain slopes, chimneys. */
@@ -572,11 +572,47 @@ export interface SiteGeometry {
 }
 
 /** A flat, triangulated surface at height z. */
-export function addSurface(m: MeshData, poly: Poly, z: number, kind = 0) {
+export function addSurface(m: MeshData, poly: Poly, z: number, kind = 0, life: number[] = [-1e4, 1e4, 0, 0]) {
   for (const t of triangulate(poly)) {
-    for (const [x, y] of t) m.vertex([x, y, z], [0, 0, 1], [x, y, kind, 0], [0, 0, 0, 0], [-1e4, 1e4, 0, 0])
+    for (const [x, y] of t) m.vertex([x, y, z], [0, 0, 1], [x, y, kind, 0], [0, 0, 0, 0], life)
     m.owner.push(-1)
   }
+}
+
+/** A cast-iron railing around every ring of a polygon (style `railing`, drawn by the wall shader). */
+export function addRailing(m: MeshData, poly: Poly, height: number, life: number[]) {
+  for (const ring of poly) {
+    let u = 0
+    for (let i = 0; i < ring.length; i++) {
+      const a = ring[i]
+      const b = ring[(i + 1) % ring.length]
+      const L = Math.hypot(b[0] - a[0], b[1] - a[1])
+      if (L < 0.05) continue
+      const n: [number, number, number] = [(b[1] - a[1]) / L, -(b[0] - a[0]) / L, 0]
+      const bv = [STYLE.railing, 0.5, 0, 0]
+      const quad: [number, number, number, number][] = [
+        [a[0], a[1], 0, u],
+        [b[0], b[1], 0, u + L],
+        [b[0], b[1], height, u + L],
+        [a[0], a[1], 0, u],
+        [b[0], b[1], height, u + L],
+        [a[0], a[1], height, u]
+      ]
+      for (const [x, y, z, uu] of quad) m.vertex([x, y, z], n, [uu, z, 0, 0], bv, life)
+      m.owner.push(-1, -1)
+      u += L
+    }
+  }
+}
+
+/** One tree, as the instanced tree meshes read it. */
+export interface TreeSpec {
+  x: number
+  y: number
+  height: number
+  group: number
+  planted: number
+  girth: number
 }
 
 /**

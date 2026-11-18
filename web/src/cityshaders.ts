@@ -239,13 +239,22 @@ void main() {
     vec4 f = westFront(dot(rel, t), z, eave, vec3(0.83, 0.79, 0.70) * (0.95 + 0.06 * noise(v_world.xy * 0.4)), aa);
     col = f.rgb;
     glass = f.a;
+  } else if (st > 6.5) {
+    // Cast-iron garden railing: bars every 14 cm between a bottom and a top rail.
+    float d = (0.5 - abs(fract(u / 0.14) - 0.5)) * 0.14;
+    bool rail = z < 0.1 || (z > 0.86 && z < 0.93);
+    bool bar = z < 1.02 && d < 0.011 + aa.x * 0.5;
+    // Far away the bars thin out to a stipple instead of shimmering.
+    if (aa.x > 0.02) bar = z < 1.0 && mod(floor(gl_FragCoord.x), 4.0) < 1.0;
+    if (!rail && !bar) discard;
+    col = vec3(0.09, 0.13, 0.10);
   } else if (st > 4.5 && st < 5.5) {
     // Quay walls: ashlar, a damp band at the waterline, a coping on the parapet.
     float course = smoothstep(0.0, aa.y * 2.0 + 0.02, abs(fract(z / 0.5) - 0.5) - 0.46);
     col *= 1.0 - 0.18 * course * detail;
     col *= mix(0.62, 1.0, smoothstep(-6.4, -5.2, z));
     if (z > 0.75) col *= 1.12;
-  } else if (st > 3.5) {
+  } else if (st > 3.5 && st < 4.5) {
     // Bridges: arches between piers, cut out of the side walls.
     float n = eave, landEnd = fh;
     float span = (L - 2.0 * landEnd) / n;
@@ -511,5 +520,192 @@ void main() {
   float a = edgeFade(p);
   if (a < 0.02) discard;
   gl_FragColor = vec4(haze(col, v_world), a);
+}
+`
+
+/* ------------------------------------------------------------- gardens */
+
+export const gardenVertex = /* glsl */ `
+${common}
+${lifeVertex}
+varying vec3 v_world;
+void main() {
+  v_world = position;
+  gl_Position = alive() ? projectionMatrix * modelViewMatrix * vec4(position, 1.0) : vec4(0.0, 0.0, 2.0, 1.0);
+}
+`
+
+export const gardenFragment = /* glsl */ `
+${common}
+varying vec3 v_world;
+void main() {
+  vec2 p = v_world.xy;
+  // Lawn: fine blades, patches of darker and drier grass.
+  vec3 col = mix(vec3(0.33, 0.45, 0.20), vec3(0.42, 0.52, 0.25), noise(p * 0.35));
+  col *= 0.86 + 0.24 * noise(p * 6.0) - 0.1 * noise(p * 0.08 + 7.0);
+  col *= 0.6 + 0.48 * max(u_sun.z, 0.0);
+  if (edgeFade(p) < 0.5) discard;
+  gl_FragColor = vec4(haze(col, v_world), 1.0);
+}
+`
+
+/* ------------------------------------------------------------- trees */
+
+// Per tree: a_tree = (x, y, height, group), a_tree2 = (planted, seed, girth cm, in a garden).
+// Groups: 0 plane, 1 horse chestnut, 2 poplar, 3 lime, 4 other broadleaf, 5 small ornamental, 6 conifer.
+const treeCommon = /* glsl */ `
+attribute vec4 a_tree;
+attribute vec4 a_tree2;
+// How grown a tree is: young when planted, full size after about 40 years.
+float growth() { return clamp((u_year - a_tree2.x + 3.0) / 40.0, 0.3, 1.0); }
+bool planted() { return u_year >= a_tree2.x; }
+// Crown radii (horizontal, vertical) as fractions of the height.
+vec2 crownShape(float g) {
+  if (g < 0.5) return vec2(0.34, 0.30);
+  if (g < 1.5) return vec2(0.36, 0.33);
+  if (g < 2.5) return vec2(0.15, 0.42);
+  if (g < 3.5) return vec2(0.30, 0.33);
+  if (g < 4.5) return vec2(0.30, 0.30);
+  if (g < 5.5) return vec2(0.44, 0.38);
+  return vec2(0.24, 0.46);
+}
+`
+
+export const crownVertex = /* glsl */ `
+${common}
+${treeCommon}
+varying vec3 v_world;
+varying vec3 v_n;
+varying float v_h;
+varying float v_group;
+varying float v_seed;
+void main() {
+  if (!planted()) { gl_Position = vec4(0.0, 0.0, 2.0, 1.0); return; }
+  float H = a_tree.z * growth();
+  float g = a_tree.w;
+  float seed = a_tree2.y;
+  vec2 r = crownShape(g);
+  vec3 p = normalize(position);
+  // A lumpy crown, different for every tree.
+  float lump = 1.0 + 0.15 * sin(p.x * 5.0 + seed * 6.3) * sin(p.y * 4.0 + seed * 3.1) * sin(p.z * 6.0 + seed * 9.7)
+                   + 0.07 * sin(p.x * 11.0 + p.z * 7.0 + seed * 17.0);
+  vec3 q = p * lump;
+  float spread = r.x * H;
+  if (g > 5.5) spread *= 1.0 - 0.85 * (q.z * 0.5 + 0.5); // conifers: a cone
+  vec3 world = vec3(a_tree.x + q.x * spread, a_tree.y + q.y * spread, H * (1.0 - r.y) + q.z * r.y * H);
+  v_world = world;
+  v_n = p;
+  v_h = p.z;
+  v_group = g;
+  v_seed = seed;
+  gl_Position = projectionMatrix * modelViewMatrix * vec4(world, 1.0);
+}
+`
+
+export const crownFragment = /* glsl */ `
+${common}
+varying vec3 v_world;
+varying vec3 v_n;
+varying float v_h;
+varying float v_group;
+varying float v_seed;
+void main() {
+  vec3 w = v_world;
+  float coarse = noise(vec2(w.x * 0.9 + w.z * 0.6, w.y * 0.9 - w.z * 0.5) + v_seed * 13.0);
+  float fine = noise(vec2(w.x * 3.1 + w.z * 2.3, w.y * 3.1 - w.z * 1.9) + v_seed * 7.0);
+  float px = length(fwidth(w));
+  // Leaves: small clumps that only show up close, where they would not shimmer.
+  float leaves = noise(vec2(w.x * 9.0 + w.z * 6.0, w.y * 9.0 - w.z * 7.0) + v_seed * 3.0);
+  float near = 1.0 - smoothstep(0.03, 0.12, px);
+  fine = mix(fine, fine * 0.55 + leaves * 0.45, near);
+  vec3 view = normalize(u_camera - w);
+  float rim = 1.0 - abs(dot(v_n, view));
+  // Ragged edges up close; a solid silhouette far away.
+  if (px < 0.3 && fine < rim * 0.5 - 0.06) discard;
+  float g = v_group;
+  vec3 leaf = g < 0.5 ? vec3(0.36, 0.48, 0.22) : g < 1.5 ? vec3(0.25, 0.38, 0.17) : g < 2.5 ? vec3(0.38, 0.50, 0.26)
+            : g < 3.5 ? vec3(0.39, 0.50, 0.21) : g < 5.5 ? vec3(0.33, 0.45, 0.22) : vec3(0.18, 0.30, 0.20);
+  vec3 col = leaf * (0.72 + 0.5 * coarse) * (0.88 + 0.24 * fine);
+  col *= 1.0 - 0.3 * near * smoothstep(0.55, 0.2, leaves); // shadowed gaps between the clumps
+  vec3 n = normalize(v_n + vec3(coarse - 0.5, fine - 0.5, 0.0) * 0.8);
+  float light = 0.5 + 0.55 * max(dot(n, u_sun), 0.0);
+  light *= mix(0.62, 1.08, v_h * 0.5 + 0.5); // the underside of the crown is in shade
+  col *= light;
+  if (edgeFade(w.xy) < 0.5) discard;
+  gl_FragColor = vec4(haze(col, w), 1.0);
+}
+`
+
+export const trunkVertex = /* glsl */ `
+${common}
+${treeCommon}
+varying vec3 v_world;
+varying vec3 v_n;
+varying float v_group;
+void main() {
+  if (!planted()) { gl_Position = vec4(0.0, 0.0, 2.0, 1.0); return; }
+  float grow = growth();
+  float H = a_tree.z * grow;
+  float g = a_tree.w;
+  // Cylinder geometry: y is up, from -0.5 to 0.5.
+  float t = position.y + 0.5;
+  float girth = a_tree2.z > 0.0 ? a_tree2.z / 100.0 : 0.12 * a_tree.z;
+  float radius = max(0.06, girth / 6.283 * grow) * (1.0 - 0.4 * t);
+  float trunkH = H * (1.0 - crownShape(g).y * 1.4);
+  vec3 world = vec3(a_tree.x + position.x * radius, a_tree.y + position.z * radius, t * trunkH);
+  v_world = world;
+  v_n = normalize(vec3(position.x, position.z, 0.0));
+  v_group = g;
+  gl_Position = projectionMatrix * modelViewMatrix * vec4(world, 1.0);
+}
+`
+
+export const trunkFragment = /* glsl */ `
+${common}
+varying vec3 v_world;
+varying vec3 v_n;
+varying float v_group;
+void main() {
+  vec3 col;
+  if (v_group < 0.5) {
+    // Plane trees shed their bark in patches: cream, olive and grey.
+    float patches = noise(vec2(atan(v_n.y, v_n.x) * 2.0, v_world.z * 1.6) + v_world.xy * 3.0);
+    col = mix(vec3(0.55, 0.53, 0.42), vec3(0.78, 0.75, 0.62), smoothstep(0.35, 0.65, patches));
+  } else {
+    float furrow = noise(vec2(atan(v_n.y, v_n.x) * 5.0, v_world.z * 0.8));
+    col = vec3(0.30, 0.26, 0.22) * (0.8 + 0.35 * furrow);
+  }
+  col *= 0.55 + 0.5 * max(dot(v_n, u_sun), 0.0);
+  if (edgeFade(v_world.xy) < 0.5) discard;
+  gl_FragColor = vec4(haze(col, v_world), 1.0);
+}
+`
+
+// A soft shadow on the ground under each tree, cast away from the sun.
+export const treeShadowVertex = /* glsl */ `
+${common}
+${treeCommon}
+varying vec2 v_p;
+varying vec3 v_world;
+void main() {
+  if (!planted()) { gl_Position = vec4(0.0, 0.0, 2.0, 1.0); return; }
+  float H = a_tree.z * growth();
+  float R = crownShape(a_tree.w).x * H * 1.15;
+  vec2 away = -normalize(u_sun.xy) * H * 0.45;
+  v_p = position.xy;
+  vec3 world = vec3(a_tree.xy + away + position.xy * 2.0 * R, 0.08);
+  v_world = world;
+  gl_Position = projectionMatrix * modelViewMatrix * vec4(world, 1.0);
+}
+`
+
+export const treeShadowFragment = /* glsl */ `
+${common}
+varying vec2 v_p;
+varying vec3 v_world;
+void main() {
+  float a = (1.0 - smoothstep(0.15, 0.5, length(v_p))) * 0.32 * edgeFade(v_world.xy);
+  if (a < 0.01) discard;
+  gl_FragColor = vec4(0.05, 0.07, 0.04, a);
 }
 `

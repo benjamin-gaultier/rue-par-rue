@@ -18,6 +18,7 @@ import { MercatorCoordinate, type CustomLayerInterface, type CustomRenderMethodI
 import {
   addBridge,
   addQuay,
+  addRailing,
   addSpire,
   addSurface,
   buildCity,
@@ -29,12 +30,48 @@ import {
   type BuildingSpec,
   type Poly,
   type Pt,
-  type RoofShape
+  type RoofShape,
+  type TreeSpec
 } from './citygen'
 import * as S from './cityshaders'
 import type { ModelProps } from './model3d'
 
 export const SITE_URL = 'data/3d/site-cite.geojson'
+export const GREENERY_URL = 'data/3d/greenery-cite.json'
+
+interface Greenery {
+  gardens: { features: { geometry: Geometry; properties: { name: string; from: number; dated: boolean; note: string } }[] }
+  trees: { fields: string[]; rows: number[][] }
+}
+
+/** Trees from the compact rows of the greenery file. */
+export function treesOf(g: Greenery, project: (p: number[]) => Pt): TreeSpec[] {
+  const f = g.trees.fields
+  const col = (name: string) => f.indexOf(name)
+  const [lon, lat, h, group, planted, girth] = ['lon', 'lat', 'height_m', 'group', 'planted', 'girth_cm'].map(col)
+  return g.trees.rows.map((r) => {
+    const [x, y] = project([r[lon], r[lat]])
+    return { x, y, height: r[h], group: r[group], planted: r[planted], girth: r[girth] || 0 }
+  })
+}
+
+/** Instanced geometry: one copy of `base` per tree, with the tree's attributes. */
+function treeGeometry(base: THREE.BufferGeometry, trees: TreeSpec[]): THREE.InstancedBufferGeometry {
+  const g = new THREE.InstancedBufferGeometry()
+  g.index = base.index
+  g.setAttribute('position', base.getAttribute('position'))
+  if (base.getAttribute('normal')) g.setAttribute('normal', base.getAttribute('normal'))
+  const a = new Float32Array(trees.length * 4)
+  const b = new Float32Array(trees.length * 4)
+  trees.forEach((t, i) => {
+    a.set([t.x, t.y, t.height, t.group], i * 4)
+    b.set([t.planted, seedOf(`${t.x.toFixed(2)}:${t.y.toFixed(2)}`), t.girth, 0], i * 4)
+  })
+  g.setAttribute('a_tree', new THREE.InstancedBufferAttribute(a, 4))
+  g.setAttribute('a_tree2', new THREE.InstancedBufferAttribute(b, 4))
+  g.instanceCount = trees.length
+  return g
+}
 
 export interface CityProps extends ModelProps {
   id: string
@@ -155,8 +192,10 @@ export class City3D implements CustomLayerInterface {
     u_front: { value: new THREE.Vector4() },
     u_frontHalf: { value: 0 }
   }
-  /** Number of detailed buildings, for the legend and tests. */
+  /** Number of detailed buildings and trees, for the legend and tests. */
   count = 0
+  trees = 0
+  private extras: THREE.Mesh[] = []
 
   constructor(center: [number, number]) {
     this.origin = MercatorCoordinate.fromLngLat(center, 0)
@@ -175,8 +214,16 @@ export class City3D implements CustomLayerInterface {
   }
 
   /** Build every mesh from the model and site files. */
-  async load(modelUrl: string, siteUrl: string) {
-    const [model, site] = await Promise.all([fetch(modelUrl).then((r) => r.json()), fetch(siteUrl).then((r) => r.json())])
+  async load(modelUrl: string, siteUrl: string, greeneryUrl?: string) {
+    const [model, site, greenery] = await Promise.all([
+      fetch(modelUrl).then((r) => r.json()),
+      fetch(siteUrl).then((r) => r.json()),
+      greeneryUrl
+        ? fetch(greeneryUrl)
+            .then((r) => (r.ok ? (r.json() as Promise<Greenery>) : undefined))
+            .catch(() => undefined)
+        : Promise.resolve(undefined)
+    ])
     const features = (model.features as Feature<CityProps>[]).filter((f) => f.properties.focus)
     const cathedral = (site.features as Feature<{ kind: string; ids?: string[]; axis_bearing?: number }>[]).find((f) => f.properties.kind === 'cathedral')?.properties
     const cathedralIds = new Set(cathedral?.ids ?? [])
@@ -231,6 +278,20 @@ export class City3D implements CustomLayerInterface {
     }
     for (const deck of this.bridges) addBridge(walls, ground, deck, waterZ - 0.3)
 
+    // Gardens: lawns inside cast-iron railings, from the year they opened.
+    const lawns = new MeshData()
+    let trees: TreeSpec[] = []
+    if (greenery) {
+      for (const f of greenery.gardens.features) {
+        const life = [f.properties.from, OPEN, 0, 0]
+        for (const poly of this.polys(f.geometry)) {
+          addSurface(lawns, poly, 0.05, 0, life)
+          addRailing(walls, poly, 1.0, life)
+        }
+      }
+      trees = treesOf(greenery, this.project)
+      this.trees = trees.length
+    }
     const material = (vertexShader: string, fragmentShader: string, order: number) => {
       const m = new THREE.ShaderMaterial({ vertexShader, fragmentShader, uniforms: this.uniforms, side: THREE.DoubleSide, transparent: true })
       return { m, order }
@@ -238,6 +299,7 @@ export class City3D implements CustomLayerInterface {
     const meshes: [MeshData, ReturnType<typeof material>, boolean][] = [
       [water, material(S.groundVertex, S.waterFragment, 0), true],
       [ground, material(S.groundVertex, S.groundFragment, 1), true],
+      [lawns, material(S.gardenVertex, S.gardenFragment, 1), false],
       [walls, material(S.wallVertex, S.wallFragment, 2), true],
       [roofs, material(S.roofVertex, S.roofFragment, 3), true]
     ]
@@ -248,6 +310,30 @@ export class City3D implements CustomLayerInterface {
       mesh.frustumCulled = false
       this.scene.add(mesh)
       if (pickable) this.pickables.push({ mesh, owner: Int32Array.from(data.owner) })
+      else this.extras.push(mesh)
+    }
+    if (trees.length) {
+      // Trees: three instanced meshes (crowns, trunks, ground shadows), one draw call each.
+      const parts: [THREE.BufferGeometry, string, string, number, boolean][] = [
+        [new THREE.IcosahedronGeometry(1, 2), S.crownVertex, S.crownFragment, 4, false],
+        [new THREE.CylinderGeometry(1, 1, 1, 7, 1, true), S.trunkVertex, S.trunkFragment, 4, false],
+        [new THREE.PlaneGeometry(1, 1), S.treeShadowVertex, S.treeShadowFragment, 1.5, true]
+      ]
+      for (const [base, vs, fs, order, shadow] of parts) {
+        const m = new THREE.ShaderMaterial({
+          vertexShader: vs,
+          fragmentShader: fs,
+          uniforms: this.uniforms,
+          side: THREE.DoubleSide,
+          transparent: shadow,
+          depthWrite: !shadow
+        })
+        const mesh = new THREE.Mesh(treeGeometry(base, trees), m)
+        mesh.renderOrder = order
+        mesh.frustumCulled = false
+        this.scene.add(mesh)
+        this.extras.push(mesh)
+      }
     }
     this.map?.triggerRepaint()
   }
@@ -259,7 +345,7 @@ export class City3D implements CustomLayerInterface {
   }
 
   onRemove() {
-    for (const { mesh } of this.pickables) {
+    for (const mesh of [...this.pickables.map((p) => p.mesh), ...this.extras]) {
       mesh.geometry.dispose()
       ;(mesh.material as THREE.Material).dispose()
     }

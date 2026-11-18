@@ -294,9 +294,9 @@ let cityLoading: Promise<void> | undefined
 function ensureCity(): Promise<void> {
   cityLoading ??= (async () => {
     try {
-      const { City3D, SITE_URL } = await import('./city3d')
+      const { City3D, SITE_URL, GREENERY_URL } = await import('./city3d')
       const layer = new City3D(CITE_CENTER)
-      await layer.load(BASE + MODEL_URL, BASE + SITE_URL)
+      await layer.load(BASE + MODEL_URL, BASE + SITE_URL, BASE + GREENERY_URL)
       map.addLayer(layer, map.getLayer('photo-frames') ? 'photo-frames' : undefined)
       city = layer
       city.setYear(state.year)
