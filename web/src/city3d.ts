@@ -380,10 +380,16 @@ export class City3D implements CustomLayerInterface {
     const ground = new MeshData()
     const water = new MeshData()
     const siteFeatures = site.features as Feature<{ kind: string; [k: string]: unknown }>[]
+    // Quay walls stop under the decks of bridges still standing; a deck of the past leaves no gap.
+    const standing: Poly[] = []
     for (const f of siteFeatures) {
-      if (f.properties.kind === 'bridge') this.bridges.push(...this.polys(f.geometry as Geometry))
+      if (f.properties.kind !== 'bridge') continue
+      const polys = this.polys(f.geometry as Geometry)
+      this.bridges.push(...polys)
+      const history = (f.properties as unknown as BridgeProps).history
+      if (!history?.length || history[history.length - 1].until == null) standing.push(...polys)
     }
-    const underDeck = (p: Pt) => this.bridges.some((b) => insidePoly(p, b))
+    const underDeck = (p: Pt) => standing.some((b) => insidePoly(p, b))
     for (const f of siteFeatures) {
       const k = f.properties.kind
       if (k === 'ground') for (const poly of this.polys(f.geometry as Geometry)) addSurface(ground, poly, 0)

@@ -225,23 +225,25 @@ export function addBridgeHistory(walls: MeshData, deck: Poly, waterZ: number, hi
     const b = [STYLE.bridge, kind, n, landEnd]
     const [z0, z1] = wallRange(kind, waterZ)
 
-    // Deck: a = (along, z, across, part), b = (style, kind, width, length).
+    // Deck: a = (along, z, across, part), b = (style, kind, width, length). Paved decks run
+    // onto the banks; plank decks stop just past the water so they do not lie on the quay.
     const deckZ = 0.06
     const bd = [STYLE.bridge, kind, w, L]
+    const d0 = MASONRY.has(kind) || kind === 2 || kind === 7 ? 0 : Math.max(0, landEnd - 1.5)
     quad(
       walls,
       [
-        [...at(f, -f.halfLen, -h), deckZ],
-        [...at(f, f.halfLen, -h), deckZ],
-        [...at(f, f.halfLen, h), deckZ],
-        [...at(f, -f.halfLen, h), deckZ]
+        [...at(f, -f.halfLen + d0, -h), deckZ],
+        [...at(f, f.halfLen - d0, -h), deckZ],
+        [...at(f, f.halfLen - d0, h), deckZ],
+        [...at(f, -f.halfLen + d0, h), deckZ]
       ] as [number, number, number][],
       [0, 0, 1],
       [
-        [0, deckZ, -h, PART.deck],
-        [L, deckZ, -h, PART.deck],
-        [L, deckZ, h, PART.deck],
-        [0, deckZ, h, PART.deck]
+        [d0, deckZ, -h, PART.deck],
+        [L - d0, deckZ, -h, PART.deck],
+        [L - d0, deckZ, h, PART.deck],
+        [d0, deckZ, h, PART.deck]
       ],
       bd,
       life

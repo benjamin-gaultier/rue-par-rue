@@ -44,24 +44,60 @@ Choose **Île de la Cité in 3D** to fly over the island in 1836, then drag the 
 
 It is a massing model to judge scale and density, labelled as a reconstruction in the app. Drag past 1860 to see Haussmann clear the island, and click any building for its sources.
 
-#### The detailed area around Notre-Dame
+#### The detailed island
 
-About 600 m around the cathedral (`focus` in `AREAS`, about 2,000 buildings across all years) is drawn by `web/src/city3d.ts` instead of plain blocks: a three.js layer in the map's WebGL context, with geometry from `web/src/citygen.ts` and procedural shaders in `web/src/cityshaders.ts`. Nothing is downloaded beyond the model: storeys, windows, shutters, shopfronts, balconies, dormers, tiles and zinc are drawn by the shaders, and fade to an average colour with distance.
+The whole Île de la Cité and the quays facing it are drawn by `web/src/city3d.ts` instead of plain blocks: the islands and every bank within 90 m of the Seine inside the model box (`focus` and `focus_river_m` in `AREAS`, computed by `site.focus_area`), 3,331 buildings across all years, plus the houses on the bridges. The streets behind the quays stay plain blocks. It is a three.js layer in the map's WebGL context, with geometry from `web/src/citygen.ts` and procedural shaders in `web/src/cityshaders.ts`. Nothing is downloaded beyond the model: storeys, windows, shutters, shopfronts, balconies, dormers, tiles and zinc are drawn by the shaders, and fade to an average colour with distance.
 
 - **Facades by age.** Houses standing in 1836 get plaster in varied colours, narrow window bays, shutters and painted wooden shopfronts. Buildings of 1851–1914 get cut stone, a rusticated ground floor with arched openings, and balconies on the second and fifth floors. Later buildings get plainer, wider windows. Walls that touch a neighbour standing at the same time are left blind, as Paris gable walls are.
 - **Roofs from APUR.** `c_forme_toit` gives the shape: brisis-terrasson becomes a mansard with dormers lined up on the windows below, two-pitch roofs a ridge along the footprint's long axis, flat roofs a terrace. `c_toiture_mat` gives tile, zinc, stone or planting. Demolished houses get tile roofs with gables; chimney stacks rise from party walls.
 - **Notre-Dame.** Towers come from APUR (about 67 m). The west front is laid out along the line across the cathedral's westernmost points: three portals, the gallery of kings, the rose window between two traceried windows, the great gallery and the belfries. The spire stands from 1860 (Viollet-le-Duc), is missing from April 2019 and back in 2024.
-- **The river.** `python -m rpr site --area cite` fetches the Seine from IGN BD TOPO with its water level (27 m, against 34 m in the streets), so the river sits 7 m down between stone quays. Bridge decks come from the BD TOPO road segments marked as bridges; their side walls are pierced by arches. Streets and squares are paved with sandstone setts.
-- **Gardens and trees.** `python -m rpr greenery --area cite` takes the 1,038 trees in the area from the City of Paris tree register (species, height, girth) and the garden outlines from APUR. Neither has dates, so the dates are reasoned:
-  - Gardens open in the year their history gives (square Jean-XXIII 1844, square de l'Île-de-France 1914, square René-Viviani 1928…). Five small gardens with no source found are shown from 1950 and flagged in the data.
+- **The river.** `python -m rpr site --area cite` fetches the Seine from IGN BD TOPO with its water level (27 m, against 34 m in the streets), so the river sits 7 m down between stone quays. The ground box is the focus box plus about 90 m, where the detail fades out, so paving, river, quay walls and trees cover the whole island and the facing quays. Streets and squares are paved with sandstone setts. Each bridge stands only in the years it stood (see below).
+- **Gardens and trees.** `python -m rpr greenery --area cite` takes the 2,493 trees in the ground box from the City of Paris tree register (species, height, girth) and the garden outlines from APUR. Neither has dates, so the dates are reasoned:
+  - Gardens open in the year their history gives (square Jean-XXIII 1844, square de la Tour-Saint-Jacques 1856, square du Vert-Galant 1884, square de l'Île-de-France 1914, square René-Viviani 1928…). Gardens with no source found (the place Dauphine's among them, and small ones at the edge) are shown from 1950 and flagged in the data.
   - Trees in a garden are planted when it opens, street trees with the Second Empire's tree-lined quays (from 1855).
   - No tree grows inside a building standing that year, so trees on the site of demolished houses are planted after 1860.
   - Trees grow with the slider: young when planted, full size after about 40 years.
   - Lawns sit inside cast-iron railings. Plane trees, chestnuts, poplars, limes and conifers each have their own shape, colour and bark, and cast a soft shadow.
-- **Walking.** The river blocks the way except on the bridges.
+- **Walking.** The river blocks the way except on the bridges standing that year, houses on the bridges block it too, and walking stops 60 m inside the ground box, before the detail fades (`web/src/island.ts`).
 - **The year is a shader uniform**, so dragging the slider costs nothing: buildings that do not stand that year are dropped on the GPU.
 
 Facades are generated, not surveyed: they show the character of each period, not the real windows of each house.
+
+#### Bridges through time
+
+Every bridge touching the island is drawn as the succession of structures that stood there, each only in its years (`BRIDGES` in `pipeline/rpr/sources/site.py`, geometry in `web/src/bridges.ts`, shading in `web/src/bridgeshaders.ts`). Today's BD TOPO decks stand in for the older bridges' plans: one deck per crossing (two for the Pont Neuf), same line and length; the width changes only where the history gives one. The kinds look their period: old stone bridges with round arches, thick piers and pointed cutwaters; 19th-century masonry with elliptical arches, slender piers and a cornice; iron arches with ribs, spandrel struts and cast-iron railings; suspension footbridges with masonry pylons, chains and hangers; a timber bridge; a steel lattice footbridge; a steel girder. Masonry arches are closed by vaults.
+
+| Bridge | Structures shown (years on the slider) | Sources |
+| --- | --- | --- |
+| Pont Neuf | Stone, 7 + 5 round arches (built 1578–1607) | Structurae |
+| Pont au Change | Stone bridge of 1639–1647 with two rows of houses until 1788 (cleared 1786–1788), until 1858 · three elliptical arches of 31 m from 1860 (1858–1860) | Structurae; paperblog.fr; Hubert Robert's paintings (Carnavalet) |
+| Pont Notre-Dame | Stone bridge of 1500–1507 carrying 68 houses, until 1853; the houses until 1787 (demolition ordered 1786, done 1786–1787) · five arches 1853–1919 · two stone arches around a 60 m iron arch from 1919 (decided 1912) | techno-science.net; sortiraparis.com; Structurae |
+| Petit-Pont | Stone, rebuilt without houses after the fire of 1718, until 1853 · one stone arch from 1853 | *Dictionnaire administratif et historique des rues de Paris* (Wikisource); Wikipedia |
+| Pont au Double | Stone (1634, rebuilt after its collapse in 1709) until 1847 · one masonry span of 31 m 1848–1883 · cast-iron arch from 1883 | Structurae |
+| Pont Saint-Michel | Stone bridge of 1616 with 32 houses, until 1857; the houses until 1808 (imperial decree of 1807) · three round arches from 1857 | evous.fr; Wikipedia |
+| Pont d'Arcole | Suspension footbridge, two spans, 3.5 m wide, 1828–1854 · wrought-iron arch of 80 m from 1856 (decree of 1854) | paris.fr; Structurae |
+| Pont Saint-Louis | Timber pont Rouge (1717) until 1795 · pont de la Cité, two arches, 1804–1811 · suspension footbridge 1842–1861 · iron arch of 64 m 1862–1939 (sunk 22 December 1939) · lattice footbridge 1941–1968 · steel bridge from 1970 | Structurae; list of Paris bridges (Wikipedia) |
+| Pont de l'Archevêché | Three masonry arches of 15, 17 and 15 m, from 1828 | Structurae; waymarking.com |
+| Pont Louis-Philippe | Two-span suspension bridge from the right bank to the quai aux Fleurs over the point of the Île Saint-Louis, 1834–1860, on its own line · three masonry arches on today's line, from 1862 | Structurae; Wikipedia; stereotheque.fr |
+| Pont de la Tournelle (in view, from the Île Saint-Louis) | Stone, six round arches (1656), until 1918 · concrete faced with stone, arches of 12, 74 and 11 m, from 1928 | parisjetaime.com; pariszigzag.fr; Structurae |
+
+**Houses on the bridges** stand on the Pont Notre-Dame, the Pont au Change and the Pont Saint-Michel from 1780 until they were cleared: rows of narrow houses on both sides of the roadway with the old-house facade (style 0) and tile gable roofs, at least 6 m of street between them, the parapet left out while they stand. They block the way when walking, and their popup says when they went.
+
+What is estimated, not sourced:
+
+- The arch counts of the old bridges (Pont au Change 7, Pont Notre-Dame 6, Petit-Pont 3, Pont au Double 2, Pont Saint-Michel 4, pont Rouge 3) and the widths of the footbridges (except the Pont d'Arcole's 3.5 m).
+- Arch shapes follow the kind, not each bridge: spans are equal (or one wide centre), and decks are level.
+- The line of the first Pont Louis-Philippe: from the quai aux Fleurs through the north-west point of the Île Saint-Louis, as the sources describe it; the landing places are estimated.
+- House fronts are at least 3.4 m and today's decks are shorter than the old bridges, so 56 of the Pont Notre-Dame's 68 houses fit; the Pont au Change gets 44 (no count found), the Pont Saint-Michel its 32. Heights are 14 m alike on the Pont Notre-Dame, 12–17 m elsewhere.
+- Years of works are left empty where a source dates them (the Pont d'Arcole 1854–1856, the Pont au Change 1858–1860, the Pont Saint-Louis 1939–1941 and 1968–1970, the Pont Louis-Philippe 1860–1862, the Tournelle 1918–1928); elsewhere one structure gives way to the next in the year of the change (the Pont Notre-Dame's iron centre is shown from its opening in 1919).
+- Not drawn: the Hôtel-Dieu's rooms over the Pont au Double and its Pont Saint-Charles (left to the Hôtel-Dieu model), the Samaritaine pump on the Pont Neuf (until 1813) and its half-moon shops, and the bridges that do not touch the island (Pont des Arts, Pont Marie, Pont de Sully).
+
+#### Performance
+
+The detailed island has 3,463 buildings across all years (167,000 wall and roof triangles, against 95,000 for the old 600 m area). To keep it usable on phones:
+
+- Identical vertices are merged behind an index, normals are stored as bytes and years as 16-bit integers (`web/src/meshpack.ts`): GPU buffers come to about 20 MB, less than the old area's 23 MB.
+- Tree crowns have three levels of detail by distance (180, 80 and 20 faces, within 160 m, 450 m and beyond), refilled when the camera moves 30 m: about 318,000 triangles are drawn in a view over the island (308,000 before, with less than half the trees).
 
 #### Photos in 3D and walking the streets
 
@@ -144,7 +180,7 @@ For Paris Musées, create a free token at <https://apicollections.parismusees.pa
 1. **Phase 1, time-slider map** (this release): basemap timeline, cadastre, Panoramax "today" view, photo pipeline.
 2. **Phase 2, then-and-now viewer** (this release): archive photo over the nearest Panoramax panorama, with alignment saved in the URL.
 3. **Phase 3, pose refinement**: geocode Marville and Atget captions against historical street names and the 1836/1888 street networks; infer headings (Kahn records have positions but no direction, so the viewer cannot yet face the subject automatically); refine poses by matching against Panoramax imagery; let people submit the alignments they make in the viewer.
-4. **Phase 4, 3D**: the Île de la Cité as a massing model, with footprints traced from Vasserot's plans, photos in the streets, an eye-level walk, and a detailed area around Notre-Dame (see above). Next: the Hôtel-Dieu and the archbishop's palace of 1836, photo-textured landmark facades, then more quarters.
+4. **Phase 4, 3D**: the Île de la Cité as a massing model, with footprints traced from Vasserot's plans, photos in the streets, an eye-level walk, and the whole island in detail with its bridges through time (see above). Next: the Hôtel-Dieu and the archbishop's palace of 1836, photo-textured landmark facades, then more quarters.
 
 ## Licences
 
