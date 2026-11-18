@@ -107,6 +107,42 @@ def fetch_gardens(bbox: tuple[float, float, float, float]) -> list[dict]:
     return net.fetch_json(f"{APUR_FACILITIES}?{urllib.parse.urlencode(query)}", timeout=120).get("features", [])
 
 
+def palace_gardens(area: str, water: list) -> list[dict]:
+    """The palace parcel outside the palace's buildings and courts, until the sack of 1831."""
+    from shapely.geometry import mapping, shape
+    from shapely.ops import unary_union
+
+    from rpr.sources.institutions import INSTITUTIONS, load_parcels
+
+    path = paths.DATA_DIR / "3d" / f"institutions-{area}.geojson"
+    if not path.exists():
+        return []
+    cfg = INSTITUTIONS["archeveche"]
+    built = [shape(f["geometry"]) for f in json.loads(path.read_text())["features"] if f["properties"]["institution"] == "archeveche" and not f["properties"].get("ruin")]
+    parcels = load_parcels(set(cfg["parcels"]))
+    if not built or not parcels:
+        return []
+    parcel = unary_union(list(parcels.values()))
+    rest = parcel.difference(unary_union(built).convex_hull.buffer(0.00002)).difference(unary_union(water))
+    pieces = [p for p in getattr(rest, "geoms", [rest]) if p.geom_type == "Polygon" and p.area * 111320 * 0.658 * 110574 > 200]
+    return [
+        {
+            "type": "Feature",
+            "properties": {
+                "kind": "garden",
+                "id": f"archeveche-garden:{i}",
+                "name": "Jardins de l'Archevêché",
+                "from": -10000,
+                "until": cfg["ruin_from"],
+                "dated": True,
+                "note": "The archbishop's terraced gardens (Verniquet's atlas), lost with the palace in February 1831",
+            },
+            "geometry": mapping(p),
+        }
+        for i, p in enumerate(pieces)
+    ]
+
+
 def build(area: str = "cite", log: Callable[[str], Any] = print) -> dict:
     from shapely.geometry import Point, box, mapping, shape
     from shapely.strtree import STRtree
@@ -141,6 +177,10 @@ def build(area: str = "cite", log: Callable[[str], Any] = print) -> dict:
             }
         )
         garden_shapes.append((g, year))
+
+    # The archbishop's gardens, terraced along the river: Verniquet draws
+    # their parterres. They went with the palace in February 1831.
+    gardens += palace_gardens(area, water)
 
     # Buildings, to keep trees out of them.
     buildings = []

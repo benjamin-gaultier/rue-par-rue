@@ -40,7 +40,7 @@ export const SITE_URL = 'data/3d/site-cite.geojson'
 export const GREENERY_URL = 'data/3d/greenery-cite.json'
 
 interface Greenery {
-  gardens: { features: { geometry: Geometry; properties: { name: string; from: number; dated: boolean; note: string } }[] }
+  gardens: { features: { geometry: Geometry; properties: { name: string; from: number; until?: number; dated: boolean; note: string } }[] }
   trees: { fields: string[]; rows: number[][] }
 }
 
@@ -104,7 +104,7 @@ export function seedOf(id: string): number {
 /** Years a building stands, as the shader reads them: [from, until, gapFrom, gapUntil]. */
 export function lifeOf(p: Pick<CityProps, 'kind' | 'from' | 'until'>): [number, number, number, number] {
   if (p.kind === 'standing') return [-OPEN, OPEN, 0, 0]
-  if (p.kind === 'reconstructed') return [-OPEN, p.until ?? 1860, 0, 0]
+  if (p.kind === 'reconstructed') return [p.from ?? -OPEN, p.until ?? 1860, 0, 0]
   return [p.from ?? 1851, OPEN, 0, 0]
 }
 
@@ -354,7 +354,7 @@ export class City3D implements CustomLayerInterface {
     let trees: TreeSpec[] = []
     if (greenery) {
       for (const f of greenery.gardens.features) {
-        const life = [f.properties.from, OPEN, 0, 0]
+        const life = [f.properties.from, f.properties.until ?? OPEN, 0, 0]
         for (const poly of this.polys(f.geometry)) {
           addSurface(lawns, poly, 0.05, 0, life)
           addRailing(walls, poly, 1.0, life)

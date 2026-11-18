@@ -39,7 +39,7 @@ export function modelFilter(year: number): FilterSpecification {
   return [
     'any',
     ['==', ['get', 'kind'], 'standing'],
-    ['all', ['==', ['get', 'kind'], 'reconstructed'], ['<', year, ['get', 'until']]],
+    ['all', ['==', ['get', 'kind'], 'reconstructed'], ['<', year, ['get', 'until']], ['>=', year, ['coalesce', ['get', 'from'], -10000]]],
     ['all', ['in', ['get', 'kind'], ['literal', ['later', 'undated']]], ['<=', ['get', 'from'], year]]
   ]
 }
@@ -47,7 +47,7 @@ export function modelFilter(year: number): FilterSpecification {
 /** Same rule as modelFilter, for tests and counts. */
 export function existsIn(p: { kind: string; until?: number; from?: number }, year: number): boolean {
   if (p.kind === 'standing') return true
-  if (p.kind === 'reconstructed') return year < (p.until ?? Infinity)
+  if (p.kind === 'reconstructed') return year < (p.until ?? Infinity) && year >= (p.from ?? -Infinity)
   return (p.from ?? Infinity) <= year
 }
 
@@ -63,6 +63,8 @@ export interface ModelProps {
   name?: string
   plan_url?: string
   iou?: number
+  /** History of an institution (Hôtel-Dieu, archbishop's palace…). */
+  note?: string
 }
 
 /** Plain-language lines for the building popup. */
@@ -78,6 +80,7 @@ export function describeBuilding(p: ModelProps): { title: string; lines: string[
       ? `Height: about ${Math.round(p.height)} m (estimated)`
       : `Height: ${Math.round(p.height)} m median${p.height_max ? `, ${Math.round(p.height_max)} m at the highest` : ''} (measured)`
   )
+  if (p.note) lines.push(p.note)
   lines.push(p.source + (p.traced && p.iou ? ` · fit ${Math.round(p.iou * 100)}%` : ''))
   const link = p.plan_url ? { href: p.plan_url, text: 'Vasserot’s plan at the Archives nationales' } : undefined
   return { title, lines, link }

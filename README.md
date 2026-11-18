@@ -58,6 +58,12 @@ About 600 m around the cathedral (`focus` in `AREAS`, about 2,000 buildings acro
   - No tree grows inside a building standing that year, so trees on the site of demolished houses are planted after 1860.
   - Trees grow with the slider: young when planted, full size after about 40 years.
   - Lawns sit inside cast-iron railings. Plane trees, chestnuts, poplars, limes and conifers each have their own shape, colour and bark, and cast a soft shadow.
+- **The great institutions of the old Cité.** The 1836 cadastre names the parcels of the Hôtel-Dieu, the archbishop's palace and the Enfants-Trouvés but draws no buildings in them, and the Archives nationales hold no building sheets for them. Verniquet's atlas (surveyed 1785–1791) does: built areas are hatched. `pipeline/scripts/capture_verniquet.cjs` saves screenshots of the atlas as the app shows it (georeferenced by SoDUCo, warped by Allmaps), and `python -m rpr institutions --area cite` finds the hatching, keeps it inside each institution's 1836 parcel and out of today's river, and dates it:
+  - the Hôtel-Dieu: wards on the island until 1878 (demolished once the new Hôtel-Dieu opened north of the parvis), the annex on the left bank until 1909 (its site became the square René-Viviani). Wards built over the river are left out: their dates are not known;
+  - the Enfants-Trouvés by Boffrand (1746–1748) on the parvis, until the works of the 1870s;
+  - the archbishop's palace and its terraced gardens until February 1831, when a mob sacked and burned it; its blackened, roofless shell until it was razed after the law of June 1837.
+
+  `model3d` uses these footprints in place of house lots, and `web/src/institutions.ts` gives them classical stone facades (`institutionshaders.ts`) and slate mansards. Footprints are those of about 1790, used until each demolition.
 - **Walking.** The river blocks the way except on the bridges.
 - **The year is a shader uniform**, so dragging the slider costs nothing: buildings that do not stand that year are dropped on the GPU.
 
@@ -144,7 +150,7 @@ For Paris Musées, create a free token at <https://apicollections.parismusees.pa
 1. **Phase 1, time-slider map** (this release): basemap timeline, cadastre, Panoramax "today" view, photo pipeline.
 2. **Phase 2, then-and-now viewer** (this release): archive photo over the nearest Panoramax panorama, with alignment saved in the URL.
 3. **Phase 3, pose refinement**: geocode Marville and Atget captions against historical street names and the 1836/1888 street networks; infer headings (Kahn records have positions but no direction, so the viewer cannot yet face the subject automatically); refine poses by matching against Panoramax imagery; let people submit the alignments they make in the viewer.
-4. **Phase 4, 3D**: the Île de la Cité as a massing model, with footprints traced from Vasserot's plans, photos in the streets, an eye-level walk, and a detailed area around Notre-Dame (see above). Next: the Hôtel-Dieu and the archbishop's palace of 1836, photo-textured landmark facades, then more quarters.
+4. **Phase 4, 3D**: the Île de la Cité as a massing model, with footprints traced from Vasserot's plans, photos in the streets, an eye-level walk, and a detailed area around Notre-Dame (see above). Next: the whole island in detail, its bridges through time, landmarks, streets and street furniture, period vehicles and richer facades.
 
 ## Licences
 

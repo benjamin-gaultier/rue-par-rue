@@ -190,6 +190,18 @@ def split_houses(footprint, size: float = HOUSE_M, min_area: float = 8.0) -> lis
     return out or [footprint]
 
 
+def load_institutions(area: str) -> tuple[list[dict], set[str]]:
+    """Traced institutions (python -m rpr institutions) and the parcels they replace."""
+    from rpr.sources.institutions import INSTITUTIONS
+
+    path = paths.DATA_DIR / "3d" / f"institutions-{area}.geojson"
+    if not path.exists():
+        return [], set()
+    features = json.loads(path.read_text())["features"]
+    parcels = {p for cfg in INSTITUTIONS.values() for p in cfg["parcels"]}
+    return features, parcels
+
+
 def download_vasserot(cache: Path, log: Callable[[str], Any]) -> Path:
     cache.mkdir(parents=True, exist_ok=True)
     for ext in ("shp", "shx", "dbf", "prj"):
@@ -289,8 +301,10 @@ def build(area: str, log: Callable[[str], Any] = print) -> dict:
     shp = download_vasserot(paths.REPO_ROOT / "pipeline" / "cache" / "vasserot", log)
     reader = shapefile.Reader(str(shp), encoding="latin-1")
     fields = [f[0] for f in reader.fields[1:]]
-    reconstructed_shapes: list = []
-    reconstructed, skipped = [], {"covered by a surviving building": 0, "too small": 0, "open space": 0}
+    reconstructed_shapes: list = []  # (metric footprint, last year standing)
+    reconstructed, skipped = [], {"covered by a surviving building": 0, "too small": 0, "open space": 0, "institution": 0}
+    # Institutions traced from Verniquet's atlas replace the house lots of their parcels.
+    institutions, institution_parcels = load_institutions(area)
     traced = load_traced(area, to_l93)
     used_traced = 0
     from_l93 = Transformer.from_crs(2154, 4326, always_xy=True).transform
@@ -306,6 +320,9 @@ def build(area: str, log: Callable[[str], Any] = print) -> dict:
         if not geom.is_valid:
             geom = geom.buffer(0)
         if not geom.intersects(area_box):
+            continue
+        if institutions and sr.record[fields.index("ID_ALPAGE")] in institution_parcels:
+            skipped["institution"] += 1
             continue
         metric = transform(to_l93, geom)
         if metric.area < MIN_PARCEL_M2:
@@ -370,14 +387,54 @@ def build(area: str, log: Callable[[str], Any] = print) -> dict:
                   "geometry": mapping(geom),
               }
             )
-        reconstructed_shapes.append(footprint)
-    # A building of 1851-1859 on the site of a house that stands until 1860
-    # would overlap it for a few years: start it when the house goes.
+        reconstructed_shapes.append((footprint, DEMOLISHED_BY))
+    for f in institutions:
+        p = f["properties"]
+        metric = transform(to_l93, shape(f["geometry"])).buffer(-INSET_M, join_style="mitre", mitre_limit=3.0)
+        if survivor_union is not None:
+            metric = metric.difference(survivor_union.buffer(INSET_M))
+        if metric.is_empty or metric.area < 20:
+            continue
+        geom = transform(from_l93, metric)
+        reconstructed.append(
+            {
+                "type": "Feature",
+                "properties": {
+                    "kind": "reconstructed",
+                    "height": p["height"],
+                    "period": "standing in 1836, since demolished",
+                    **({"from": p["from"]} if "from" in p else {}),
+                    "until": p["until"],
+                    "source": p["source"],
+                    "id": p["id"],
+                    "name": p["name"] + (" (sacked in 1831)" if p.get("ruin") else ""),
+                    "institution": p["institution"],
+                    "institution_style": p["style"],
+                    "ruin": bool(p.get("ruin")),
+                    "note": p["note"],
+                    "traced": True,
+                    "roof": "flat" if p.get("ruin") else "mansard",
+                    "roof_material": "mineral" if p.get("ruin") else "zinc",
+                    "landmark": False,
+                    "focus": bool(focus_box is not None and geom.intersects(focus_box)),
+                },
+                "geometry": mapping(geom),
+            }
+        )
+        reconstructed_shapes.append((metric, p["until"]))
+    # A later building on the site of one that stood until year U would
+    # overlap it for a few years: start it when the old one goes.
     if reconstructed_shapes:
-        gone = unary_union(reconstructed_shapes)
+        from shapely.strtree import STRtree
+
+        tree = STRtree([g for g, _ in reconstructed_shapes])
         for f, g in zip(later, later_shapes):
-            if f["properties"]["from"] < DEMOLISHED_BY and g.area and g.intersection(gone).area / g.area > 0.2:
-                f["properties"]["from"] = DEMOLISHED_BY
+            if not g.area:
+                continue
+            for i in tree.query(g):
+                old, until = reconstructed_shapes[i]
+                if f["properties"]["from"] < until and g.intersection(old).area / g.area > 0.2:
+                    f["properties"]["from"] = until
     log(f"model3d: {len(reconstructed)} demolished buildings reconstructed ({used_traced} with traced footprints); skipped {skipped}")
 
     features = survivors + later + reconstructed

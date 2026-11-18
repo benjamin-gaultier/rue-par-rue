@@ -86,6 +86,12 @@ def cmd_site(args: argparse.Namespace) -> None:
     _update_manifest(f"site_{args.area}", site.build(args.area))
 
 
+def cmd_institutions(args: argparse.Namespace) -> None:
+    from rpr.sources import institutions
+
+    _update_manifest(f"institutions_{args.area}", institutions.build(args.area))
+
+
 def cmd_greenery(args: argparse.Namespace) -> None:
     from rpr.sources import greenery
 
@@ -137,6 +143,10 @@ def main(argv: list[str] | None = None) -> int:
     p = sub.add_parser("site", help="the Seine, bridges and landmark details of a model area (IGN BD TOPO, needs shapely)")
     p.add_argument("--area", choices=["cite"], default="cite")
     p.set_defaults(func=cmd_site)
+
+    p = sub.add_parser("institutions", help="Hôtel-Dieu and archbishop's palace traced from Verniquet's atlas (needs [geo,vision] and the atlas screenshots)")
+    p.add_argument("--area", choices=["cite"], default="cite")
+    p.set_defaults(func=cmd_institutions)
 
     p = sub.add_parser("greenery", help="gardens and trees of a model area (Paris tree register, APUR; needs shapely)")
     p.add_argument("--area", choices=["cite"], default="cite")

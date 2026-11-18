@@ -168,3 +168,18 @@ describe('gardens and trees', () => {
     expect(trees).toEqual([{ x: 23.5, y: 488.5, height: 18, group: 0, planted: 1857, girth: 210 }])
   })
 })
+
+describe('institutions', () => {
+  it('gives the palace slate mansards, then a roofless shell after the sack of 1831', async () => {
+    const { institutionLook, INSTITUTION_STYLE } = await import('./institutions')
+    const base = { id: 'institution:archeveche:0', kind: 'reconstructed' as const, height: 18, period: '', source: '' }
+    expect(institutionLook(base)).toBeUndefined()
+    expect(institutionLook({ ...base, institution: 'archeveche', institution_style: 12 })).toEqual({ style: 12, roof: 'mansard', roofMaterial: ROOF_MATERIAL.lead })
+    expect(institutionLook({ ...base, institution: 'archeveche', ruin: true })?.style).toBe(INSTITUTION_STYLE.palaceRuin)
+    expect(institutionLook({ ...base, institution: 'archeveche', ruin: true })?.roof).toBe('flat')
+  })
+
+  it('dates a building that starts and ends', () => {
+    expect(lifeOf({ kind: 'reconstructed', from: 1831, until: 1837 })).toEqual([1831, 1837, 0, 0])
+  })
+})
