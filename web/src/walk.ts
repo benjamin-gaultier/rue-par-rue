@@ -83,8 +83,9 @@ export function slide(from: [number, number], heading: number, metres: number, i
 const SLIDE_TURNS = [20, 40, 60, 75]
 
 /** True if a building standing in `year` covers the point. */
-export function blocked(p: [number, number], year: number, obstacles: Obstacle[]): boolean {
+export function blocked(p: [number, number], year: number, obstacles: Obstacle[], skip?: Set<string>): boolean {
   for (const o of obstacles) {
+    if (skip?.has((o.props as { id?: string }).id ?? '')) continue
     const [x0, y0, x1, y1] = o.bbox
     if (p[0] < x0 || p[0] > x1 || p[1] < y0 || p[1] > y1) continue
     if (!existsIn(o.props, year)) continue
@@ -106,6 +107,8 @@ export class Walker {
   private obstacles: Obstacle[] = []
   /** More places you cannot walk, such as the river (set by the detailed layer). */
   extraBlock?: (p: [number, number]) => boolean
+  /** Buildings whose blocking extraBlock takes over (the detailed layer, with its own dates). */
+  skipIds?: Set<string>
 
   constructor(
     private map: MapLibreMap,
@@ -198,7 +201,7 @@ export class Walker {
   }
 
   private isBlocked(p: [number, number]): boolean {
-    return blocked(p, this.year(), this.obstacles) || (this.extraBlock?.(p) ?? false)
+    return blocked(p, this.year(), this.obstacles, this.skipIds) || (this.extraBlock?.(p) ?? false)
   }
 
   private freeSpotNear(at: [number, number]): [number, number] {

@@ -315,6 +315,7 @@ function ensureCity(): Promise<void> {
       city.setVisible(model.active)
       model.setHideFocus(true)
       walker.extraBlock = (p) => city?.isBlocked(p, state.year) ?? false
+      walker.skipIds = city.buildingIds
     } catch (err) {
       console.warn('Detailed 3D area unavailable:', err)
     }

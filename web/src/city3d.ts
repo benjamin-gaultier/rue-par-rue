@@ -82,6 +82,9 @@ function treeGeometry(base: THREE.BufferGeometry, trees: TreeSpec[]): THREE.Inst
  * beyond, where the haze has begun and a crown is a few pixels wide.
  */
 export const TREE_LEVELS_M = [160, 450]
+/** Grid cell for finding the buildings under a walker (metres). */
+const CELL_M = 20
+
 /** The trees are sorted again when the camera has moved this far. */
 const TREE_RESORT_M = 30
 
@@ -313,6 +316,7 @@ export class City3D implements CustomLayerInterface {
   private extras: THREE.Mesh[] = []
   private treeLod?: (camera: THREE.Vector3) => void
   private blockers: ((p: Pt, year: number) => boolean)[] = []
+  private buildingCells?: Map<string, number[]>
   private steps: ((seconds: number) => boolean)[] = []
   /** Modules that failed to load, by name (shown in the console only). */
   failed: string[] = []
@@ -594,11 +598,46 @@ export class City3D implements CustomLayerInterface {
     return this.water.some((w) => insidePoly(p, w)) && !this.bridges.some((b) => insidePoly(p, b))
   }
 
-  /** True where nobody can stand in `year`: the river, or anything a module blocks. */
+  /** True where nobody can stand in `year`: the river, a building, or anything a module blocks. */
   isBlocked(lonlat: [number, number], year: number): boolean {
     if (this.inWater(lonlat)) return true
-    if (!this.blockers.length) return false
     const p = this.project(lonlat)
-    return this.blockers.some((test) => test(p, year))
+    return this.buildingAt(p, year) || this.blockers.some((test) => test(p, year))
+  }
+
+  /**
+   * Ids of the model buildings this layer draws. Walking takes their dates
+   * from here (as modules changed them), not from the model file.
+   */
+  get buildingIds(): Set<string> {
+    return new Set(this.props.map((p) => p.id))
+  }
+
+  /** True if a building standing in `year`, as drawn, covers the point (local metres). */
+  buildingAt(p: Pt, year: number): boolean {
+    if (!this.buildingCells) {
+      const cells = new Map<string, number[]>()
+      this.buildingCells = cells
+      this.specs.forEach((s, i) => {
+        for (const poly of s.polys) {
+          let [x0, y0, x1, y1] = [Infinity, Infinity, -Infinity, -Infinity]
+          for (const [x, y] of poly[0]) {
+            x0 = Math.min(x0, x)
+            y0 = Math.min(y0, y)
+            x1 = Math.max(x1, x)
+            y1 = Math.max(y1, y)
+          }
+          for (let cx = Math.floor(x0 / CELL_M); cx <= Math.floor(x1 / CELL_M); cx++)
+            for (let cy = Math.floor(y0 / CELL_M); cy <= Math.floor(y1 / CELL_M); cy++) {
+              const key = `${cx},${cy}`
+              const list = cells.get(key) ?? []
+              if (list[list.length - 1] !== i) list.push(i)
+              cells.set(key, list)
+            }
+        }
+      })
+    }
+    const list = this.buildingCells.get(`${Math.floor(p[0] / CELL_M)},${Math.floor(p[1] / CELL_M)}`)
+    return !!list?.some((i) => aliveIn(this.specs[i].life, year) && this.specs[i].polys.some((poly) => insidePoly(p, poly)))
   }
 }
