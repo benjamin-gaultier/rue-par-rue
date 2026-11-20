@@ -46,6 +46,25 @@ describe('positionLabel', () => {
     )
   })
 
+  it('names gardens, bridges and city gates', () => {
+    const garden = photo('geocoded', { geocoded_street: 'Jardin du Luxembourg', precision: 'place', method: 'bdtopo' })
+    expect(positionLabel(garden)).toBe('Approximate: at Jardin du Luxembourg, named in the caption')
+    const gate = photo('geocoded', {
+      geocoded_street: "Avenue de la Porte d'Italie",
+      precision: 'place',
+      method: 'gate-way',
+      from_caption: "porte d'Italie"
+    })
+    expect(positionLabel(gate)).toBe("Approximate: on Avenue de la Porte d'Italie, by the porte d'Italie of the caption (a gate of the city wall)")
+  })
+
+  it('says when the caption gives the wrong arrondissement', () => {
+    const p = photo('geocoded', { geocoded_street: '5 Rue du Mail 75002 Paris', precision: 'number', method: 'ban', caption_arrondissement: 1 })
+    expect(positionLabel(p)).toBe('At 5 Rue du Mail, the address in the caption; the caption says the 1st arrondissement, but it lies in the next one')
+    const q = photo('geocoded', { geocoded_street: 'Rue Galande 75005 Paris', precision: 'street', method: 'ban', caption_arrondissement: 13 })
+    expect(positionLabel(q)).toContain('the 13th arrondissement')
+  })
+
   it('keeps the street wording for older records and other poses', () => {
     expect(positionLabel(photo('geocoded', { geocoded_street: 'Rue Galande 75005 Paris' }))).toBe(
       'Approximate: on Rue Galande, the street named in the caption'

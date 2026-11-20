@@ -202,7 +202,7 @@ In the 3D view the archive photographs stand as picture frames where they were t
 
 **Walk the streets** puts the camera about 2 m above the ground. Use the arrow keys or W A S D (Shift to go faster) and drag to look around and up. Buildings standing in the chosen year block the way, so changing the year changes the streets you can walk; if a building appears where you stand, you step out to the nearest open ground. Looking above the horizon uses MapLibre's experimental pitch beyond 90° with an unclamped camera centre.
 
-WebGL can only draw images served with CORS headers. Albert-Kahn images load from the museum's portal; Paris Musées images come from small same-origin thumbnails (`python -m rpr thumbs --area cite`, 807 images, 5.7 MB, CC0).
+WebGL can only draw images served with CORS headers. Albert-Kahn images load from the museum's portal; Paris Musées images come from small same-origin thumbnails (`python -m rpr thumbs --area cite`, 898 images, 6.3 MB, CC0).
 
 #### 3D photos (AI depth)
 
@@ -254,19 +254,22 @@ python -m rpr verniquet     # Verniquet georeference annotations, with real IIIF
 python -m rpr vasserot      # Vasserot PMTiles from Stanford
 python -m rpr kahn          # Albert-Kahn Paris photos (see note)
 python -m rpr streetnames   # former street names + 1836 address points for captions (needs [geo])
+python -m rpr places        # gardens, squares, bridges and city gates for captions (BD TOPO + City of Paris)
 python -m rpr parismusees   # Paris Musées photos, needs PARISMUSEES_TOKEN (--offline: place the saved works again)
 python -m rpr index         # rebuild photos.geojson + manifest.json
 pytest -q
 ```
 
-Paris Musées records carry no coordinates, so `rpr/geocode.py` reads the caption ("Hôtel Lambert, 13 quai d'Anjou, 4ème arrondissement", "Passage de l'Opéra, vue prise de la rue Lepeletier") for its arrondissement, streets, house numbers, corner ("à l'angle de") and the street the view was taken from. Each street is looked up, most precise answer first:
+Paris Musées records carry no coordinates, so `rpr/geocode.py` reads the caption ("Hôtel Lambert, 13 quai d'Anjou, 4ème arrondissement", "Passage de l'Opéra, vue prise de la rue Lepeletier") for its arrondissements, streets, house numbers, corner ("à l'angle de", "coin des rues de Seine et de l'Echaudé") and the street the view was taken from. A street name ends where the caption moves on to a description, a date or another street ("Rue de Bretonvilliers avec l'hôtel de Bretonvilliers au fond", "Rue Berton mars 1901", "Impasse de la Baudroirie Rue de Venise"); "Fb", "Gds" and "Pont-Neuf" are read as "rue du Faubourg", "Grands" and "Pont Neuf". Each name is looked up in every arrondissement the caption gives, most precise answer first:
 
-1. today's street in the national address base (IGN Géoplateforme geocoder), at the house number when the caption gives one;
+1. today's street in the national address base (IGN Géoplateforme geocoder), at the house number when the caption gives one; the caption's own name is taken down to a geocoder score of 0.5 ("Place St Sulpice", "rue Grenelle"), since only the spelling differs;
 2. the street as it was in 1836, from the 29,164 ALPAGE address points of the Vasserot cadastre, for streets since demolished (rue de la Calandre, rue de la Licorne), at the numbered house when there is one;
 3. a former name from the City of Paris *dénominations caduques* (rue de la Barillerie → boulevard du Palais), placed on today's street;
-4. a close spelling in the address base (score 0.8 or more), but never for a name known to be historical: those stay on their own street or unplaced.
+4. a garden, square, bridge, market or gate of that name (jardin du Luxembourg, square René-Viviani, pont au Change, marché Saint-Germain), at the centre of its outline, from a gazetteer of 1,758 places built from IGN BD TOPO and the City of Paris street outlines (`python -m rpr places`, `pipeline/cache/paris-places.json`); a gate of the Thiers wall ("porte d'Italie") on the place or avenue named after it, which runs out from where it stood. Names match whole, particles aside ("square Vert-Galant"), never in part;
+5. a close spelling in the address base (score 0.8 or more), but never for a name known to be historical: those stay on their own street or unplaced;
+6. when none of these is in the caption's arrondissements: today's street or place of exactly that name (score 0.9 or more) in a neighbouring arrondissement ("5 rue du Mail, 1er arrondissement": the rue du Mail is in the 2nd), flagged with `caption_arrondissement` and its confidence multiplied by 0.6. Not when a street of that name is recorded in the caption's own arrondissement and gone since (the rue Larrey of the 6th): that is a different street.
 
-Two streets that meet within 30 m in the 1836 address points ("Rue X, vue prise de la rue Y", "à l'angle de") place the photo at their corner. A caption that names only a quarter ("île de la Cité") lands at its centre. Nothing is placed on a street that cannot be found. `confidence` follows precision, and `extra.precision` / `extra.method` say which rule placed the photo; the photo card states it ("At 13 Quai d'Anjou, the address in the caption"):
+Two streets of the caption ("Rue X, vue prise de la rue Y", "à l'angle de") place the photo at their corner: where their 1836 address points come within 30 m, else where today's street outlines meet. A caption that names only a quarter ("île de la Cité") lands at its centre. Nothing is placed on a street that cannot be found. `confidence` follows precision, and `extra.precision` / `extra.method` say which rule placed the photo; the photo card states it ("At 13 Quai d'Anjou, the address in the caption"):
 
 | Match | Confidence |
 | --- | --- |
@@ -276,9 +279,12 @@ Two streets that meet within 30 m in the 1836 address points ("Rue X, vue prise 
 | 1836 house number on a street that lost it since | 0.4 |
 | Street the view was taken from / street shown | 0.35 / 0.25 (× geocoder score) |
 | Today's street for a former name (view / shown) | 0.3 / 0.2 |
+| Garden, square, bridge or gate, by how far it reaches from its centre: up to 150 m / 400 m / further | 0.2 / 0.15 / 0.1 |
 | Quarter only | 0.1 |
 
-A name that could mean several places (a former name used in two arrondissements, a homonym still in use elsewhere in the photo's year) is placed on the likeliest one, flagged `ambiguous` and its confidence multiplied by 0.6; part of a renamed street, or a demolished street more than 300 m long, by 0.8. Lookups are cached in `pipeline/cache/geocode.json`; `python -m rpr streetnames` builds the two historical tables in `pipeline/cache/` (`former-street-names.json`, `vasserot-1836.json`). The harvest saves the raw works to `pipeline/cache/parismusees-works.json.gz`, so `python -m rpr parismusees --offline` places them again without a token when the matching improves.
+A place ranks below the streets of the same caption, so "Port du Louvre, vers le Pont Neuf" stays on the port.
+
+A name that could mean several places (a former name used in two arrondissements, a homonym still in use elsewhere in the photo's year) is placed on the likeliest one, flagged `ambiguous` and its confidence multiplied by 0.6; part of a renamed street, or a demolished street more than 300 m long, by 0.8. Lookups are cached in `pipeline/cache/geocode.json`; `python -m rpr streetnames` builds the historical tables in `pipeline/cache/` (`former-street-names.json`, `vasserot-1836.json`, `street-junctions.json`) and `python -m rpr places` the gazetteer. The harvest saves the raw works to `pipeline/cache/parismusees-works.json.gz`, so `python -m rpr parismusees --offline` places them again without a token when the matching improves.
 
 Every photo source is normalised into one schema (`pipeline/rpr/photo.py`): position, date range, image links, licence, credit, and how the camera position was obtained (`recorded`, `geocoded`, `matched`, `manual`, `estimated`) with a confidence score. Records outside Paris, with impossible dates or without an image are rejected and counted in `manifest.json`.
 
@@ -296,7 +302,7 @@ For Paris Musées, create a free token at <https://apicollections.parismusees.pa
 
 1. **Phase 1, time-slider map** (this release): basemap timeline, cadastre, Panoramax "today" view, photo pipeline.
 2. **Phase 2, then-and-now viewer** (this release): archive photo over the nearest Panoramax panorama, with alignment saved in the URL.
-3. **Phase 3, pose refinement** (started): Marville and Atget captions are now placed at their house number, corner, former or demolished street using the City of Paris former street names and the 1836 address points (see Paris Musées above). Still to do: corners of two streets laid out after 1836 (from today's street footprints); the 1888 street network; infer headings (Kahn records have positions but no direction, so the viewer cannot yet face the subject automatically); refine poses by matching against Panoramax imagery; let people submit the alignments they make in the viewer.
+3. **Phase 3, pose refinement** (started): Marville and Atget captions are now placed at their house number, corner, former or demolished street, or the garden, square, bridge or city gate they name, using the City of Paris former street names and street outlines, the 1836 address points and IGN BD TOPO (see Paris Musées above). Still to do: the 1,295 unplaced captions that name no street, about 680 of them a church, a hôtel or a palace (a gazetteer of landmarks); the 1888 street network; infer headings (Kahn records have positions but no direction, so the viewer cannot yet face the subject automatically); refine poses by matching against Panoramax imagery; let people submit the alignments they make in the viewer.
 4. **Phase 4, 3D**: the Île de la Cité as a massing model, with footprints traced from Vasserot's plans, photos in the streets, an eye-level walk, and the whole island in detail with its bridges through time, the Hôtel-Dieu and the archbishop's palace (see above). Next: landmarks through time, streets and street furniture, period vehicles and richer facades, then more quarters.
 
 ## Licences

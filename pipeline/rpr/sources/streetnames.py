@@ -13,6 +13,12 @@ harvests (including the GitHub Actions one) need no extra downloads:
   (1810-1836, ODbL), grouped by street. Each street keeps its numbered
   points, its centre and how far its points spread, and the arrondissements
   of today it falls in. A street name used in two places becomes two entries.
+* street-junctions.json: where today's streets meet, from the outlines of
+  the City of Paris "Dénominations des emprises des voies actuelles" (ODbL).
+  Two outlines that touch, overlap or leave a gap of a few metres with no
+  other street in it meet there; each meeting is one point, the centre of
+  where they touch. This places corners of streets laid out after 1836
+  (boulevard du Palais, rue Rambuteau), which have no 1836 address points.
 
 Run `python -m rpr streetnames` (needs the [geo] extras) to rebuild them.
 """
@@ -37,12 +43,25 @@ ARRONDISSEMENTS_DATASET = "arrondissements"
 CACHE_DIR = paths.REPO_ROOT / "pipeline" / "cache"
 FORMER_PATH = CACHE_DIR / "former-street-names.json"
 VASSEROT_PATH = CACHE_DIR / "vasserot-1836.json"
+JUNCTIONS_PATH = CACHE_DIR / "street-junctions.json"
 
 VASSEROT_EPSG = 27561  # NTF (Paris) Lambert Nord, as in rpr.sources.vasserot_plans
+METRIC_EPSG = 2154  # Lambert-93, for measuring today's street outlines in metres
 CLUSTER_GAP_M = 250  # address points of one street further apart than this are two streets
+# Today's street outlines. Measured over Paris: 12,000 pairs share an edge,
+# 1,400 overlap, 860 touch at a corner point; 170 leave less than 1 m
+# (digitising slack: rue des Halles / rue Saint-Honoré, 0.02 m). Of the gaps
+# of 1 to 3 m, two thirds are another street lying between the two (rue
+# Lucien Sampaix and place Jacques Bonsergent, across the boulevard de
+# Magenta): those do not meet.
+TOUCH_M = 1.0  # outlines closer than this meet
+GAP_M = 3.0  # outlines up to this far apart meet if no other street fills the gap
+MEETING_M = 40  # pieces of contact closer than this (plus the width of the street) are one meeting
+ARRONDISSEMENT_NEAR_M = 20  # a junction belongs to every arrondissement within this distance
 
 FORMER_CREDIT = "Ville de Paris, Dénominations caduques des voies (ODbL)"
 VASSEROT_CREDIT = "ALPAGE, Vasserot address points 1810-1836 (ODbL)"
+JUNCTIONS_CREDIT = "Ville de Paris, Dénominations des emprises des voies actuelles (ODbL)"
 
 # Abbreviations used in the histories ("Actuellement av. de New York").
 _ABBREVIATIONS = [
@@ -281,6 +300,104 @@ def _num_sort(n: str) -> tuple[int, str]:
     return (int(m.group()) if m else 10**6, n)
 
 
+def _display(name: str) -> str:
+    """'boulevard du Palais' -> 'Boulevard du Palais'."""
+    return name[:1].upper() + name[1:]
+
+
+def build_junctions(
+    features: list[dict],
+    to_metres: Callable,
+    to_wgs: Callable[[float, float], tuple[float, float]],
+    arrondissements_near: Callable[[float, float], list[int]] = lambda x, y: [],
+) -> dict:
+    """Points where today's streets meet, keyed by the two street names.
+
+    `features` are GeoJSON features with a `typo_min` name, an optional
+    `largeur` (width in metres) and the street outline. `to_metres` maps an
+    (N, 2) array of outline coordinates to metres, `to_wgs` one point back.
+    Returns {"junctions": {name_a: {name_b: [[lon, lat, arrondissement, ...],
+    ...]}}} with norm(name_a) < norm(name_b). A pair that meets in more than
+    one place has one point per meeting.
+    """
+    import numpy as np
+    import shapely
+    from shapely.geometry import LineString, shape
+    from shapely.ops import nearest_points, unary_union
+    from shapely.strtree import STRtree
+
+    parts: dict[str, list] = defaultdict(list)
+    names: dict[str, str] = {}
+    width: dict[str, float] = defaultdict(float)
+    for f in features:
+        p = f.get("properties") or {}
+        name = re.sub(r"\s+", " ", p.get("typo_min") or "").strip()
+        if not name or not f.get("geometry"):
+            continue
+        key = norm(name)
+        parts[key].append(shapely.make_valid(shapely.transform(shape(f["geometry"]), to_metres)))
+        names.setdefault(key, _display(name))
+        width[key] = max(width[key], float(p.get("largeur") or 0))
+    keys = sorted(parts)
+    outlines = [unary_union(parts[k]) for k in keys]  # a name used twice (avenue Foch) is one street
+    tree = STRtree(outlines)
+    near = [shapely.buffer(g, TOUCH_M / 2) for g in outlines]
+
+    def gap_piece(i: int, j: int):
+        """Where two outlines a few metres apart meet, unless another street lies between them."""
+        p, q = nearest_points(outlines[i], outlines[j])
+        seg = LineString([p, q])
+        for k in tree.query(seg, predicate="intersects"):
+            if k not in (i, j) and outlines[k].intersection(seg).length > seg.length / 2:
+                return None
+        return seg.buffer(TOUCH_M / 2)
+
+    junctions: dict[str, dict[str, list]] = defaultdict(dict)
+    a_idx, b_idx = tree.query(outlines, predicate="dwithin", distance=GAP_M)
+    for i, j in zip(a_idx.tolist(), b_idx.tolist()):
+        if i >= j:
+            continue
+        if outlines[i].distance(outlines[j]) <= TOUCH_M:
+            contact = near[i].intersection(near[j])
+            pieces = [g for g in getattr(contact, "geoms", [contact]) if g.area > 0]
+        else:
+            piece = gap_piece(i, j)
+            pieces = [piece] if piece is not None else []
+        if not pieces:
+            continue
+        # The two sides of a crossing are one meeting: they lie a street's width apart.
+        merge = max(MEETING_M, max(width[keys[i]], width[keys[j]]) + 10)
+        points = []
+        for group in _cluster_shapes(pieces, merge):
+            c = unary_union(group).centroid
+            lon, lat = to_wgs(c.x, c.y)
+            points.append([round(lon, 6), round(lat, 6), *arrondissements_near(c.x, c.y)])
+        junctions[keys[i]][keys[j]] = sorted(points)
+    return {
+        "junctions": {
+            names[a]: {names[b]: pts for b, pts in sorted(inner.items())} for a, inner in sorted(junctions.items())
+        }
+    }
+
+
+def _cluster_shapes(shapes: list, gap: float) -> list[list]:
+    """Single-linkage groups of shapes closer than `gap`."""
+    left = list(range(len(shapes)))
+    groups = []
+    while left:
+        group = [left.pop()]
+        frontier = list(group)
+        while frontier:
+            i = frontier.pop()
+            close = [j for j in left if shapes[i].distance(shapes[j]) <= gap]
+            for j in close:
+                left.remove(j)
+            group.extend(close)
+            frontier.extend(close)
+        groups.append([shapes[i] for i in sorted(group)])
+    return groups
+
+
 def _write(path: Path, data: Any) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     text = json.dumps(data, ensure_ascii=False, sort_keys=False, separators=(",", ":"))
@@ -289,6 +406,7 @@ def _write(path: Path, data: Any) -> None:
 
 def build(log: Callable[[str], Any] = print) -> dict:
     import shapefile
+    import shapely
     from pyproj import Transformer
     from shapely.geometry import Point, shape
     from shapely.strtree import STRtree
@@ -296,8 +414,8 @@ def build(log: Callable[[str], Any] = print) -> dict:
     from rpr.sources import vasserot_plans
 
     former = net.fetch_json(ODS.format(id=FORMER_DATASET, fmt="json"), timeout=180)
-    current_rows = net.fetch_json(ODS.format(id=CURRENT_DATASET, fmt="json") + "?select=typo_min", timeout=180)
-    current = {norm(r["typo_min"]) for r in current_rows if r.get("typo_min")}
+    current_geo = net.fetch_json(ODS.format(id=CURRENT_DATASET, fmt="geojson") + "?select=typo_min,largeur,geo_shape", timeout=300)
+    current = {norm(f["properties"]["typo_min"]) for f in current_geo["features"] if f["properties"].get("typo_min")}
     table = build_former(former, current)
     _write(FORMER_PATH, {"source": FORMER_CREDIT, "names": table})
     log(f"streetnames: {len(former)} retired names, {len(table)} keys -> {FORMER_PATH.name}")
@@ -305,6 +423,28 @@ def build(log: Callable[[str], Any] = print) -> dict:
     arr_geo = net.fetch_json(ODS.format(id=ARRONDISSEMENTS_DATASET, fmt="geojson"), timeout=180)
     polys = [(shape(f["geometry"]), int(f["properties"]["c_ar"])) for f in arr_geo["features"]]
     tree = STRtree([p for p, _ in polys])
+
+    to_m = Transformer.from_crs(4326, METRIC_EPSG, always_xy=True)
+    m_to_wgs = Transformer.from_crs(METRIC_EPSG, 4326, always_xy=True).transform
+
+    def to_metres(coords):
+        import numpy as np
+
+        return np.column_stack(to_m.transform(coords[:, 0], coords[:, 1]))
+
+    arr_m = [shapely.transform(p, to_metres) for p, _ in polys]
+    arr_m_tree = STRtree(arr_m)
+
+    def arrondissements_near(x: float, y: float) -> list[int]:
+        around = Point(x, y).buffer(ARRONDISSEMENT_NEAR_M)
+        return sorted(polys[int(i)][1] for i in arr_m_tree.query(around, predicate="intersects"))
+
+    j = build_junctions(current_geo["features"], to_metres, m_to_wgs, arrondissements_near)
+    _write(JUNCTIONS_PATH, {"source": JUNCTIONS_CREDIT, **j})
+    n_pairs = sum(len(v) for v in j["junctions"].values())
+    n_multi = sum(1 for v in j["junctions"].values() for pts in v.values() if len(pts) > 1)
+    log(f"streetnames: {n_pairs} pairs of today's streets that meet ({n_multi} more than once) -> {JUNCTIONS_PATH.name}")
+
     to_wgs = Transformer.from_crs(VASSEROT_EPSG, 4326, always_xy=True).transform
 
     def arrondissement_of(x: float, y: float) -> int | None:
@@ -329,26 +469,50 @@ def build(log: Callable[[str], Any] = print) -> dict:
     return {
         "former_names": len(table),
         "streets_1836": n_entries,
-        "files": [str(FORMER_PATH.relative_to(paths.REPO_ROOT)), str(VASSEROT_PATH.relative_to(paths.REPO_ROOT))],
+        "junctions": n_pairs,
+        "files": [p.relative_to(paths.REPO_ROOT).as_posix() for p in (FORMER_PATH, VASSEROT_PATH, JUNCTIONS_PATH)],
     }
 
 
 class StreetHistory:
-    """Lookups in the two tables: former names, and streets of 1836."""
+    """Lookups in the three tables: former names, streets of 1836, and where today's streets meet."""
 
-    def __init__(self, former: dict[str, list[dict]] | None = None, vasserot: dict | None = None):
+    def __init__(self, former: dict[str, list[dict]] | None = None, vasserot: dict | None = None, junctions: dict | None = None):
         self.former = former or {}
         self.streets: dict[str, list[dict]] = (vasserot or {}).get("streets", {})
         self.quarters: dict[str, dict] = (vasserot or {}).get("quarters", {})
         self.sounds: dict[str, list[str]] = defaultdict(list)  # spelling-free key -> 1836 keys
         for key in self.streets:
             self.sounds[sound(key)].append(key)
+        self.today: dict[str, str] = {}  # key -> today's name
+        self.meetings: dict[str, dict[str, list]] = defaultdict(dict)  # key a -> key b -> points, a < b
+        for a, inner in (junctions or {}).get("junctions", {}).items():
+            for b, points in inner.items():
+                ka, kb = norm(a), norm(b)
+                self.today.setdefault(ka, a)
+                self.today.setdefault(kb, b)
+                lo, hi = sorted((ka, kb))
+                self.meetings[lo][hi] = points
+        self.today_sounds: dict[str, list[str]] = defaultdict(list)  # spelling-free key -> today's keys
+        for key in self.today:
+            self.today_sounds[sound(key)].append(key)
 
     @classmethod
-    def load(cls, former_path: Path = FORMER_PATH, vasserot_path: Path = VASSEROT_PATH) -> "StreetHistory":
-        former = json.loads(former_path.read_text(encoding="utf-8"))["names"] if former_path.exists() else {}
-        vasserot = json.loads(vasserot_path.read_text(encoding="utf-8")) if vasserot_path.exists() else {}
-        return cls(former, vasserot)
+    def load(
+        cls, former_path: Path = FORMER_PATH, vasserot_path: Path = VASSEROT_PATH, junctions_path: Path = JUNCTIONS_PATH
+    ) -> "StreetHistory":
+        def read(path: Path) -> dict:
+            return json.loads(path.read_text(encoding="utf-8")) if path.exists() else {}
+
+        return cls(read(former_path).get("names", {}), read(vasserot_path), read(junctions_path))
+
+    def junctions(self, a: str, b: str, arrondissement: int | None = None) -> list[tuple[float, float]]:
+        """Where today's streets `a` and `b` (table keys) meet, within the arrondissement when it is given."""
+        lo, hi = sorted((a, b))
+        points = self.meetings.get(lo, {}).get(hi, [])
+        if arrondissement:
+            points = [p for p in points if arrondissement in p[2:]]
+        return [(p[0], p[1]) for p in points]
 
     def streets_1836(self, name: str, arrondissement: int | None = None) -> list[dict]:
         """Places a street of this name had in 1836, biggest first, within the arrondissement of today.

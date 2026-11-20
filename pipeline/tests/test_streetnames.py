@@ -1,5 +1,8 @@
+import pytest
+
+from rpr.geocode import distance_m
 from rpr.sources import streetnames
-from rpr.sources.streetnames import StreetHistory, build_former, build_vasserot, norm, parse_history, sound
+from rpr.sources.streetnames import StreetHistory, build_former, build_junctions, build_vasserot, norm, parse_history, sound
 
 # Histories copied from the City of Paris "dénominations caduques" records.
 RENAMED = "Actuellement rue de la Tacherie."
@@ -109,7 +112,81 @@ def history() -> StreetHistory:
             },
             "quarters": {"cite": {"name": "Cite", "center": [2.348, 48.8545], "spread": 343}},
         },
+        junctions={
+            "junctions": {
+                "Boulevard du Palais": {"Quai des Orfèvres": [[2.3448, 48.854425, 1, 4]]},
+                # Two meetings: rue de l'Hôtel-de-Ville runs along the quai and joins it at both ends.
+                "Quai de l'Hôtel de Ville": {"Rue de l'Hôtel de Ville": [[2.355078, 48.854521, 4], [2.355842, 48.854198, 4]]},
+                "Rue Clos Georgeot": {"Rue Sainte-Anne": [[2.3360, 48.8665, 1]]},
+                "Rue d'Orties": {"Rue Sainte-Anne": [[2.3345, 48.8658, 1]]},
+                "Rue de Mézières": {"Rue Madame": [[2.3315, 48.8501, 6]]},
+            }
+        },
     )
+
+
+def street(name, x0, y0, x1, y1, width=None):
+    """A rectangular street outline, in metres."""
+    ring = [[x0, y0], [x1, y0], [x1, y1], [x0, y1], [x0, y0]]
+    return {"properties": {"typo_min": name, "largeur": width}, "geometry": {"type": "Polygon", "coordinates": [ring]}}
+
+
+def metres(p):
+    """Back from `flat` lon/lat to metres."""
+    return ((p[0] - 2.35) * 73_000, (p[1] - 48.85) * 111_000)
+
+
+def test_build_junctions_where_outlines_meet():
+    pytest.importorskip("shapely")
+    features = [
+        street("rue Alpha", 0, 0, 100, 10),
+        street("rue Beta", 40, 10, 50, 60),  # shares an edge with rue Alpha: a T-junction
+        street("rue Overlap", 50, -5, 60, 5),  # overlaps rue Alpha
+        street("boulevard Large", 200, -100, 230, 100, width=30),
+        street("rue Cross", 150, 0, 200, 10),  # crosses the boulevard: one meeting on each side
+        street("rue Cross", 230, 0, 280, 10),
+        street("rue Gap", 102, 0, 140, 10),  # 2 m from rue Alpha, nothing between: they meet
+        street("rue Left", 0, 500, 100, 510),
+        street("rue Right", 102.5, 500, 200, 510),  # 2.5 m from rue Left, but rue Between fills the gap
+        street("rue Between", 100, 450, 102.5, 560),
+        street("rue Far", 110, 700, 200, 710),
+        street("rue Near", 0, 700, 100, 710),  # 10 m apart: they do not meet
+        street("rue Bottom", 0, 900, 300, 910),
+        street("rue Hook", 0, 910, 10, 1000),  # one street, two legs: meets rue Bottom twice
+        street("rue Hook", 290, 910, 300, 1000),
+        street("rue Hook", 0, 1000, 300, 1010),
+    ]
+    out = build_junctions(features, lambda c: c, flat, lambda x, y: [4] if x < 150 else [5])["junctions"]
+
+    def at(a, b):
+        lo, hi = sorted((a, b), key=norm)
+        return [(metres(p), p[2:]) for p in out.get(lo, {}).get(hi, [])]
+
+    [((x, y), arr)] = at("Rue Alpha", "Rue Beta")
+    assert abs(x - 45) < 1 and abs(y - 10) < 1 and arr == [4]  # middle of the shared edge
+    [((x, y), _)] = at("Rue Alpha", "Rue Overlap")
+    assert abs(x - 55) < 1 and abs(y - 2.5) < 1  # centre of the overlap
+    [((x, y), arr)] = at("Boulevard Large", "Rue Cross")
+    assert abs(x - 215) < 1 and abs(y - 5) < 1 and arr == [5]  # both sides of the crossing are one meeting
+    [((x, y), _)] = at("Rue Alpha", "Rue Gap")
+    assert abs(x - 101) < 1 and abs(y - 5) < 6  # across the gap
+    assert at("Rue Left", "Rue Right") == []  # another street lies between them
+    assert len(at("Rue Left", "Rue Between")) == 1 and len(at("Rue Between", "Rue Right")) == 1
+    assert at("Rue Near", "Rue Far") == []
+    assert sorted(round(p[0]) for p, _ in at("Rue Bottom", "Rue Hook")) == [5, 295]  # meets twice
+    assert "Rue Cross" not in out.get("Rue Cross", {})  # a name used twice is one street
+    assert all(norm(a) < norm(b) for a, inner in out.items() for b in inner)
+
+
+def test_street_history_junctions():
+    h = history()
+    palais = h.junctions(norm("Quai des Orfèvres"), norm("boulevard du Palais"))  # either order
+    assert palais == [(2.3448, 48.854425)]
+    assert h.junctions(norm("boulevard du Palais"), norm("quai des Orfèvres"), 4) == palais
+    assert h.junctions(norm("boulevard du Palais"), norm("quai des Orfèvres"), 5) == []  # not in that arrondissement
+    assert len(h.junctions(norm("rue de l'Hôtel de Ville"), norm("quai de l'Hôtel de Ville"))) == 2
+    assert h.today[norm("boulevard du Palais")] == "Boulevard du Palais"
+    assert h.today_sounds[sound(norm("rue Mézières"))] == [norm("Rue de Mézières")]
 
 
 def test_street_history_lookups():
@@ -124,8 +201,29 @@ def test_street_history_lookups():
 
 
 def test_load_without_tables(tmp_path):
-    h = StreetHistory.load(tmp_path / "none.json", tmp_path / "none2.json")
+    h = StreetHistory.load(tmp_path / "none.json", tmp_path / "none2.json", tmp_path / "none3.json")
     assert h.streets_1836("rue de la Calandre") == [] and h.former_names("rue de la Calandre") == []
+    assert h.junctions(norm("boulevard du Palais"), norm("quai des Orfèvres")) == []
+
+
+def test_committed_junctions_place_corners_laid_out_after_1836():
+    if not streetnames.JUNCTIONS_PATH.exists():
+        return
+    h = StreetHistory.load()
+
+    def meet(a, b, arr=None):
+        return h.junctions(norm(a), norm(b), arr)
+
+    # OpenStreetMap junction nodes, as in the hand-checked Cité sample.
+    [palais] = meet("boulevard du Palais", "quai des Orfèvres", 1)
+    assert distance_m(palais, (2.3448388, 48.8543673)) < 15
+    [galande] = meet("rue Galande", "rue du Petit-Pont", 5)
+    assert distance_m(galande, (2.3462784, 48.852176)) < 15
+    assert len(meet("rue de Rivoli", "rue Saint-Florentin")) == 1
+    assert len(meet("rue Rambuteau", "rue Saint-Denis")) == 1  # both sides of the crossing are one meeting
+    # Streets that only meet across another one do not meet.
+    assert meet("rue Royale", "rue de Rivoli") == []  # place de la Concorde between them
+    assert meet("rue Lucien Sampaix", "place Jacques Bonsergent") == []  # boulevard de Magenta between them
 
 
 def test_committed_tables_cover_the_cite():

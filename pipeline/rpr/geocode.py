@@ -7,9 +7,10 @@ Captions in the Paris Musées catalogue follow a few habits:
     "Vieille maison à l'angle de la rue d'Arras et de la rue Clopin, 5ème arrondissement"
     "Hôtel Lambert, 13 quai d'Anjou, 4ème arrondissement, Paris."
 
-We pull out the arrondissement, the street names, the house numbers and the
+We pull out the arrondissements, the street names, the house numbers and the
 street the view was taken from ("vue prise de", "(de la rue ...)"). Each
-street is then looked up, most precise answer first:
+street is then looked up in every arrondissement the caption gives ("14 rue
+de Turenne, 3ème et 4ème"), most precise answer first:
 
 1. today's street of that name in the national address base (BAN, through
    the IGN Géoplateforme geocoder), at the house number when there is one;
@@ -18,13 +19,30 @@ street is then looked up, most precise answer first:
    demolished;
 3. a former street name (City of Paris "dénominations caduques") and the
    street that carries it today;
-4. today's street with a close name (BAN score of 0.8 or more), unless the
-   name is a known historical one.
+4. a garden, square, bridge, market or city gate of that name (IGN BD TOPO
+   and the City of Paris street outlines, see rpr.sources.places), at its
+   centre; a gate of the Thiers wall ("porte d'Italie") on the avenue or
+   place named after it;
+5. today's street with a close name (BAN score of 0.8 or more), unless the
+   name is a known historical one;
+6. when nothing of the caption is found in its arrondissements: today's
+   street or place of exactly that name in a neighbouring arrondissement
+   ("5 rue du Mail, 1er arrondissement": the rue du Mail is in the 2e),
+   flagged with the arrondissement the caption gave and at lower confidence;
+   not when a street of that name is recorded there and gone since.
+
+A street BAN finds under the caption's own name (accents, particles and "St"
+aside: "rue Candolle" is the rue de Candolle) is taken at a lower BAN score
+than a merely close name.
 
 Two streets of a junction ("Rue X, vue prise de la rue Y", "à l'angle de")
-are placed at their corner when both are in the 1836 address points.
-Confidence follows precision: house number, corner, street, quarter. A name
-that could mean several places is placed on the likeliest one and flagged.
+are placed at their corner: where their 1836 address points meet, else
+where today's street outlines meet (streets laid out after 1836, such as the
+boulevard du Palais). Streets that only meet across a third one get no corner.
+Confidence follows precision: house number, corner, street, place (by its
+size; below the streets of the same caption, which it never displaces),
+quarter. A name that could mean several places is placed on the likeliest
+one and flagged.
 Nothing is placed on a street that cannot be found: no position is invented.
 """
 
@@ -41,10 +59,12 @@ from typing import TYPE_CHECKING, Callable
 from rpr import net
 
 if TYPE_CHECKING:
+    from rpr.sources.places import Places
     from rpr.sources.streetnames import StreetHistory
 
 GEOCODER = "https://data.geopf.fr/geocodage/search"
 MIN_SCORE = 0.8
+SAME_NAME_MIN_SCORE = 0.5  # BAN found the caption's own name, spelt differently ("Place St Sulpice": 0.71)
 CORNER_MAX_M = 30  # 1836 address points of two streets closer than this: they meet
 
 # Confidence by how precisely the caption pins the photo down.
@@ -63,21 +83,66 @@ AMBIGUOUS_FACTOR = 0.6  # the name could also mean another place
 PART_FACTOR = 0.8  # the old street is only part of today's
 LONG_STREET_M = 300  # 1836 streets whose points spread further than this
 LONG_STREET_FACTOR = 0.8
+# A named place (garden, square, bridge...) pins the photo down as well as its
+# size allows: (largest spread in metres, confidence), else PLACE_LARGE.
+# Ranked below a street of the caption, which it never displaces
+# ("Port du Louvre, vers le Pont Neuf" is on the port).
+PLACE_CONFIDENCE = ((150, 0.2), (400, 0.15))
+PLACE_LARGE = 0.1  # the Tuileries or the Jardin des Plantes
+OTHER_ARRONDISSEMENT_FACTOR = 0.6  # found only outside the arrondissement the caption gives
+ELSEWHERE_MIN_SCORE = 0.9  # and then only under exactly the caption's name, in a neighbouring arrondissement
+# Arrondissements that share a boundary (City of Paris outlines; across the Seine too).
+NEIGHBOURS = {
+    1: {2, 3, 4, 5, 6, 7, 8, 9}, 2: {1, 3, 9, 10}, 3: {1, 2, 4, 10, 11}, 4: {1, 3, 5, 6, 11, 12},
+    5: {1, 4, 6, 12, 13, 14}, 6: {1, 4, 5, 7, 14, 15}, 7: {1, 6, 8, 15, 16}, 8: {1, 7, 9, 16, 17, 18},
+    9: {1, 2, 8, 10, 17, 18}, 10: {2, 3, 9, 11, 18, 19, 20}, 11: {3, 4, 10, 12, 19, 20}, 12: {4, 5, 11, 13, 20},
+    13: {5, 12, 14}, 14: {5, 6, 13, 15}, 15: {6, 7, 14, 16}, 16: {7, 8, 15, 17}, 17: {8, 9, 16, 18},
+    18: {8, 9, 10, 17, 19}, 19: {10, 11, 18, 20}, 20: {10, 11, 12, 19},
+}
 
 STREET_TYPES = (
     "rue|boulevard|bd|avenue|av\\.|place|quai|passage|impasse|cour|cité|cite|pont|square|carrefour|"
-    "marché|marche|porte|chaussée|chaussee|faubourg|allée|allee|villa|ruelle|parvis|port|galerie|"
+    "marché|marche|porte|chaussée|chaussee|faubourg|fb|fg|allée|allee|villa|ruelle|parvis|port|galerie|"
     "rond-point|esplanade|cloître|cloitre|hameau|sentier|chemin|route|jardin"
 )
+# Kinds of name that may be a place rather than a street (looked up in the gazetteer).
+PLACE_TYPES = {
+    "place", "square", "pont", "porte", "port", "jardin", "marché", "marche", "cour", "cloître", "cloitre",
+    "parvis", "esplanade", "galerie", "carrefour", "rond-point",
+}
+_MONTHS = "janvier|février|fevrier|mars|avril|mai|juin|juillet|août|aout|septembre|octobre|novembre|décembre|decembre"
 _PARTICLE = r"(?:(?i:de la|de l['’]|des|du|de|d['’]|aux|au|à)\s*)?"
+# Where a street name ends: punctuation, a sentence ("Rue Lepic. Montmartre"),
+# a slash or a bracket ("Cour de Rohan / cour de Rouen", "Passage Saint-Paul
+# [ou Saint-Pierre]"), a spaced dash, a number, a date ("Rue Berton mars
+# 1901"), words that start a description ("Rue de Bretonvilliers avec l'hôtel
+# de Bretonvilliers au fond", "Rue Saint-Dominique prise du Ministère"), or a
+# street written straight after another ("Impasse de la Baudoirie Rue de
+# Venise", "cour du 21 rue Cassette"), unless a particle makes it part of the
+# name ("Rue du Pont Neuf", "Rue de la Cité").
 _STOP = (
-    r"(?=\s*(?:[,;:()]|\.\s*$|$)|(?i:\s+(?:et|vue|près|pres|côté|cote|depuis|vers|n°|à l['’]angle|au coin)\b)|\s+\d)"
+    r"(?=\s*(?:[,;:()/\[]|\.\s*$|$)"
+    r"|(?<=[a-zà-ÿ]{3})\.\s"
+    r"|\s+[-–—](?=\s|\d)"
+    r"|(?i:\s+(?:et|vue?|près|pres|côté|cote|depuis|vers|n°|à l['’]angle|au coin|prise?|pris|devant|derrière|derriere"
+    r"|entre|donnant|au niveau|dans|sur|le long|avec|au fond|conduisant|habitée?|actuellement|anciennement"
+    rf"|à\s+(?:la|l['’]|le|les|partir|droite|gauche|(?=(?-i:[A-ZÀ-Ý])))|en\s+(?:{_MONTHS}|\d{{4}})|(?:{_MONTHS})(?=\s+\d{{4}}))\b)"
+    r"|(?<!\bde)(?<!\bdu)(?<!\bdes)(?<!\bla)(?<!\bd')(?<!\bl')(?<!\bd’)(?<!\bl’)"
+    r"\s+(?:\d{1,3}\s+)?(?i:rue|bd|boulevard|avenue|quai|impasse)\s"
+    r"|\s+\d)"
 )
 # Street type (any case), optional particle, then a capitalised name.
-_STREET = re.compile(rf"\b((?i:{STREET_TYPES})\s+{_PARTICLE}[A-ZÀ-Ý0-9][^,;:()]*?){_STOP}")
-_ARRONDISSEMENT = re.compile(r"\b(\d{1,2})\s*(?:e|è|ème|eme|er|ère)\s+arr(?:ondissement|\.)?", re.IGNORECASE)
+_STREET = re.compile(
+    rf"\b((?i:{STREET_TYPES})\s+{_PARTICLE}(?!(?i:rue|bd|boulevard|avenue|quai|impasse)\s)[A-ZÀ-Ý0-9][^,;:()/\[]*?){_STOP}"
+)
+_ORDINAL = r"(\d{1,2})\s*(?:e|è|ème|eme|er|ère|ième|ieme)"
+# "5ème arrondissement", "1er et 4ème arrondissement", "19ème ou 20ème arr."
+_ARRONDISSEMENT = re.compile(rf"\b{_ORDINAL}(?:\s*(?:et|ou|-|,)\s*{_ORDINAL})?\s+arr(?:ondissement|\.)?", re.IGNORECASE)
+# "rues de Seine et de l'Echaudé": each name is a street.
+_RUES = re.compile(r"\brues\s+(?=" + _PARTICLE + r"[A-ZÀ-Ý])")
 _VIEW_FROM = re.compile(
-    r"(?:vue\s+prise\s+d[eu]s?\s+|vue\s+d[eu]s?\s+|\(\s*d[eu]s?\s+|\(\s*depuis\s+|depuis\s+|,\s*d[eu]s?\s+)"
+    r"(?:vue\s+prise\s+d[eu]s?\s+|vue?\s+d[eu]s?\s+|\bprise?\s+d[eu]s?\s+|\bpris\s+d[eu]s?\s+|\(\s*d[eu]s?\s+"
+    r"|\(\s*depuis\s+|depuis\s+|,\s*d[eu]s?\s+)"
     r"(?:la\s+|l['’]\s*|le\s+|les\s+)?",
     re.IGNORECASE,
 )
@@ -103,6 +168,8 @@ class ParsedCaption:
     numbers: dict[str, str] = field(default_factory=dict)
     corner: bool = False
     quarter: str | None = None
+    corner_pair: tuple[str, str] | None = None  # the streets either side of the corner word
+    arrondissements: list[int] = field(default_factory=list)  # every one the caption gives, first one first
 
     @property
     def citycode(self) -> str | None:
@@ -126,29 +193,72 @@ class ParsedCaption:
             others = [s for s in self.streets if s != self.viewpoint]
             if others:
                 return others[0], self.viewpoint
+        if self.corner and self.corner_pair:
+            return self.corner_pair
         if self.corner and len(self.streets) >= 2:
             return self.streets[0], self.streets[1]
         return None
 
+    def junctions(self) -> list[tuple[str, str]]:
+        """Pairs of streets that may meet where the photo was taken, likeliest first: the
+        viewpoint's, then the corner's ("Angle de la rue X et de la rue Y, depuis la rue Z")."""
+        out = [self.junction()] if self.junction() else []
+        if self.corner:
+            pair = self.corner_pair or (tuple(self.streets[:2]) if len(self.streets) >= 2 else None)
+            if pair and pair not in out:
+                out.append(pair)
+        return out
+
+
+_ABBREVIATIONS = [
+    (r"^bd\b\.?", "boulevard"),
+    (r"^av\.", "avenue"),
+    (r"^(?:f[bg]\b\.?|faubourg\b)", "rue du Faubourg"),  # "21 Fb St Honoré", "Faubourg Saint-Denis"
+    (r"\bGds\b\.?", "Grands"),
+    (r"\bGde\b\.?", "Grande"),
+]
+
 
 def _clean(street: str) -> str:
     street = re.sub(r"\s+", " ", street).strip(" .'\"’")
-    street = re.sub(r"^bd\b", "boulevard", street, flags=re.IGNORECASE)
-    street = re.sub(r"^av\.", "avenue", street, flags=re.IGNORECASE)
+    for pattern, full in _ABBREVIATIONS:
+        street = re.sub(pattern, full, street, flags=re.IGNORECASE)
     return street
+
+
+def _expand_rues(text: str) -> str:
+    """'angle des rues de Seine et de l'Echaudé' -> 'angle des rue de Seine et rue de l'Echaudé'."""
+    m = _RUES.search(text)
+    if not m:
+        return text
+    head, rest = text[: m.start()], text[m.end():]
+    parts = re.split(r"(,\s*|\s+et\s+)", rest)
+    out = []
+    for i in range(0, len(parts), 2):
+        name = parts[i]
+        if not re.match(_PARTICLE + r"[A-ZÀ-Ý]", name) or _ARRONDISSEMENT.search(name) or name.startswith("Paris"):
+            out.append("".join(parts[i:]))
+            break
+        out.append("rue " + name + (parts[i + 1] if i + 1 < len(parts) else ""))
+    return head + "".join(out)
 
 
 def parse_caption(caption: str) -> ParsedCaption:
     text = caption.replace(" ", " ").strip().strip('"')
+    text = re.sub(r"\b(Pont)-(?=[A-ZÀ-Ý])", r"\1 ", text)  # "le Pont-Neuf" is the Pont Neuf
+    text = _expand_rues(text)
     arr = _ARRONDISSEMENT.search(text)
+    arrondissements = [int(g) for g in (arr.groups() if arr else ()) if g and 1 <= int(g) <= 20]
     streets: list[str] = []
+    spans: list[tuple[int, int, str]] = []
     numbers: dict[str, str] = {}
     for m in _STREET.finditer(text):
         s = _clean(m.group(1))
-        if len(s.split()) < 2:
+        if len(s.split()) < 2 or re.search(r"\s\d+$", s):  # "cour du 21 rue Cassette": the number is the street's
             continue
         if s.lower() not in (x.lower() for x in streets):
             streets.append(s)
+            spans.append((m.start(1), m.end(1), s))
         nb = _NUMBER_BEFORE.search(text[: m.start(1)])
         na = _NUMBER_AFTER.match(text[m.end(1):])
         number = nb.group(1) if nb else na.group(1) if na else None
@@ -164,13 +274,25 @@ def parse_caption(caption: str) -> ParsedCaption:
             if viewpoint.lower() not in (x.lower() for x in streets):
                 streets.append(viewpoint)
     qm = _QUARTER.search(text)
+    cm = _CORNER.search(text)
+    corner_pair = None
+    if cm:
+        # "Pont Saint-Michel, le quai des Orfèvres à l'angle du boulevard du
+        # Palais": the corner is the street before the word and the one after
+        # it; "Angle de la rue X et de la rue Y": the two after it.
+        before = [s for start, end, s in spans if end <= cm.start()]
+        after = [s for start, end, s in spans if start >= cm.end()]
+        if after and (before or len(after) > 1):
+            corner_pair = (before[-1] if before else after[0], after[0] if before else after[1])
     return ParsedCaption(
         streets=streets,
         viewpoint=viewpoint,
-        arrondissement=int(arr.group(1)) if arr else None,
+        arrondissement=arrondissements[0] if arrondissements else None,
         numbers=numbers,
-        corner=bool(_CORNER.search(text)),
+        corner=bool(cm),
         quarter=qm.group(1).strip() if qm else None,
+        corner_pair=corner_pair,
+        arrondissements=arrondissements,
     )
 
 
@@ -216,6 +338,7 @@ class Match:
     current_name: str | None = None  # today's name, when the caption uses a former one
     historical: bool = False  # the street no longer exists
     ambiguous: int = 0  # other places the caption's name could mean
+    caption_arrondissement: int | None = None  # found outside the arrondissement the caption gives
 
     def extra(self) -> dict:
         out: dict = {
@@ -233,6 +356,8 @@ class Match:
             out["historical"] = True
         if self.ambiguous:
             out["ambiguous"] = self.ambiguous
+        if self.caption_arrondissement:
+            out["caption_arrondissement"] = self.caption_arrondissement
         return out
 
 
@@ -240,7 +365,8 @@ class Geocoder:
     """Street lookups with an on-disk cache, so reruns cost no requests.
 
     Without `history` only the national address base is used: today's
-    streets and house numbers.
+    streets and house numbers. Without `places` gardens, squares and bridges
+    are found only where the address base lists them as streets.
     """
 
     def __init__(
@@ -248,6 +374,7 @@ class Geocoder:
         cache_path: Path | None = None,
         fetch: Callable[[str], dict] | None = None,
         history: StreetHistory | None = None,
+        places: Places | None = None,
     ):
         self.cache_path = cache_path
         self.cache: dict[str, dict | None] = {}
@@ -255,6 +382,7 @@ class Geocoder:
             self.cache = json.loads(cache_path.read_text(encoding="utf-8"))
         self.fetch = fetch or (lambda url: net.fetch_json(url, timeout=30))
         self.history = history
+        self.places = places
         self.requests = 0
 
     def save(self) -> None:
@@ -305,6 +433,37 @@ class Geocoder:
             and (not citycode or r["citycode"] == citycode)
         )
 
+    @staticmethod
+    def _same_name(r: dict | None, citycode: str | None, name: str, min_score: float = SAME_NAME_MIN_SCORE) -> bool:
+        """BAN found the caption's own name (spelt its way), in Paris and in the arrondissement asked for."""
+        return bool(
+            r
+            and r["score"] >= min_score
+            and str(r.get("citycode", "")).startswith("751")
+            and (not citycode or r["citycode"] == citycode)
+            and same_street(name, street_of(r["label"]))
+        )
+
+    def _place(self, name: str, role: str, arrondissements: set[int] | None) -> Match | None:
+        """A garden, square, bridge, market or gate of that name, at its centre, in one of these arrondissements."""
+        if not self.places or name.split()[0].lower() not in PLACE_TYPES:
+            return None
+        tries = [(name, None)]
+        gate = re.match(r"(?i)porte\s+(.+)", name)
+        if gate:  # a gate of the Thiers wall is the place or avenue named after it
+            tries += [(f"Place de la Porte {gate.group(1)}", "gate-way"), (f"Avenue de la Porte {gate.group(1)}", "gate-way")]
+        for query, method in tries:
+            found = [e for e in self.places.find(query) if not arrondissements or arrondissements & set(e["arr"])]
+            if not found:
+                continue
+            e, amb = found[0], len(found) - 1
+            conf = next((c for limit, c in PLACE_CONFIDENCE if e["spread"] <= limit), PLACE_LARGE)
+            lon, lat = e["center"]
+            source = "bdtopo" if e["source"] == "bdtopo" else "paris-voies"
+            return Match(lon, lat, e["name"], 1.0, name, role, "place", method or source,
+                         round(conf * (AMBIGUOUS_FACTOR if amb else 1.0), 2), ambiguous=amb)
+        return None
+
     def _at_number(self, number: str, r: dict) -> dict | None:
         """Today's address on the street BAN gave, if that number still exists."""
         h = self.housenumber(number, street_of(r["label"]), r["citycode"])
@@ -327,7 +486,8 @@ class Geocoder:
         h = self.history
 
         # 1. Today's street of that name.
-        if usable and same_street(name, street_of(r["label"])):
+        if self._same_name(r, citycode, name):
+            score = max(r["score"], MIN_SCORE)  # a low score here is only the caption's spelling
             amb = self._homonyms(name, year) if not arrondissement else 0
             factor = AMBIGUOUS_FACTOR if amb else 1.0
             if number:
@@ -341,12 +501,12 @@ class Geocoder:
                     return Match(lon, lat, f"{number} {old[0]['name']} (1836)", 1.0, name, role, "number", "vasserot-1836",
                                  round(CONFIDENCE["number_1836_today"] * factor, 2), number, ambiguous=amb)
             return Match(r["lon"], r["lat"], r["label"], r["score"], name, role, "street", "ban",
-                         round(street_conf * r["score"] * factor, 2), ambiguous=amb)
+                         round(street_conf * score * factor, 2), ambiguous=amb)
         if not h:
             if usable:
                 return Match(r["lon"], r["lat"], r["label"], r["score"], name, role, "street", "ban",
                              round(street_conf * r["score"], 2))
-            return None
+            return self._place(name, role, {arrondissement} if arrondissement else None)
 
         # 2. The street as it was in 1836 (demolished since, or renamed).
         old = h.streets_1836(name, arrondissement)
@@ -371,7 +531,7 @@ class Geocoder:
             for target in e["to"]:
                 cc = citycode or (f"751{e['arr'][0]:02d}" if len(e["arr"]) == 1 else None)
                 t = self.street(target, cc)
-                if not self._usable(t, cc) or not same_street(target, street_of(t["label"])):
+                if not self._same_name(t, cc, target):
                     continue
                 amb = len(distinct) - 1 + (len(e["to"]) > 1)
                 factor = (PART_FACTOR if e.get("part") else 1.0) * (AMBIGUOUS_FACTOR if amb else 1.0)
@@ -379,18 +539,72 @@ class Geocoder:
                 return Match(t["lon"], t["lat"], t["label"], t["score"], name, role, "street", "former-name",
                              round(conf, 2), current_name=street_of(t["label"]), ambiguous=amb)
 
-        # 4. Today's street with a close name, unless the name is a known old one.
+        # 4. A garden, square, bridge, market or gate of that name.
+        place = self._place(name, role, {arrondissement} if arrondissement else None)
+        if place:
+            return place
+
+        # 5. Today's street with a close name, unless the name is a known old one.
         if usable and not former:
             return Match(r["lon"], r["lat"], r["label"], r["score"], name, role, "street", "ban",
                          round(street_conf * r["score"], 2))
         return None
 
-    def _corner(self, parsed: ParsedCaption) -> Match | None:
-        pair = parsed.junction()
-        if not pair or not self.history:
+    def _today_keys(self, name: str, arrondissement: int | None) -> tuple[list[tuple[str, float]], list[tuple[str, float]]]:
+        """Today's streets a caption's name stands for, as (junction-table key, factor).
+
+        Returns (streets of that name, streets that carry it today). The
+        first is the street of that name (or BAN's spelling of it), else
+        today's streets spelt alike ("rue Mézières" is the rue de Mézières).
+        The second is filled for a former name, with the factor for being
+        only part of today's street; a known old name is never moved to a
+        lookalike.
+        """
+        from rpr.sources.streetnames import norm, sound
+
+        h = self.history
+        key = norm(name)
+        if key in h.today:
+            return [(key, 1.0)], []
+        citycode = f"751{arrondissement:02d}" if arrondissement else None
+        r = self.street(name, citycode)  # already looked up, so cached
+        if self._same_name(r, citycode, name) and norm(street_of(r["label"])) in h.today:
+            return [(norm(street_of(r["label"])), 1.0)], []
+        known_old = h.former_names(name, arrondissement)
+        if known_old:
+            successors: dict[str, float] = {}
+            for e in known_old:
+                for t in e.get("to", []):
+                    successors.setdefault(norm(t), PART_FACTOR if e.get("part") else 1.0)
+            return [], [(k, f) for k, f in successors.items() if k in h.today]
+        return [(k, 1.0) for k in h.today_sounds.get(sound(key), [])], []
+
+    def _corner_today(self, pair: tuple[str, str], arrondissement: int | None) -> Match | None:
+        """Corner of two streets from where their outlines meet today (streets laid out after 1836)."""
+        h = self.history
+
+        def meetings(keys_a: list[tuple[str, float]], keys_b: list[tuple[str, float]]) -> list[tuple]:
+            return list(dict.fromkeys(
+                (*p, a, b, min(fa, fb))
+                for a, fa in keys_a for b, fb in keys_b if a != b
+                for p in h.junctions(a, b, arrondissement)
+            ))
+
+        (a_now, a_old), (b_now, b_old) = self._today_keys(pair[0], arrondissement), self._today_keys(pair[1], arrondissement)
+        # The streets of those names first; for a former name, the streets that carry it today.
+        found = meetings(a_now, b_now) or meetings(a_now + a_old, b_now + b_old)
+        if not found:
             return None
-        a = self.history.streets_1836(pair[0], parsed.arrondissement)
-        b = self.history.streets_1836(pair[1], parsed.arrondissement)
+        lon, lat, a, b, factor = found[0]
+        amb = len({(m[0], m[1]) for m in found}) - 1  # the streets meet in more than one place
+        conf = CONFIDENCE["corner"] * factor * (AMBIGUOUS_FACTOR if amb else 1.0)
+        return Match(lon, lat, f"{h.today[a]} / {h.today[b]}", 1.0, f"{pair[0]} / {pair[1]}", "corner", "corner",
+                     "street-outlines", round(conf, 2), ambiguous=amb)
+
+    def _corner_1836(self, pair: tuple[str, str], arrondissement: int | None) -> Match | None:
+        """Corner of two streets whose 1836 address points come within CORNER_MAX_M."""
+        a = self.history.streets_1836(pair[0], arrondissement)
+        b = self.history.streets_1836(pair[1], arrondissement)
         hits = []
         for ea in a:
             for eb in b:
@@ -418,17 +632,52 @@ class Geocoder:
         return Match(lon, lat, q["name"], 1.0, parsed.quarter, "quarter", "quarter", "vasserot-1836",
                      CONFIDENCE["quarter"])
 
-    def place(self, caption: str, year: int | None = None) -> Match | None:
-        parsed = parse_caption(caption)
+    def _elsewhere(self, name: str, role: str, number: str | None, arrondissements: list[int]) -> Match | None:
+        """Today's street or place of exactly that name in a neighbouring arrondissement (a slip in the caption)."""
+        view = role == "viewpoint"
+        if self.history and any(set(e.get("arr") or []) & set(arrondissements) for e in self.history.former_names(name)):
+            return None  # a street of that name was there and is gone ("rue Larrey, 6ème"): not a slip
+        near = set().union(*(NEIGHBOURS.get(a, set()) for a in arrondissements)) - set(arrondissements)
+        r = self.street(name, None)
+        if self._same_name(r, None, name, ELSEWHERE_MIN_SCORE) and int(r["citycode"][-2:]) in near:
+            hn = self._at_number(number, r) if number else None
+            if hn:
+                m = Match(hn["lon"], hn["lat"], hn["label"], hn["score"], name, role, "number", "ban",
+                          CONFIDENCE["number"], number)
+            else:
+                m = Match(r["lon"], r["lat"], r["label"], r["score"], name, role, "street", "ban",
+                          CONFIDENCE["street_viewpoint" if view else "street_subject"] * r["score"])
+        else:
+            m = self._place(name, role, near)
+        if not m:
+            return None
+        m.confidence = round(m.confidence * OTHER_ARRONDISSEMENT_FACTOR, 2)
+        m.caption_arrondissement = arrondissements[0]
+        return m
+
+    def _all(self, parsed: ParsedCaption, arrondissement: int | None, year: int | None) -> list[Match]:
+        """Every street, place and corner of the caption found in this arrondissement."""
         found = []
         for name, role in parsed.candidates():
-            m = self._resolve(name, role, parsed.numbers.get(name), parsed.arrondissement, year)
+            m = self._resolve(name, role, parsed.numbers.get(name), arrondissement, year)
             if m:
                 found.append(m)
-        corner = self._corner(parsed)
-        if corner:
-            found.append(corner)
+        for pair in parsed.junctions() if self.history else []:
+            corner = self._corner_1836(pair, arrondissement) or self._corner_today(pair, arrondissement)
+            if corner:
+                found.append(corner)
+                break
+        return found
+
+    def place(self, caption: str, year: int | None = None) -> Match | None:
+        parsed = parse_caption(caption)
+        found: list[Match] = []
+        # Every arrondissement the caption lists ("14 rue de Turenne, 3ème et 4ème": the number is in the 4th).
+        for arr in parsed.arrondissements or [None]:
+            found += self._all(parsed, arr, year)
+        if not found and parsed.arrondissement:
+            found = [m for name, role in parsed.candidates()
+                     if (m := self._elsewhere(name, role, parsed.numbers.get(name), parsed.arrondissements))]
         if not found:
-            q = self._quarter(parsed)
-            return q
-        return max(found, key=lambda m: m.confidence)  # ties keep caption order: viewpoint first
+            return self._quarter(parsed)
+        return max(found, key=lambda m: m.confidence)  # ties: first arrondissement, then caption order (viewpoint first)

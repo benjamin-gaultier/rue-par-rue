@@ -24,6 +24,7 @@ from typing import Any, Callable, Iterator
 from rpr import net, paths
 from rpr.geocode import Geocoder
 from rpr.photo import Photo, SourceInfo
+from rpr.sources.places import Places
 from rpr.sources.streetnames import StreetHistory
 
 ENDPOINT = "https://apicollections.parismusees.paris.fr/graphql"
@@ -209,7 +210,11 @@ def load_works(path: Path = WORKS_CACHE) -> list[dict]:
 
 
 def harvest(log: Callable[[str], Any] = print, limit: int | None = None, offline: bool = False):
-    geocoder = Geocoder(cache_path=paths.REPO_ROOT / "pipeline" / "cache" / "geocode.json", history=StreetHistory.load())
+    geocoder = Geocoder(
+        cache_path=paths.REPO_ROOT / "pipeline" / "cache" / "geocode.json",
+        history=StreetHistory.load(),
+        places=Places.load(),
+    )
     stats: dict[str, int] = {}
     photos: list[Photo] = []
     if offline:
