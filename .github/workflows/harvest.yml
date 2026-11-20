@@ -29,6 +29,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       SOURCE: ${{ inputs.source }}
+      PYTHONUNBUFFERED: "1"  # progress lines appear as they happen
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5

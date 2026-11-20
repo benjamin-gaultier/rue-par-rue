@@ -63,3 +63,35 @@ def test_works_cache_round_trip_is_stable(tmp_path):
     assert parismusees.load_works(path) == [other, WORK]  # sorted by id
     parismusees.save_works([other, WORK], path)
     assert path.read_bytes() == first
+
+
+def test_failing_page_is_fetched_in_halves(monkeypatch):
+    import urllib.error
+
+    calls = []
+
+    def fake_query(q, variables):
+        calls.append((variables["offset"], variables["limit"]))
+        if variables["limit"] > 50:
+            raise urllib.error.HTTPError("x", 502, "Bad Gateway", {}, None)
+        n = min(variables["limit"], 120 - variables["offset"])
+        return {"nodeQuery": {"count": 120, "entities": [{"id": variables["offset"] + i} for i in range(n)]}}
+
+    monkeypatch.setattr(parismusees, "query", fake_query)
+    monkeypatch.setattr(parismusees.time, "sleep", lambda s: None)
+    got = list(parismusees.works("Atget", log=lambda m: None))
+    assert [w["id"] for w in got] == list(range(120))
+    assert calls[:3] == [(0, 100), (0, 50), (50, 50)]
+
+
+def test_auth_error_is_not_retried_in_pieces(monkeypatch):
+    import urllib.error
+
+    import pytest
+
+    def fake_query(q, variables):
+        raise urllib.error.HTTPError("x", 403, "Forbidden", {}, None)
+
+    monkeypatch.setattr(parismusees, "query", fake_query)
+    with pytest.raises(urllib.error.HTTPError):
+        parismusees.page("Atget", 0, 100, log=lambda m: None)

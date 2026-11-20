@@ -17,6 +17,7 @@ import json
 import os
 import re
 import time
+import urllib.error
 from pathlib import Path
 from typing import Any, Callable, Iterator
 
@@ -28,6 +29,7 @@ from rpr.sources.streetnames import StreetHistory
 ENDPOINT = "https://apicollections.parismusees.paris.fr/graphql"
 SITE = "https://www.parismuseescollections.paris.fr"
 PAGE = 100
+MIN_PAGE = 10  # a page the API keeps failing on is split down to this size
 # Every work the last harvest saw, as the API returned it, so photos can be
 # placed again (`rpr parismusees --offline`) without a token.
 WORKS_CACHE = paths.REPO_ROOT / "pipeline" / "cache" / "parismusees-works.json.gz"
@@ -163,10 +165,25 @@ def to_photo(work: dict, geocoder: Geocoder, stats: dict) -> Photo | None:
     )
 
 
+def page(author: str, offset: int, size: int, log: Callable[[str], Any] = print) -> dict:
+    """One page of works. The API answers big pages slowly and sometimes not at
+    all (502 after minutes), so a page that keeps failing is fetched in halves."""
+    try:
+        return query(WORKS, {"author": [f"%{author}%"], "offset": offset, "limit": size})["nodeQuery"]
+    except (urllib.error.URLError, TimeoutError) as err:
+        server_side = not isinstance(err, urllib.error.HTTPError) or err.code in net.RETRY_STATUS
+        if size <= MIN_PAGE or not server_side:
+            raise
+        log(f"parismusees: {author} {offset}+{size} failed ({err}), fetching it in halves")
+    half = size // 2
+    first, second = page(author, offset, half, log), page(author, offset + half, size - half, log)
+    return {"count": first["count"], "entities": first["entities"] + second["entities"]}
+
+
 def works(author: str, log: Callable[[str], Any], limit: int | None = None) -> Iterator[dict]:
     offset, total = 0, None
     while total is None or offset < total:
-        data = query(WORKS, {"author": [f"%{author}%"], "offset": offset, "limit": PAGE})["nodeQuery"]
+        data = page(author, offset, PAGE, log)
         total = data["count"] if limit is None else min(data["count"], limit)
         for w in data["entities"]:
             if w:
