@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { positionLabel, type PhotoProps } from './photos'
+import { compassPoint, headingLabel, positionLabel, type PhotoProps } from './photos'
 
 function photo(pose: PhotoProps['pose'], extra?: Record<string, unknown>): PhotoProps {
   return {
@@ -83,5 +83,19 @@ describe('positionLabel', () => {
       'Rough: somewhere in île de la Cité, named in the caption'
     )
     expect(positionLabel(photo('recorded'))).toBe('Camera position recorded by the archive')
+  })
+})
+
+describe('headingLabel', () => {
+  const base = { id: 'parismusees:1', source: 'parismusees', source_id: '1', title: 'x', license: 'CC0', media: 'photo', pose: 'geocoded', confidence: 0.6 } as PhotoProps
+  it('says nothing without a heading', () => {
+    expect(headingLabel(base)).toBeNull()
+  })
+  it('names the compass point and how the heading was found', () => {
+    expect(compassPoint(0)).toBe('north')
+    expect(compassPoint(209.2)).toBe('south-west')
+    expect(compassPoint(350)).toBe('north')
+    expect(headingLabel({ ...base, heading: 209.2, heading_method: 'facade' })).toMatch(/^Facing south-west \(209°\): towards the building/)
+    expect(headingLabel({ ...base, heading: 90, heading_method: 'recorded' })).toBe('Facing east (90°), as recorded by the archive')
   })
 })

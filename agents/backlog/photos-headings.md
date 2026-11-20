@@ -1,7 +1,8 @@
 ---
 stream: photos
 priority: 2
-status: open
+status: done
+done: 2026-11-21, PR #18 — first slice: 1,699 of 9,423 photos (18%) face the building at their address (method facade); the third-of-photos target moves to photos-headings-views
 added: 2026-11-20
 needs: [photos-land-pr12-pr14]
 ---

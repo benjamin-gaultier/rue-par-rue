@@ -14,6 +14,7 @@ from pathlib import Path
 from typing import Iterable
 
 from rpr import paths
+from rpr.headings import HEADING_METHODS
 
 # Generous box around Paris and the inner suburbs. Anything outside is a
 # geocoding error for our purposes.
@@ -43,7 +44,9 @@ class Photo:
     credit: str | None = None
     media: str = "photo"
     pose: str = "estimated"
-    heading: float | None = None
+    heading: float | None = None  # compass bearing the camera faced, degrees (see rpr.headings)
+    heading_method: str | None = None  # how the heading was obtained: rpr.headings.HEADING_METHODS
+    heading_confidence: float | None = None
     fov: float | None = None
     confidence: float = 0.0
     extra: dict = field(default_factory=dict)
@@ -73,6 +76,10 @@ class Photo:
             out.append("confidence outside 0..1")
         if self.heading is not None and not 0.0 <= self.heading < 360.0:
             out.append("heading outside 0..360")
+        if self.heading is not None and self.heading_method not in HEADING_METHODS:
+            out.append(f"unknown heading method {self.heading_method!r}")
+        if self.heading is None and (self.heading_method or self.heading_confidence is not None):
+            out.append("heading method without a heading")
         if not (self.thumb or self.image or self.iiif):
             out.append("no image")
         return out

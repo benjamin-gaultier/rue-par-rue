@@ -18,6 +18,7 @@ import urllib.parse
 from typing import Any, Callable, Iterable
 
 from rpr import net
+from rpr.headings import CONFIDENCE
 from rpr.photo import Photo, SourceInfo
 
 DATASET = "archives-de-la-planete-paris"
@@ -178,6 +179,8 @@ def to_photo(record: dict) -> Photo | None:
         media=media,
         pose="recorded",
         heading=heading,
+        heading_method="recorded" if heading is not None else None,
+        heading_confidence=CONFIDENCE["recorded"] if heading is not None else None,
         confidence=0.8 if heading is None else 0.9,
     )
 

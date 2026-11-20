@@ -216,13 +216,13 @@ The depth is relative and estimated from a single image. It gives parallax, not 
 
 `python -m rpr trace --area cite` (needs `pip install -e ".[geo,vision]"`) traces real building footprints from Vasserot's ground-floor plans, one coloured sheet per building, published by the Archives nationales under the Licence Ouverte 2.0:
 
-1. Each sheet is matched to its parcel through the ALPAGE 1836 address points (street, number, quarter).
+1. Each sheet is matched to its parcel through the ALPAGE 1836 address points (street, number, quarter). The plans' index tells homonyms apart with a qualifier the points lack ("Sainte-Anne-en-la-Cité", "Harlay-au-Palais"), which is dropped, and spellings are compared loosely (Deux-Ermites, Deux-Hermites). A sheet for two houses ("n°6 et 8") is fitted to both parcels together. The place Dauphine's address points carry no street name: a point takes the name of a street still called the same today (and named by 1836, per the City's record) when it lies within 2 m of that street's outline, from the City of Paris street outlines (ODbL). Each footprint records how it was matched (`match`).
 2. The drawing is segmented in Lab colour, relative to the sheet's own paper: the pink wash marks built rooms, white areas closed by boundary lines are courtyards. Sheets that colour only the walls are flagged `walls_only`.
 3. The drawing is registered onto the parcel polygon (scale from areas, rotation searched to 0.25°, scored by IoU). Fits below 0.72 are rejected.
 
-On the Cité: 169 sheets with a street number, 57 traced (median IoU 0.82), 42 rejected for a poor fit, 63 without an address match, 7 with no detectable drawing. Traced buildings are shown in terracotta, with a link to the original sheet. Output: `web/public/data/3d/vasserot-traced-cite.geojson`.
+On the Cité: 169 sheets with a street number, 78 traced (median IoU 0.83), 49 rejected for a poor fit, 33 without an address match, 9 with no detectable drawing. The 33 left: 19 sheets on streets opened or renumbered after the cadastre was drawn (rue d'Arcole 1837, rue de Constantine, rue de la Cité 1834, rue Bossuet), whose numbers need a concordance with the old ones; 9 in the cour de la Sainte-Chapelle, whose address points all fall on the single parcel of the Palais; and 5 whose number has no point in the cadastre. Traced buildings are shown in terracotta, with a link to the original sheet. Output: `web/public/data/3d/vasserot-traced-cite.geojson`.
 
-Next: better address matching (renamed streets, number ranges), the Vasserot block atlas for full coverage, roof shapes, and facade textures from the archive photographs.
+Next: a concordance of old and new house numbers for the streets renumbered after 1836, the Vasserot block atlas for full coverage, roof shapes, and facade textures from the archive photographs.
 
 ## Repository layout
 
@@ -257,6 +257,7 @@ python -m rpr streetnames   # former street names + 1836 address points for capt
 python -m rpr places        # gardens, squares, bridges and city gates for captions (BD TOPO + City of Paris)
 python -m rpr monuments     # churches, hôtels, palaces, fountains and cemeteries for captions (Mérimée + BD TOPO)
 python -m rpr parismusees   # Paris Musées photos, needs PARISMUSEES_TOKEN (--offline: place the saved works again)
+python -m rpr headings      # facade bearings for photos placed at a house number (then parismusees --offline, index)
 python -m rpr index         # rebuild photos.geojson + manifest.json
 pytest -q
 ```
@@ -289,6 +290,8 @@ A place ranks below the streets of the same caption, so "Port du Louvre, vers le
 
 A name that could mean several places (a former name used in two arrondissements, a homonym still in use elsewhere in the photo's year) is placed on the likeliest one, flagged `ambiguous` and its confidence multiplied by 0.6; part of a renamed street, or a demolished street more than 300 m long, by 0.8. Lookups are cached in `pipeline/cache/geocode.json`; `python -m rpr streetnames` builds the historical tables in `pipeline/cache/` (`former-street-names.json`, `vasserot-1836.json`, `street-junctions.json`), `python -m rpr places` the gazetteer of places and `python -m rpr monuments` that of landmarks. The harvest saves the raw works to `pipeline/cache/parismusees-works.json.gz`, so `python -m rpr parismusees --offline` places them again without a token when the matching improves.
 
+A photo placed at a house number also gets a heading, the compass bearing the camera faced: towards the building, square to its facade, from the street in front of it (method `facade`, heading confidence 0.5). The facade is the edge of today's street outline nearest the address point; address points sit about a metre outside that edge. No heading is given when the caption says the view was taken from elsewhere or shows a courtyard, a park, a staircase or an interior, or when the address is an 1836 one. `python -m rpr headings` saves the bearings by address point in `pipeline/cache/facade-bearings.json`, so `parismusees --offline` needs no download. 1,699 of the 10,002 photos have a heading. In a hand check of 20, all looked at the right side of the street; many photographers stood at an angle to the facade, so a heading can be up to about 60° off. The photo card says which way the camera faced, the then-and-now viewer looks that way, and the 3D frames stand along the heading, turning at most 60° towards the walker.
+
 Every photo source is normalised into one schema (`pipeline/rpr/photo.py`): position, date range, image links, licence, credit, and how the camera position was obtained (`recorded`, `geocoded`, `matched`, `manual`, `estimated`) with a confidence score. Records outside Paris, with impossible dates or without an image are rejected and counted in `manifest.json`.
 
 ### Harvest from GitHub Actions
@@ -305,7 +308,7 @@ For Paris Musées, create a free token at <https://apicollections.parismusees.pa
 
 1. **Phase 1, time-slider map** (this release): basemap timeline, cadastre, Panoramax "today" view, photo pipeline.
 2. **Phase 2, then-and-now viewer** (this release): archive photo over the nearest Panoramax panorama, with alignment saved in the URL.
-3. **Phase 3, pose refinement** (started): Marville and Atget captions are now placed at their house number, corner, former or demolished street, or the garden, square, bridge, city gate or building they name, using the City of Paris former street names and street outlines, the 1836 address points, IGN BD TOPO and the Mérimée list (see Paris Musées above). Still to do: the 741 captions that name no street and no building of the gazetteers (demolished buildings, interiors, objects); the 1888 street network; infer headings (Kahn records have positions but no direction, so the viewer cannot yet face the subject automatically); refine poses by matching against Panoramax imagery; let people submit the alignments they make in the viewer.
+3. **Phase 3, pose refinement** (started): Marville and Atget captions are now placed at their house number, corner, former or demolished street, or the garden, square, bridge, city gate or building they name, using the City of Paris former street names and street outlines, the 1836 address points, IGN BD TOPO and the Mérimée list (see Paris Musées above). Still to do: the 741 captions that name no street and no building of the gazetteers (demolished buildings, interiors, objects); the 1888 street network; more headings (photos at a house number face their building; Kahn records and street views still have no direction); refine poses by matching against Panoramax imagery; let people submit the alignments they make in the viewer.
 4. **Phase 4, 3D**: the Île de la Cité as a massing model, with footprints traced from Vasserot's plans, photos in the streets, an eye-level walk, and the whole island in detail with its bridges through time, the Hôtel-Dieu and the archbishop's palace (see above). Next: landmarks through time, streets and street furniture, period vehicles and richer facades, then more quarters.
 
 ## Licences

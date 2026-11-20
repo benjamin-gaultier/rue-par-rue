@@ -68,6 +68,21 @@ export function groupPhotos(
   return [...groups.values()].map(({ gap: _gap, ...g }) => g)
 }
 
+/** How far (degrees) a frame with a known heading turns towards the viewer. */
+export const FRAME_TURN_MAX = 60
+
+/**
+ * Compass bearing a frame faces, seen by someone looking along `mapBearing`.
+ * Without a heading the frame turns to face the viewer. With one it stands
+ * where the photographer's picture stood, turning at most FRAME_TURN_MAX
+ * degrees towards the viewer, so it still reads from the side.
+ */
+export function frameBearing(mapBearing: number, heading?: number, max = FRAME_TURN_MAX): number {
+  if (heading === undefined) return mapBearing
+  const off = ((((mapBearing - heading) % 360) + 540) % 360) - 180
+  return heading + Math.max(-max, Math.min(max, off))
+}
+
 /** The `max` groups nearest to `center`. */
 export function nearestGroups(groups: FrameGroup[], center: [number, number], max: number): FrameGroup[] {
   const k = Math.cos((center[1] * Math.PI) / 180)
@@ -279,9 +294,9 @@ export class PhotoFrames implements CustomLayerInterface {
     this.matrix.copy(this.camera.projectionMatrix)
 
     const h = frameHeight(this.map.getZoom(), this.center[1])
-    const turn = (-this.map.getBearing() * Math.PI) / 180
+    const bearing = this.map.getBearing()
     for (const f of this.frames.values()) {
-      f.node.rotation.z = turn
+      f.node.rotation.z = (-frameBearing(bearing, f.group.photo.properties.heading) * Math.PI) / 180
       f.node.scale.setScalar(h)
       f.node.position.z = h / 2 + 0.4
       if (f.relief) f.picture.scale.set(1, 1, 1) // relief geometry is built at its own width

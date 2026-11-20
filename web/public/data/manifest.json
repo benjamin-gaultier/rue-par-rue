@@ -57,7 +57,7 @@
         "rejected": {
           "year_end before year": 1
         },
-        "harvested_at": "2026-11-20T19:25:24Z"
+        "harvested_at": "2026-11-20T23:35:29Z"
       }
     ]
   },
@@ -66,27 +66,27 @@
     "area": "Île de la Cité",
     "standing": 1606,
     "later": 813,
-    "reconstructed": 6099,
-    "traced": 48,
+    "reconstructed": 6096,
+    "traced": 62,
     "license": "Vasserot parcels: ODbL (ALPAGE). APUR buildings: ODbL.",
-    "updated_at": "2026-11-18T11:38:11Z"
+    "updated_at": "2026-11-20T22:36:08Z"
   },
   "traced_cite": {
     "area": "cite",
-    "no parcel match": 63,
-    "no drawing found": 7,
-    "poor fit": 42,
-    "traced": 57,
+    "no parcel match": 33,
+    "no drawing found": 9,
+    "poor fit": 49,
+    "traced": 78,
     "image missing": 0,
     "file": "3d/vasserot-traced-cite.geojson",
-    "updated_at": "2026-11-17T18:55:37Z"
+    "updated_at": "2026-11-20T22:34:44Z"
   },
   "thumbs_cite": {
     "area": "cite",
     "count": 1068,
     "bytes": 7561866,
     "failed": 2,
-    "updated_at": "2026-11-20T19:25:54Z"
+    "updated_at": "2026-11-20T23:35:31Z"
   },
   "depth_notre_dame": {
     "set": "notre-dame",
@@ -177,6 +177,6 @@
     "monuments": 5330,
     "names": 6104,
     "file": "pipeline/cache/paris-monuments.json",
-    "updated_at": "2026-11-20T18:35:40Z"
+    "updated_at": "2026-11-20T23:36:49Z"
   }
 }

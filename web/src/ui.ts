@@ -4,7 +4,7 @@
  */
 
 import { type Basemap, BASEMAPS, YEAR_MAX, YEAR_MIN } from './timeline'
-import { type Bin, dateLabel, positionLabel, type PhotoProps, SOURCE_COLORS, SOURCE_NAMES, FALLBACK_COLOR } from './photos'
+import { type Bin, dateLabel, headingLabel, positionLabel, type PhotoProps, SOURCE_COLORS, SOURCE_NAMES, FALLBACK_COLOR } from './photos'
 import type { TodayPicture } from './panoramax'
 import { bestPicture } from './alignment'
 
@@ -174,6 +174,7 @@ export function buildPanel(
         ...(p.creator ? ([['Photographer', p.creator]] as [string, string][]) : []),
         ['Source', el('span', {}, [swatch, sourceName])],
         ['Position', positionLabel(p)],
+        ...(headingLabel(p) ? ([['Direction', headingLabel(p)!]] as [string, string][]) : []),
         ['Licence', p.license]
       ]
       const dl = el('dl', { class: 'facts' })
