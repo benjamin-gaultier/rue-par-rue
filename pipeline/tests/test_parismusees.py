@@ -53,3 +53,13 @@ def test_work_without_free_image_is_skipped(tmp_path):
     work = {**WORK, "fieldVisuels": [{"entity": {"publicUrl": "https://x/y.jpg", "fieldImageLibre": False}}]}
     assert parismusees.to_photo(work, Geocoder(cache_path=tmp_path / "c.json", fetch=Fake()), stats) is None
     assert stats == {"no free image": 1}
+
+
+def test_works_cache_round_trip_is_stable(tmp_path):
+    path = tmp_path / "works.json.gz"
+    other = {**WORK, "fieldLrefAdlib": 1}
+    parismusees.save_works([WORK, other], path)
+    first = path.read_bytes()
+    assert parismusees.load_works(path) == [other, WORK]  # sorted by id
+    parismusees.save_works([other, WORK], path)
+    assert path.read_bytes() == first

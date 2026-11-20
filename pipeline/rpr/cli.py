@@ -49,7 +49,7 @@ def cmd_parismusees(args: argparse.Namespace) -> None:
     if args.introspect:
         parismusees.introspect()
         return
-    info, photos = parismusees.harvest()
+    info, photos = parismusees.harvest(offline=args.offline)
     summary = write_source(info, photos)
     print(f"parismusees: kept {summary['count']}, rejected {summary['rejected']}")
     build_index()
@@ -138,6 +138,7 @@ def main(argv: list[str] | None = None) -> int:
 
     p = sub.add_parser("parismusees", help="Paris Musées photographs (needs PARISMUSEES_TOKEN)")
     p.add_argument("--inspect", "--introspect", dest="introspect", action="store_true", help="print the GraphQL query fields and stop")
+    p.add_argument("--offline", action="store_true", help="place the works saved by the last harvest again (no token needed)")
     p.set_defaults(func=cmd_parismusees)
 
     p = sub.add_parser("model3d", help="3D massing model of an area in 1836 (needs the [geo] extras)")

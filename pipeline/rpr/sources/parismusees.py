@@ -11,10 +11,12 @@ approximations and carry pose "geocoded" with a low confidence.
 
 from __future__ import annotations
 
+import gzip
 import json
 import os
 import re
 import time
+from pathlib import Path
 from typing import Any, Callable, Iterator
 
 from rpr import net, paths
@@ -24,6 +26,9 @@ from rpr.photo import Photo, SourceInfo
 ENDPOINT = "https://apicollections.parismusees.paris.fr/graphql"
 SITE = "https://www.parismuseescollections.paris.fr"
 PAGE = 100
+# Every work the last harvest saw, as the API returned it, so photos can be
+# placed again (`rpr parismusees --offline`) without a token.
+WORKS_CACHE = paths.REPO_ROOT / "pipeline" / "cache" / "parismusees-works.json.gz"
 
 # Photographers to harvest: (search string, display name)
 PHOTOGRAPHERS = [("Marville", "Charles Marville"), ("Atget", "Eugène Atget")]
@@ -169,17 +174,43 @@ def works(author: str, log: Callable[[str], Any], limit: int | None = None) -> I
         time.sleep(0.5)
 
 
-def harvest(log: Callable[[str], Any] = print, limit: int | None = None):
+def save_works(items: list[dict], path: Path = WORKS_CACHE) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    items = sorted(items, key=lambda w: str(w.get("fieldLrefAdlib") or w.get("fieldUrlAlias")))
+    body = json.dumps(items, ensure_ascii=False, sort_keys=True, separators=(",", ":")).encode()
+    with gzip.GzipFile(path, "wb", mtime=0) as f:  # mtime=0: same works, same bytes
+        f.write(body)
+
+
+def load_works(path: Path = WORKS_CACHE) -> list[dict]:
+    if not path.exists():
+        raise SystemExit(f"{path} is missing: run `rpr parismusees` once with PARISMUSEES_TOKEN set.")
+    with gzip.open(path, "rb") as f:
+        return json.loads(f.read())
+
+
+def harvest(log: Callable[[str], Any] = print, limit: int | None = None, offline: bool = False):
     geocoder = Geocoder(cache_path=paths.REPO_ROOT / "pipeline" / "cache" / "geocode.json")
     stats: dict[str, int] = {}
     photos: list[Photo] = []
-    try:
+    if offline:
+        items = load_works()
+        log(f"parismusees: {len(items)} works from {WORKS_CACHE.name}")
+    else:
+        items, seen = [], set()
         for search, _name in PHOTOGRAPHERS:
             for w in works(search, log, limit):
-                p = to_photo(w, geocoder, stats)
-                if p:
-                    photos.append(p)
-            geocoder.save()
+                key = w.get("fieldLrefAdlib") or w.get("fieldUrlAlias")
+                if key not in seen:  # a work by both photographers comes back twice
+                    seen.add(key)
+                    items.append(w)
+        if limit is None:
+            save_works(items)
+    try:
+        for w in items:
+            p = to_photo(w, geocoder, stats)
+            if p:
+                photos.append(p)
     finally:
         geocoder.save()
     log(f"parismusees: placed {len(photos)} photos; skipped {stats}; geocoder requests {geocoder.requests}")

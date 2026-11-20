@@ -54,6 +54,10 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add web/public/data
+          # Paris Musées: the works seen and the geocoder cache, so photos can
+          # be placed again offline.
+          git add -f pipeline/cache/geocode.json
+          if [ -f pipeline/cache/parismusees-works.json.gz ]; then git add -f pipeline/cache/parismusees-works.json.gz; fi
           if git diff --cached --quiet; then
             echo "No data changes."
             exit 0
