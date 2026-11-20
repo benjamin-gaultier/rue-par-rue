@@ -58,6 +58,16 @@ describe('positionLabel', () => {
     expect(positionLabel(gate)).toBe("Approximate: on Avenue de la Porte d'Italie, by the porte d'Italie of the caption (a gate of the city wall)")
   })
 
+  it('names the building a caption names without a street', () => {
+    const church = photo('geocoded', {
+      geocoded_street: 'Église Saint-Julien-le-Pauvre',
+      precision: 'landmark',
+      method: 'merimee',
+      from_caption: "Nef de l'église Saint-Julien-le-Pauvre"
+    })
+    expect(positionLabel(church)).toBe('At Église Saint-Julien-le-Pauvre, the building named in the caption')
+  })
+
   it('says when the caption gives the wrong arrondissement', () => {
     const p = photo('geocoded', { geocoded_street: '5 Rue du Mail 75002 Paris', precision: 'number', method: 'ban', caption_arrondissement: 1 })
     expect(positionLabel(p)).toBe('At 5 Rue du Mail, the address in the caption; the caption says the 1st arrondissement, but it lies in the next one')

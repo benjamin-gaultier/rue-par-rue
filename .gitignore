@@ -12,3 +12,4 @@ pipeline/cache/verniquet/
 pipeline/cache/streets/
 pipeline/cache/vehicles/
 pipeline/cache/places/
+pipeline/cache/monuments/

@@ -6,7 +6,8 @@ header. Set it as the PARISMUSEES_TOKEN environment variable.
 
 The catalogue has no coordinates for these photographs, so captions are
 geocoded (see rpr.geocode): at the house number, the street corner or along
-the street they name, today's or a historical one. Positions carry pose
+the street they name, today's or a historical one, or at the building they
+name (see rpr.sources.monuments). Positions carry pose
 "geocoded" and a confidence that follows that precision.
 """
 
@@ -24,6 +25,7 @@ from typing import Any, Callable, Iterator
 from rpr import net, paths
 from rpr.geocode import Geocoder
 from rpr.photo import Photo, SourceInfo
+from rpr.sources.monuments import Monuments
 from rpr.sources.places import Places
 from rpr.sources.streetnames import StreetHistory
 
@@ -214,6 +216,7 @@ def harvest(log: Callable[[str], Any] = print, limit: int | None = None, offline
         cache_path=paths.REPO_ROOT / "pipeline" / "cache" / "geocode.json",
         history=StreetHistory.load(),
         places=Places.load(),
+        monuments=Monuments.load(),
     )
     stats: dict[str, int] = {}
     photos: list[Photo] = []

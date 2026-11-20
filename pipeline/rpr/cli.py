@@ -128,6 +128,12 @@ def cmd_places(args: argparse.Namespace) -> None:
     _update_manifest("places", places.build(refresh=args.refresh))
 
 
+def cmd_monuments(args: argparse.Namespace) -> None:
+    from rpr.sources import monuments
+
+    _update_manifest("monuments", monuments.build(refresh=args.refresh))
+
+
 def cmd_index(args: argparse.Namespace) -> None:
     manifest = build_index()
     print(f"index: {manifest['photos']['count']} photos from {len(manifest['photos']['sources'])} sources")
@@ -202,6 +208,10 @@ def main(argv: list[str] | None = None) -> int:
     p = sub.add_parser("places", help="gardens, squares, bridges, markets and city gates for geocoding captions (BD TOPO, Paris Data)")
     p.add_argument("--refresh", action="store_true", help="download BD TOPO and Paris Data again")
     p.set_defaults(func=cmd_places)
+
+    p = sub.add_parser("monuments", help="churches, hôtels, palaces, fountains and cemeteries for geocoding captions (Mérimée, BD TOPO)")
+    p.add_argument("--refresh", action="store_true", help="download Mérimée and BD TOPO again")
+    p.set_defaults(func=cmd_monuments)
 
     p = sub.add_parser("index", help="rebuild photos.geojson and manifest.json")
     p.set_defaults(func=cmd_index)
