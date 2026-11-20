@@ -11,3 +11,7 @@ pipeline/cache/models/
 pipeline/cache/verniquet/
 pipeline/cache/streets/
 pipeline/cache/vehicles/
+
+# Claude Code: personal settings and session worktrees
+.claude/settings.local.json
+.claude/worktrees/
