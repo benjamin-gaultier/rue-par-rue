@@ -1,7 +1,8 @@
 ---
 stream: photos
 priority: 1
-status: open
+status: done
+done: 2026-11-21, PR #18 — both were already merged on 2026-11-20 (#12, #14); main places 5,121 Paris Musées photos (#14 said 5,114) and 568 at a corner
 added: 2026-11-20
 needs: []
 ---
