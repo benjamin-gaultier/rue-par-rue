@@ -123,7 +123,7 @@ def load_traced(area: str, to_metric) -> dict[str, dict]:
     if not path.exists():
         return {}
     out = {}
-    for f in json.loads(path.read_text())["features"]:
+    for f in json.loads(path.read_text(encoding="utf-8"))["features"]:
         g = transform(to_metric, shape(f["geometry"]))
         # Close hairline gaps, drop specks and pinholes left by unwashed patches.
         g = g.buffer(0.4, join_style="mitre").buffer(-0.4, join_style="mitre")
@@ -136,15 +136,18 @@ def load_traced(area: str, to_metric) -> dict[str, dict]:
         if not parts:
             continue
         geom = MultiPolygon(parts) if len(parts) > 1 else parts[0]
-        prev = out.get(f["properties"]["parcel"])
-        if prev and prev["iou"] >= f["properties"]["iou"]:
-            continue  # several sheets for one parcel: keep the best fit
-        out[f["properties"]["parcel"]] = {
-            "geometry": geom.simplify(0.15, preserve_topology=True),
-            "address": f["properties"]["address"],
-            "plan_url": f["properties"]["url"],
-            "iou": f["properties"]["iou"],
-        }
+        # One sheet can cover two parcels ("PA7559+PA7558"): each parcel gets
+        # the footprint, and the model clips it to the parcel.
+        for parcel in f["properties"]["parcel"].split("+"):
+            prev = out.get(parcel)
+            if prev and prev["iou"] >= f["properties"]["iou"]:
+                continue  # several sheets for one parcel: keep the best fit
+            out[parcel] = {
+                "geometry": geom.simplify(0.15, preserve_topology=True),
+                "address": f["properties"]["address"],
+                "plan_url": f["properties"]["url"],
+                "iou": f["properties"]["iou"],
+            }
     return out
 
 

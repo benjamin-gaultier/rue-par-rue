@@ -44,6 +44,25 @@ AREA_QUARTERS = {
 MIN_IOU = 0.72
 CACHE = paths.REPO_ROOT / "pipeline" / "cache" / "vasserot"
 
+# An address point with no street name takes the name of a street still
+# called the same today when it lies this close to that street's outline.
+# On the place Dauphine, points 2 to 27 lie within 0.1 m; 28 to 31 lie 8 to
+# 11 m off, on the stub renamed rue Henri-Robert in 1948, and stay unnamed.
+NAME_FROM_OUTLINE_M = 2.0
+OUTLINES_URL = (
+    "https://opendata.paris.fr/api/explore/v2.1/catalog/datasets/denominations-emprises-voies-actuelles/"
+    "exports/geojson?select=typo_min,ouverture,denomination,geo_shape&where="
+)
+OUTLINES_CREDIT = "Ville de Paris, Dénominations des emprises des voies actuelles (ODbL)"
+
+# The plans' index adds a qualifier to some names to tell homonyms apart
+# ("Sainte-Anne-en-la-Cité", "Harlay-au-Palais"); the address points do not.
+QUALIFIER = re.compile(r" (?:en la cite|au palais)$")
+MATCH_ADDRESS = "address"
+MATCH_QUALIFIER = "street name without the index's qualifier"
+MATCH_SPELLING = "street name spelled differently"
+MATCH_OUTLINE = "unnamed address point on today's outline of the street"
+
 
 # ----------------------------------------------------------- addresses
 
@@ -67,6 +86,116 @@ def address_key(street: str, number: str) -> str:
     return f"{norm(street)}|{number.lower()}"
 
 
+def plan_numbers(adresse: str) -> list[str]:
+    """The house numbers a sheet covers: 'n°6 et 8' -> ['6', '8'], 'n°9 BIS' -> ['9bis']."""
+    m = re.search(r"n°\s*(.+)$", adresse)
+    if not m:
+        return []
+    return [n + suffix for n, suffix in re.findall(r"(\d+)\s*(bis|ter)?\b", m.group(1).lower())]
+
+
+def loose(key: str) -> str:
+    """A spelling-free form of a street key: Deux-Ermites = Deux-Hermites."""
+    from rpr.sources.streetnames import sound
+
+    return " ".join(re.sub(r"^h(?=[aeiouy])", "", w) for w in sound(key).split())
+
+
+def resolve_street(street: str, known: set[str]) -> tuple[str | None, str]:
+    """The address points' name for a sheet's street, and how it was found."""
+    key = norm(street)
+    if key in known:
+        return key, MATCH_ADDRESS
+    bare = QUALIFIER.sub("", key)
+    if bare in known:
+        return bare, MATCH_QUALIFIER
+    same = {k for k in known if loose(k) == loose(bare)}
+    if len(same) == 1:
+        return same.pop(), MATCH_SPELLING
+    return None, ""
+
+
+def match_parcels(street: str, numbers: list[str], index: dict[str, str]) -> list[str] | None:
+    """Parcel ids for every number a sheet covers, or None if one is missing.
+
+    A bis or ter house with no point of its own takes the parcel of its plain
+    number, as before; the fit then checks the shape.
+    """
+    pids: list[str] = []
+    for n in numbers:
+        pid = index.get(address_key(street, n)) or index.get(address_key(street, re.sub(r"(bis|ter)$", "", n)))
+        if pid is None:
+            return None
+        if pid not in pids:
+            pids.append(pid)
+    return pids or None
+
+
+def name_unnamed_points(points: list[tuple[str, str, float, float]], outline, max_m: float = NAME_FROM_OUTLINE_M) -> dict[str, str]:
+    """Number -> parcel, for the address points with no street name that lie on a street's outline."""
+    from shapely.geometry import Point
+
+    out: dict[str, str] = {}
+    for number, pid, x, y in points:
+        if outline.distance(Point(x, y)) <= max_m:
+            out.setdefault(number.lower(), pid)
+    return out
+
+
+def display_name(adresse: str) -> str | None:
+    """'Paris - Dauphine (place) n°27' -> 'place Dauphine'."""
+    m = re.match(r"Paris\s*-\s*(.+?)\s*\((.+?)\)", adresse.strip())
+    if not m:
+        return None
+    kind = m.group(2).strip()
+    return f"{kind}{'' if kind.endswith(chr(39)) else ' '}{m.group(1).strip()}"
+
+
+def named_by_1836(record: dict) -> bool:
+    """False when the City's record dates the street's opening or naming after 1836.
+
+    The rue d'Arcole, named by a decision of 13 February 1837, is not the
+    street its 1836 address points belonged to.
+    """
+    text = f"{record.get('ouverture') or ''} {record.get('denomination') or ''}"
+    return all(int(y) <= 1836 for y in re.findall(r"\b(1[5-9]\d\d|20\d\d)\b", text))
+
+
+def today_outline(name: str, log: Callable[[str], Any]):
+    """Today's outline of a street still called `name`, in Vasserot's projection, or None.
+
+    From the City of Paris street outlines (ODbL), cached in today-outlines.json.
+    """
+    import urllib.parse
+
+    import numpy as np
+    import shapely
+    from pyproj import Transformer
+    from shapely.geometry import shape
+    from shapely.ops import unary_union
+
+    cache = CACHE / "today-outlines.json"
+    known = json.loads(cache.read_text(encoding="utf-8")) if cache.exists() else {}
+    if name not in known:
+        word = max(norm(name).split(), key=len)
+        feats = net.fetch_json(OUTLINES_URL + urllib.parse.quote(f'search(typo_min, "{word}")'), timeout=120)["features"]
+        known[name] = [
+            f["geometry"]
+            for f in feats
+            if norm(f["properties"].get("typo_min") or "") == norm(name) and named_by_1836(f["properties"])
+        ]
+        CACHE.mkdir(parents=True, exist_ok=True)
+        cache.write_text(json.dumps(known), encoding="utf-8")
+        log(f"plans: today's outline of {name}: {len(known[name])} piece(s)")
+    if not known[name]:
+        return None
+    to_vasserot = Transformer.from_crs(4326, VASSEROT_EPSG, always_xy=True)
+    return shapely.transform(
+        unary_union([shape(g) for g in known[name]]),
+        lambda c: np.column_stack(to_vasserot.transform(c[:, 0], c[:, 1])),
+    )
+
+
 @dataclass
 class Plan:
     id: str
@@ -77,6 +206,7 @@ class Plan:
     cote: str
     street: str
     number: str
+    numbers: tuple[str, ...] = ()
 
 
 def load_plans(area: str, log: Callable[[str], Any]) -> list[Plan]:
@@ -93,7 +223,8 @@ def load_plans(area: str, log: Callable[[str], Any]) -> list[Plan]:
         parsed = plan_street(r["adresse"])
         if not parsed or not parsed[1]:
             continue
-        plans.append(Plan(r["id"], r["adresse"], q, r["image"], r["url_siv"], r["cote"], parsed[0], parsed[1]))
+        numbers = tuple(plan_numbers(r["adresse"])) or (parsed[1],)
+        plans.append(Plan(r["id"], r["adresse"], q, r["image"], r["url_siv"], r["cote"], parsed[0], parsed[1], numbers))
     log(f"plans: {len(plans)} sheets with a street number in {', '.join(wanted)}")
     return plans
 
@@ -274,7 +405,7 @@ def trace(area: str = "cite", log: Callable[[str], Any] = print, limit: int | No
     import shapefile
     from pyproj import Transformer
     from shapely.geometry import mapping, shape
-    from shapely.ops import transform
+    from shapely.ops import transform, unary_union
 
     plans = load_plans(area, log)
     if limit:
@@ -288,16 +419,40 @@ def trace(area: str = "cite", log: Callable[[str], Any] = print, limit: int | No
     addr = shapefile.Reader(str(download_layer(ADDRESS_DRUID, ADDRESS_STEM, log)), encoding="latin-1")
     afields = [f[0] for f in addr.fields[1:]]
     address_index: dict[str, str] = {}
-    for rec in addr.iterRecords():
-        d = dict(zip(afields, rec))
-        if d.get("QUARTIER") not in alpage_q or not str(d.get("NOM_ENTIER") or "").strip():
+    unnamed: list[tuple[str, str, float, float]] = []
+    for sr in addr.iterShapeRecords():
+        d = dict(zip(afields, sr.record))
+        if d.get("QUARTIER") not in alpage_q:
+            continue
+        if not str(d.get("NOM_ENTIER") or "").strip():
+            x, y = sr.shape.points[0]
+            unnamed.append((str(d["NUM_VOIES"]), str(d["ID_PARC"]), x, y))
             continue
         address_index[address_key(str(d["NOM_ENTIER"]), str(d["NUM_VOIES"]))] = str(d["ID_PARC"])
+    named_streets = {k.split("|")[0] for k in address_index}
+
+    # Each sheet -> its parcels, and how they were found.
+    matches: dict[str, tuple[list[str], str]] = {}
+    for p in plans:
+        street, how = resolve_street(p.street, named_streets)
+        if street is None:
+            # No point carries the name: try the unnamed points that lie on
+            # the outline of a street still called the same today.
+            name = display_name(p.adresse)
+            outline = today_outline(name, log) if name else None
+            if outline is None:
+                continue
+            street, how = norm(name), MATCH_OUTLINE
+            for number, pid in name_unnamed_points(unnamed, outline).items():
+                address_index.setdefault(address_key(street, number), pid)
+        pids = match_parcels(street, list(p.numbers), address_index)
+        if pids:
+            matches[p.id] = (pids, how)
 
     # Parcel polygons by id (Lambert 93 metres).
     parc = shapefile.Reader(str(download_layer("qr091wq2775", PARCEL_STEM, log)), encoding="latin-1")
     pfields = [f[0] for f in parc.fields[1:]]
-    wanted_ids = set(address_index.values())
+    wanted_ids = {pid for pids, _ in matches.values() for pid in pids}
     parcels = {}
     for sr in parc.iterShapeRecords():
         d = dict(zip(pfields, sr.record))
@@ -310,10 +465,13 @@ def trace(area: str = "cite", log: Callable[[str], Any] = print, limit: int | No
     out_dir.mkdir(parents=True, exist_ok=True)
     features, stats = [], {"no parcel match": 0, "no drawing found": 0, "poor fit": 0, "traced": 0, "image missing": 0}
     for p in plans:
-        pid = address_index.get(address_key(p.street, p.number))
-        if not pid or pid not in parcels:
+        if p.id not in matches or any(pid not in parcels for pid in matches[p.id][0]):
             stats["no parcel match"] += 1
             continue
+        pids, how = matches[p.id]
+        pid = "+".join(pids)
+        if len(pids) > 1:  # one sheet for two houses ("n°6 et 8"): fit it to both parcels
+            parcels[pid] = unary_union([parcels[i] for i in pids]).buffer(0.05).buffer(-0.05)
         img = out_dir / f"{p.id}.jpg"
         if not img.exists():
             try:
@@ -347,6 +505,7 @@ def trace(area: str = "cite", log: Callable[[str], Any] = print, limit: int | No
                     "cote": p.cote,
                     "url": p.url,
                     "iou": fit.iou,
+                    "match": how,
                     "walls_only": walls_only,
                     "built_share": round(footprint.area / parcels[pid].area, 2),
                 },
@@ -369,9 +528,9 @@ def trace(area: str = "cite", log: Callable[[str], Any] = print, limit: int | No
         ensure_ascii=False,
         separators=(",", ":"),
     )
-    out.write_text(re.sub(r"(-?\d+\.\d{7})\d+", r"\1", text))
+    out.write_text(re.sub(r"(-?\d+\.\d{7})\d+", r"\1", text), encoding="utf-8")
     log(f"plans: {stats}")
-    return {"area": area, **stats, "file": str(out.relative_to(paths.DATA_DIR))}
+    return {"area": area, **stats, "file": out.relative_to(paths.DATA_DIR).as_posix()}
 
 
 def traced_path(area: str) -> Path:
