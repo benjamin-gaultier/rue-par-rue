@@ -1,7 +1,8 @@
 ---
 stream: cite1836
 priority: 1
-status: open
+status: done
+done: 2026-11-20, PR #17 — 30 more sheets matched (63 → 33 without a match), 57 → 78 traced; the 33 left need sources split into cite1836-renumbered-streets and cite1836-sainte-chapelle
 added: 2026-11-20
 needs: []
 ---

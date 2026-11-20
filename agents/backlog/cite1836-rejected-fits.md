@@ -13,3 +13,4 @@ Done when: the rejected sheets are sorted by cause in the PR, at least one cause
 
 Notes:
 - Look at the worst ten by eye first (the sheet next to its parcel) before changing the registration.
+- PR #17 found an accepted fit that is visibly wrong: rue du Haut-Moulin n°3 (parcel PA7819, IoU 0.786) is placed about 45° off its parcel. IoU alone does not catch a square drawing turned inside a square parcel; check the edge alignment too.
