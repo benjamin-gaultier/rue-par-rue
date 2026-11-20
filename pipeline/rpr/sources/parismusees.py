@@ -5,8 +5,9 @@ https://apicollections.parismusees.paris.fr/ and sent in the `auth-token`
 header. Set it as the PARISMUSEES_TOKEN environment variable.
 
 The catalogue has no coordinates for these photographs, so captions are
-geocoded street by street (see rpr.geocode). Positions are street-level
-approximations and carry pose "geocoded" with a low confidence.
+geocoded (see rpr.geocode): at the house number, the street corner or along
+the street they name, today's or a historical one. Positions carry pose
+"geocoded" and a confidence that follows that precision.
 """
 
 from __future__ import annotations
@@ -22,6 +23,7 @@ from typing import Any, Callable, Iterator
 from rpr import net, paths
 from rpr.geocode import Geocoder
 from rpr.photo import Photo, SourceInfo
+from rpr.sources.streetnames import StreetHistory
 
 ENDPOINT = "https://apicollections.parismusees.paris.fr/graphql"
 SITE = "https://www.parismuseescollections.paris.fr"
@@ -119,14 +121,14 @@ def to_photo(work: dict, geocoder: Geocoder, stats: dict) -> Photo | None:
     if g and g.get("lat") and g.get("lng"):
         lon, lat, pose, confidence = g["lng"], g["lat"], "recorded", 0.6
     else:
-        m = geocoder.place(title)
+        date = work.get("fieldDateProduction") or {}
+        m = geocoder.place(title, year=date.get("startYear"))
         if not m:
             stats["not placed"] = stats.get("not placed", 0) + 1
             return None
-        lon, lat = m.lon, m.lat
-        # A street centroid can be hundreds of metres from the spot.
-        confidence = round(0.35 * m.score if m.role == "viewpoint" else 0.25 * m.score, 2)
-        extra = {"geocoded_street": m.label, "from_caption": m.street, "role": m.role}
+        # Confidence follows precision: a house number pins the building, a
+        # street centre can be hundreds of metres from the spot.
+        lon, lat, confidence, extra = m.lon, m.lat, m.confidence, m.extra()
     date = work.get("fieldDateProduction") or {}
     authors = [
         creator_name(a["entity"]["fieldAuteurAuteur"]["entity"]["name"])
@@ -190,7 +192,7 @@ def load_works(path: Path = WORKS_CACHE) -> list[dict]:
 
 
 def harvest(log: Callable[[str], Any] = print, limit: int | None = None, offline: bool = False):
-    geocoder = Geocoder(cache_path=paths.REPO_ROOT / "pipeline" / "cache" / "geocode.json")
+    geocoder = Geocoder(cache_path=paths.REPO_ROOT / "pipeline" / "cache" / "geocode.json", history=StreetHistory.load())
     stats: dict[str, int] = {}
     photos: list[Photo] = []
     if offline:
@@ -213,5 +215,9 @@ def harvest(log: Callable[[str], Any] = print, limit: int | None = None, offline
                 photos.append(p)
     finally:
         geocoder.save()
-    log(f"parismusees: placed {len(photos)} photos; skipped {stats}; geocoder requests {geocoder.requests}")
+    precision: dict[str, int] = {}
+    for p in photos:
+        key = p.extra.get("precision", p.pose)
+        precision[key] = precision.get(key, 0) + 1
+    log(f"parismusees: placed {len(photos)} photos {precision}; skipped {stats}; geocoder requests {geocoder.requests}")
     return INFO, photos

@@ -113,22 +113,40 @@ export function colorExpression(): unknown[] {
   return expr
 }
 
-export function extraOf(p: PhotoProps): Record<string, string> {
+export type Extra = Record<string, string | number | boolean | undefined>
+
+export function extraOf(p: PhotoProps): Extra {
   if (!p.extra) return {}
   try {
-    return JSON.parse(p.extra) as Record<string, string>
+    return JSON.parse(p.extra) as Extra
   } catch {
     return {}
   }
 }
 
-/** Explain how the photo was placed, naming the street for geocoded ones. */
+/**
+ * Explain how the photo was placed. Geocoded captions name the address,
+ * corner, street or quarter they were matched to (see pipeline/rpr/geocode.py).
+ */
 export function positionLabel(p: PhotoProps): string {
-  const street = extraOf(p).geocoded_street
-  if (p.pose === 'geocoded' && street) {
-    return `Approximate: on ${street.replace(/ \d{5} Paris$/, '')}, the street named in the caption`
+  const x = extraOf(p)
+  if (p.pose !== 'geocoded' || typeof x.geocoded_street !== 'string') return POSE_LABELS[p.pose] ?? p.pose
+  const place = x.geocoded_street.replace(/ \d{5} Paris$/, '')
+  const maybe = x.ambiguous ? '; the caption could also mean another place' : ''
+  switch (x.precision) {
+    case 'number':
+      return x.method === 'vasserot-1836'
+        ? `At ${place}, the address in the caption, as numbered in 1836${maybe}`
+        : `At ${place}, the address in the caption${maybe}`
+    case 'corner':
+      return `At the corner of ${place.replace(' / ', ' and ')}, named in the caption${maybe}`
+    case 'quarter':
+      return `Rough: somewhere in ${String(x.from_caption ?? place)}, named in the caption`
+    default:
+      if (x.method === 'vasserot-1836') return `Approximate: on ${place}, a street since demolished (where it ran in 1836)${maybe}`
+      if (x.method === 'former-name') return `Approximate: on ${place}, today's name for the ${String(x.from_caption)} of the caption${maybe}`
+      return `Approximate: on ${place}, the street named in the caption${maybe}`
   }
-  return POSE_LABELS[p.pose] ?? p.pose
 }
 
 export function dateLabel(p: PhotoProps): string {
