@@ -23,6 +23,7 @@ from typing import Any, Callable, Iterator
 
 from rpr import net, paths
 from rpr.geocode import Geocoder
+from rpr.headings import CONFIDENCE as HEADING_CONFIDENCE, Facades
 from rpr.photo import Photo, SourceInfo
 from rpr.sources.places import Places
 from rpr.sources.streetnames import StreetHistory
@@ -112,7 +113,7 @@ def creator_name(raw: str) -> str:
     return name
 
 
-def to_photo(work: dict, geocoder: Geocoder, stats: dict) -> Photo | None:
+def to_photo(work: dict, geocoder: Geocoder, stats: dict, facades: Facades | None = None) -> Photo | None:
     images = [v["entity"] for v in work.get("fieldVisuels") or [] if v.get("entity") and v["entity"].get("publicUrl")]
     free = [i for i in images if i.get("fieldImageLibre")]
     if not free:
@@ -144,6 +145,7 @@ def to_photo(work: dict, geocoder: Geocoder, stats: dict) -> Photo | None:
     extra["original"] = public
     if work.get("fieldOeuvreNumInventaire"):
         extra["inventory"] = work["fieldOeuvreNumInventaire"]
+    heading = facades.heading(lon, lat, extra, title) if facades and pose == "geocoded" else None
     return Photo(
         source=INFO.key,
         source_id=str(work.get("fieldLrefAdlib") or work.get("fieldUrlAlias")),
@@ -161,6 +163,9 @@ def to_photo(work: dict, geocoder: Geocoder, stats: dict) -> Photo | None:
         credit=INFO.attribution,
         media="photo",
         pose=pose,
+        heading=heading,
+        heading_method="facade" if heading is not None else None,
+        heading_confidence=HEADING_CONFIDENCE["facade"] if heading is not None else None,
         confidence=confidence,
         extra=extra,
     )
@@ -215,6 +220,7 @@ def harvest(log: Callable[[str], Any] = print, limit: int | None = None, offline
         history=StreetHistory.load(),
         places=Places.load(),
     )
+    facades = Facades.load()
     stats: dict[str, int] = {}
     photos: list[Photo] = []
     if offline:
@@ -232,7 +238,7 @@ def harvest(log: Callable[[str], Any] = print, limit: int | None = None, offline
             save_works(items)
     try:
         for w in items:
-            p = to_photo(w, geocoder, stats)
+            p = to_photo(w, geocoder, stats, facades)
             if p:
                 photos.append(p)
     finally:
@@ -242,4 +248,5 @@ def harvest(log: Callable[[str], Any] = print, limit: int | None = None, offline
         key = p.extra.get("precision", p.pose)
         precision[key] = precision.get(key, 0) + 1
     log(f"parismusees: placed {len(photos)} photos {precision}; skipped {stats}; geocoder requests {geocoder.requests}")
+    log(f"parismusees: {sum(1 for p in photos if p.heading is not None)} with a heading")
     return INFO, photos
