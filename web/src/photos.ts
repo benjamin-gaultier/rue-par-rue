@@ -22,7 +22,10 @@ export interface PhotoProps {
   credit?: string
   media: string
   pose: 'estimated' | 'geocoded' | 'recorded' | 'matched' | 'manual'
+  /** Compass bearing the camera faced, degrees; how it was obtained is `heading_method`. */
   heading?: number
+  heading_method?: 'recorded' | 'facade'
+  heading_confidence?: number
   fov?: number
   confidence: number
   /** JSON string of source-specific details (see pipeline/rpr/photo.py). */
@@ -160,6 +163,23 @@ export function positionLabel(p: PhotoProps): string {
       if (x.method === 'former-name') return `Approximate: on ${place}, today's name for the ${String(x.from_caption)} of the caption${maybe}`
       return `Approximate: on ${place}, the street named in the caption${maybe}`
   }
+}
+
+const COMPASS = ['north', 'north-east', 'east', 'south-east', 'south', 'south-west', 'west', 'north-west']
+
+/** 'north-east' for 40°. */
+export function compassPoint(bearing: number): string {
+  return COMPASS[Math.round((((bearing % 360) + 360) % 360) / 45) % 8]
+}
+
+/** Which way the camera faced and how we know, or null when unknown. */
+export function headingLabel(p: PhotoProps): string | null {
+  if (p.heading === undefined) return null
+  const where = `Facing ${compassPoint(p.heading)} (${Math.round(p.heading)}°)`
+  if (p.heading_method === 'facade')
+    return `${where}: towards the building at the address, from the street in front of it. Worked out from the street's outline; the photographer may have stood at an angle.`
+  if (p.heading_method === 'recorded') return `${where}, as recorded by the archive`
+  return where
 }
 
 export function dateLabel(p: PhotoProps): string {

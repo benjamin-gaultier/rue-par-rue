@@ -19,7 +19,7 @@ def test_problems_are_reported():
     assert "outside Paris" in make(lon=5.0).problems()[0]
     assert make(year=1700).problems() == ["implausible year 1700"]
     assert make(thumb=None).problems() == ["no image"]
-    assert make(heading=400).problems() == ["heading outside 0..360"]
+    assert make(heading=400, heading_method="recorded").problems() == ["heading outside 0..360"]
     assert make(pose="guess").problems() == ["unknown pose method 'guess'"]
 
 
