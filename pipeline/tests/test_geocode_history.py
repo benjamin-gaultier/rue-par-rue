@@ -8,6 +8,7 @@ from test_streetnames import history
 ARRAS = "Vieille maison à l'angle de la rue d'Arras et de la rue Clopin, 5ème arrondissement, Paris."
 PARCHEMINERIE = "Rue de la Parcheminerie, de la rue Saint-Jacques, 5ème arrondissement, Paris"
 FEROU = "Ancienne maison, 9 rue Férou, 6ème arrondissement, Paris"
+PONT_SAINT_MICHEL = "Pont Saint-Michel, le quai des Orfèvres à l'angle du boulevard du Palais, 1er arrondissement, Paris"
 
 
 def test_house_numbers_bind_to_their_street():
@@ -29,6 +30,9 @@ def test_years_and_arrondissements_are_not_house_numbers():
 def test_junctions_and_quarters():
     assert parse_caption(PARCHEMINERIE).junction() == ("Rue de la Parcheminerie", "rue Saint-Jacques")
     assert parse_caption(ARRAS).junction() == ("rue d'Arras", "rue Clopin")
+    # The corner is the street before the corner word and the one after it.
+    assert parse_caption(PONT_SAINT_MICHEL).junction() == ("quai des Orfèvres", "boulevard du Palais")
+    assert parse_caption("Réverbère, rue de Rivoli, angle de la rue Saint-Florentin").junction() == ("rue de Rivoli", "rue Saint-Florentin")
     assert parse_caption("Rue Mouffetard et rue Saint-Médard").junction() is None  # no corner word
     assert parse_caption("Vieille maison, île Saint-Louis").quarter == "île Saint-Louis"
 
@@ -94,6 +98,48 @@ def test_view_from_a_street_corner(tmp_path):
     assert (m.precision, m.role, m.confidence) == ("corner", "corner", CONFIDENCE["corner"])
     assert distance_m((m.lon, m.lat), (2.3353, 48.86615)) < 1  # between the two nearest addresses
     assert m.label == "Rue Clos Georgeot / Rue Sainte Anne"
+
+
+def test_corner_of_streets_laid_out_after_1836(tmp_path):
+    # The boulevard du Palais (1858) has no 1836 address points: today's outlines give the corner.
+    ban = Ban({"quai des Orfèvres": (2.3445, 48.8556, 0.97, "75101", "Quai des Orfèvres 75001 Paris")})
+    m = Geocoder(cache_path=tmp_path / "c.json", fetch=ban, history=history()).place(PONT_SAINT_MICHEL, 1900)
+    assert (m.precision, m.method, m.role, m.confidence) == ("corner", "street-outlines", "corner", CONFIDENCE["corner"])
+    assert (m.lon, m.lat) == (2.3448, 48.854425)
+    assert m.label == "Quai des Orfèvres / Boulevard du Palais" and m.ambiguous == 0
+
+
+def test_1836_corner_comes_first(tmp_path):
+    g = Geocoder(cache_path=tmp_path / "c.json", fetch=Ban(), history=history())
+    m = g.place("Rue du Clos-Georgeau, vue prise de la rue Sainte-Anne, 1er arrondissement, Paris.", 1866)
+    assert m.method == "vasserot-1836"  # today's outlines would put it at (2.3360, 48.8665)
+
+
+def test_corner_of_streets_that_meet_twice_is_flagged(tmp_path):
+    g = Geocoder(cache_path=tmp_path / "c.json", fetch=Ban(), history=history())
+    m = g.place("Rue de l'Hôtel-de-Ville, vue prise du quai de l'Hôtel-de-Ville, 4ème arrondissement", 1900)
+    assert (m.precision, m.method, m.ambiguous) == ("corner", "street-outlines", 1)
+    assert m.confidence == round(CONFIDENCE["corner"] * 0.6, 2)
+    # Not in the arrondissement the caption gives: no corner, and nothing else to place it on.
+    assert g.place("Rue de l'Hôtel-de-Ville, vue prise du quai de l'Hôtel-de-Ville, 5ème arrondissement", 1900) is None
+
+
+def test_corner_through_a_former_name_or_a_spelling(tmp_path):
+    h = history()
+    h.former["rue de la barillerie"] = [{"name": "rue de la Barillerie", "arr": [1, 4], "to": ["boulevard du Palais"]}]
+    g = Geocoder(cache_path=tmp_path / "c.json", fetch=Ban(), history=h)
+    m = g.place("Rue de la Barillerie, à l'angle du quai des Orfèvres, 1er arrondissement", 1855)
+    assert (m.method, m.label) == ("street-outlines", "Boulevard du Palais / Quai des Orfèvres")
+    m = g.place("Angle de la rue Madame et de la rue Mézières, 6ème arrondissement", 1900)
+    assert (m.method, m.label) == ("street-outlines", "Rue Madame / Rue de Mézières")
+
+
+def test_no_corner_where_outlines_do_not_meet(tmp_path):
+    ban = Ban({"rue Madame": (2.3318, 48.8495, 0.97, "75106", "Rue Madame 75006 Paris")})
+    g = Geocoder(cache_path=tmp_path / "c.json", fetch=ban, history=history())
+    assert g.place("Angle de la rue Madame et du boulevard du Palais, 6ème arrondissement", 1900).precision == "street"
+    # A known old name is never moved to a lookalike: the rue des Orties of 1836 is not today's "rue d'Orties".
+    assert g.place("Angle de la rue des Orties et de la rue Sainte-Anne, 1er arrondissement", 1850).method != "street-outlines"
 
 
 def test_former_name_goes_to_todays_street_and_flags_ambiguity(tmp_path):

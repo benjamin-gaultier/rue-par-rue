@@ -22,7 +22,9 @@ street is then looked up, most precise answer first:
    name is a known historical one.
 
 Two streets of a junction ("Rue X, vue prise de la rue Y", "à l'angle de")
-are placed at their corner when both are in the 1836 address points.
+are placed at their corner: where their 1836 address points meet, else
+where today's street outlines meet (streets laid out after 1836, such as the
+boulevard du Palais). Streets that only meet across a third one get no corner.
 Confidence follows precision: house number, corner, street, quarter. A name
 that could mean several places is placed on the likeliest one and flagged.
 Nothing is placed on a street that cannot be found: no position is invented.
@@ -103,6 +105,7 @@ class ParsedCaption:
     numbers: dict[str, str] = field(default_factory=dict)
     corner: bool = False
     quarter: str | None = None
+    corner_pair: tuple[str, str] | None = None  # the streets either side of the corner word
 
     @property
     def citycode(self) -> str | None:
@@ -126,6 +129,8 @@ class ParsedCaption:
             others = [s for s in self.streets if s != self.viewpoint]
             if others:
                 return others[0], self.viewpoint
+        if self.corner and self.corner_pair:
+            return self.corner_pair
         if self.corner and len(self.streets) >= 2:
             return self.streets[0], self.streets[1]
         return None
@@ -142,6 +147,7 @@ def parse_caption(caption: str) -> ParsedCaption:
     text = caption.replace(" ", " ").strip().strip('"')
     arr = _ARRONDISSEMENT.search(text)
     streets: list[str] = []
+    spans: list[tuple[int, int, str]] = []
     numbers: dict[str, str] = {}
     for m in _STREET.finditer(text):
         s = _clean(m.group(1))
@@ -149,6 +155,7 @@ def parse_caption(caption: str) -> ParsedCaption:
             continue
         if s.lower() not in (x.lower() for x in streets):
             streets.append(s)
+            spans.append((m.start(1), m.end(1), s))
         nb = _NUMBER_BEFORE.search(text[: m.start(1)])
         na = _NUMBER_AFTER.match(text[m.end(1):])
         number = nb.group(1) if nb else na.group(1) if na else None
@@ -164,13 +171,24 @@ def parse_caption(caption: str) -> ParsedCaption:
             if viewpoint.lower() not in (x.lower() for x in streets):
                 streets.append(viewpoint)
     qm = _QUARTER.search(text)
+    cm = _CORNER.search(text)
+    corner_pair = None
+    if cm:
+        # "Pont Saint-Michel, le quai des Orfèvres à l'angle du boulevard du
+        # Palais": the corner is the street before the word and the one after
+        # it; "Angle de la rue X et de la rue Y": the two after it.
+        before = [s for start, end, s in spans if end <= cm.start()]
+        after = [s for start, end, s in spans if start >= cm.end()]
+        if after and (before or len(after) > 1):
+            corner_pair = (before[-1] if before else after[0], after[0] if before else after[1])
     return ParsedCaption(
         streets=streets,
         viewpoint=viewpoint,
         arrondissement=int(arr.group(1)) if arr else None,
         numbers=numbers,
-        corner=bool(_CORNER.search(text)),
+        corner=bool(cm),
         quarter=qm.group(1).strip() if qm else None,
+        corner_pair=corner_pair,
     )
 
 
@@ -389,8 +407,63 @@ class Geocoder:
         pair = parsed.junction()
         if not pair or not self.history:
             return None
-        a = self.history.streets_1836(pair[0], parsed.arrondissement)
-        b = self.history.streets_1836(pair[1], parsed.arrondissement)
+        return self._corner_1836(pair, parsed.arrondissement) or self._corner_today(pair, parsed.arrondissement)
+
+    def _today_keys(self, name: str, arrondissement: int | None) -> tuple[list[tuple[str, float]], list[tuple[str, float]]]:
+        """Today's streets a caption's name stands for, as (junction-table key, factor).
+
+        Returns (streets of that name, streets that carry it today). The
+        first is the street of that name (or BAN's spelling of it), else
+        today's streets spelt alike ("rue Mézières" is the rue de Mézières).
+        The second is filled for a former name, with the factor for being
+        only part of today's street; a known old name is never moved to a
+        lookalike.
+        """
+        from rpr.sources.streetnames import norm, sound
+
+        h = self.history
+        key = norm(name)
+        if key in h.today:
+            return [(key, 1.0)], []
+        citycode = f"751{arrondissement:02d}" if arrondissement else None
+        r = self.street(name, citycode)  # already looked up, so cached
+        if self._usable(r, citycode) and same_street(name, street_of(r["label"])) and norm(street_of(r["label"])) in h.today:
+            return [(norm(street_of(r["label"])), 1.0)], []
+        known_old = h.former_names(name, arrondissement)
+        if known_old:
+            successors: dict[str, float] = {}
+            for e in known_old:
+                for t in e.get("to", []):
+                    successors.setdefault(norm(t), PART_FACTOR if e.get("part") else 1.0)
+            return [], [(k, f) for k, f in successors.items() if k in h.today]
+        return [(k, 1.0) for k in h.today_sounds.get(sound(key), [])], []
+
+    def _corner_today(self, pair: tuple[str, str], arrondissement: int | None) -> Match | None:
+        """Corner of two streets from where their outlines meet today (streets laid out after 1836)."""
+        h = self.history
+
+        def meetings(keys_a: list[tuple[str, float]], keys_b: list[tuple[str, float]]) -> list[tuple]:
+            return list(dict.fromkeys(
+                (*p, a, b, min(fa, fb))
+                for a, fa in keys_a for b, fb in keys_b if a != b
+                for p in h.junctions(a, b, arrondissement)
+            ))
+
+        (a_now, a_old), (b_now, b_old) = self._today_keys(pair[0], arrondissement), self._today_keys(pair[1], arrondissement)
+        # The streets of those names first; for a former name, the streets that carry it today.
+        found = meetings(a_now, b_now) or meetings(a_now + a_old, b_now + b_old)
+        if not found:
+            return None
+        lon, lat, a, b, factor = found[0]
+        amb = len({(m[0], m[1]) for m in found}) - 1  # the streets meet in more than one place
+        conf = CONFIDENCE["corner"] * factor * (AMBIGUOUS_FACTOR if amb else 1.0)
+        return Match(lon, lat, f"{h.today[a]} / {h.today[b]}", 1.0, f"{pair[0]} / {pair[1]}", "corner", "corner",
+                     "street-outlines", round(conf, 2), ambiguous=amb)
+
+    def _corner_1836(self, pair: tuple[str, str], arrondissement: int | None) -> Match | None:
+        """Corner of two streets whose 1836 address points come within CORNER_MAX_M."""
+        a = self.history.streets_1836(pair[0], arrondissement)
+        b = self.history.streets_1836(pair[1], arrondissement)
         hits = []
         for ea in a:
             for eb in b:

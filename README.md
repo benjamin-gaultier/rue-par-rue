@@ -202,7 +202,7 @@ In the 3D view the archive photographs stand as picture frames where they were t
 
 **Walk the streets** puts the camera about 2 m above the ground. Use the arrow keys or W A S D (Shift to go faster) and drag to look around and up. Buildings standing in the chosen year block the way, so changing the year changes the streets you can walk; if a building appears where you stand, you step out to the nearest open ground. Looking above the horizon uses MapLibre's experimental pitch beyond 90° with an unclamped camera centre.
 
-WebGL can only draw images served with CORS headers. Albert-Kahn images load from the museum's portal; Paris Musées images come from small same-origin thumbnails (`python -m rpr thumbs --area cite`, 731 images, 5.2 MB, CC0).
+WebGL can only draw images served with CORS headers. Albert-Kahn images load from the museum's portal; Paris Musées images come from small same-origin thumbnails (`python -m rpr thumbs --area cite`, 742 images, 5.2 MB, CC0).
 
 #### 3D photos (AI depth)
 
@@ -266,7 +266,7 @@ Paris Musées records carry no coordinates, so `rpr/geocode.py` reads the captio
 3. a former name from the City of Paris *dénominations caduques* (rue de la Barillerie → boulevard du Palais), placed on today's street;
 4. a close spelling in the address base (score 0.8 or more), but never for a name known to be historical: those stay on their own street or unplaced.
 
-Two streets that meet within 30 m in the 1836 address points ("Rue X, vue prise de la rue Y", "à l'angle de") place the photo at their corner. A caption that names only a quarter ("île de la Cité") lands at its centre. Nothing is placed on a street that cannot be found. `confidence` follows precision, and `extra.precision` / `extra.method` say which rule placed the photo; the photo card states it ("At 13 Quai d'Anjou, the address in the caption"):
+Two streets that meet within 30 m in the 1836 address points ("Rue X, vue prise de la rue Y", "à l'angle de") place the photo at their corner. Streets laid out since then (boulevard du Palais, rue Rambuteau, the rue de Rivoli east of the Louvre), and corners the 1836 points miss, are placed where their outlines from the City of Paris street register meet today: the outlines touch, overlap, or leave a gap under 3 m with no other street in it. Streets that only meet across another one (rue Royale and rue de Rivoli, across the place de la Concorde) get no corner, and streets that meet in more than one place are flagged ambiguous. A caption that names only a quarter ("île de la Cité") lands at its centre. Nothing is placed on a street that cannot be found. `confidence` follows precision, and `extra.precision` / `extra.method` say which rule placed the photo; the photo card states it ("At 13 Quai d'Anjou, the address in the caption"):
 
 | Match | Confidence |
 | --- | --- |
@@ -278,7 +278,7 @@ Two streets that meet within 30 m in the 1836 address points ("Rue X, vue prise 
 | Today's street for a former name (view / shown) | 0.3 / 0.2 |
 | Quarter only | 0.1 |
 
-A name that could mean several places (a former name used in two arrondissements, a homonym still in use elsewhere in the photo's year) is placed on the likeliest one, flagged `ambiguous` and its confidence multiplied by 0.6; part of a renamed street, or a demolished street more than 300 m long, by 0.8. Lookups are cached in `pipeline/cache/geocode.json`; `python -m rpr streetnames` builds the two historical tables in `pipeline/cache/` (`former-street-names.json`, `vasserot-1836.json`). The harvest saves the raw works to `pipeline/cache/parismusees-works.json.gz`, so `python -m rpr parismusees --offline` places them again without a token when the matching improves.
+A name that could mean several places (a former name used in two arrondissements, a homonym still in use elsewhere in the photo's year) is placed on the likeliest one, flagged `ambiguous` and its confidence multiplied by 0.6; part of a renamed street, or a demolished street more than 300 m long, by 0.8. Lookups are cached in `pipeline/cache/geocode.json`; `python -m rpr streetnames` builds the three street tables in `pipeline/cache/` (`former-street-names.json`, `vasserot-1836.json`, and `street-junctions.json`, the 14,646 places where two of today's streets meet). The harvest saves the raw works to `pipeline/cache/parismusees-works.json.gz`, so `python -m rpr parismusees --offline` places them again without a token when the matching improves.
 
 Every photo source is normalised into one schema (`pipeline/rpr/photo.py`): position, date range, image links, licence, credit, and how the camera position was obtained (`recorded`, `geocoded`, `matched`, `manual`, `estimated`) with a confidence score. Records outside Paris, with impossible dates or without an image are rejected and counted in `manifest.json`.
 
@@ -296,7 +296,7 @@ For Paris Musées, create a free token at <https://apicollections.parismusees.pa
 
 1. **Phase 1, time-slider map** (this release): basemap timeline, cadastre, Panoramax "today" view, photo pipeline.
 2. **Phase 2, then-and-now viewer** (this release): archive photo over the nearest Panoramax panorama, with alignment saved in the URL.
-3. **Phase 3, pose refinement** (started): Marville and Atget captions are now placed at their house number, corner, former or demolished street using the City of Paris former street names and the 1836 address points (see Paris Musées above). Still to do: corners of two streets laid out after 1836 (from today's street footprints); the 1888 street network; infer headings (Kahn records have positions but no direction, so the viewer cannot yet face the subject automatically); refine poses by matching against Panoramax imagery; let people submit the alignments they make in the viewer.
+3. **Phase 3, pose refinement** (started): Marville and Atget captions are now placed at their house number, corner, former or demolished street using the City of Paris former street names, the 1836 address points and, for corners of streets laid out after 1836, where today's street outlines meet (see Paris Musées above). Still to do: the 1888 street network; infer headings (Kahn records have positions but no direction, so the viewer cannot yet face the subject automatically); refine poses by matching against Panoramax imagery; let people submit the alignments they make in the viewer.
 4. **Phase 4, 3D**: the Île de la Cité as a massing model, with footprints traced from Vasserot's plans, photos in the streets, an eye-level walk, and the whole island in detail with its bridges through time, the Hôtel-Dieu and the archbishop's palace (see above). Next: landmarks through time, streets and street furniture, period vehicles and richer facades, then more quarters.
 
 ## Licences

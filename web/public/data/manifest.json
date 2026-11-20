@@ -83,10 +83,10 @@
   },
   "thumbs_cite": {
     "area": "cite",
-    "count": 731,
-    "bytes": 5168896,
+    "count": 742,
+    "bytes": 5245017,
     "failed": 1,
-    "updated_at": "2026-11-20T11:01:12Z"
+    "updated_at": "2026-11-20T11:22:19Z"
   },
   "depth_notre_dame": {
     "set": "notre-dame",
@@ -155,5 +155,16 @@
     "moving": 561,
     "bytes": 353948,
     "updated_at": "2026-11-18T12:03:18Z"
+  },
+  "streetnames": {
+    "former_names": 8113,
+    "streets_1836": 1195,
+    "junctions": 14646,
+    "files": [
+      "pipeline/cache/former-street-names.json",
+      "pipeline/cache/vasserot-1836.json",
+      "pipeline/cache/street-junctions.json"
+    ],
+    "updated_at": "2026-11-20T11:18:51Z"
   }
 }
