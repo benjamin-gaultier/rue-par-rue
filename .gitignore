@@ -11,3 +11,4 @@ pipeline/cache/models/
 pipeline/cache/verniquet/
 pipeline/cache/streets/
 pipeline/cache/vehicles/
+pipeline/cache/places/

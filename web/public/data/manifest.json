@@ -35,7 +35,7 @@
     "updated_at": "2026-11-17T12:40:03Z"
   },
   "photos": {
-    "count": 9004,
+    "count": 9423,
     "sources": [
       {
         "key": "kahn",
@@ -53,11 +53,11 @@
         "license": "CC0-1.0",
         "homepage": "https://www.parismuseescollections.paris.fr/",
         "attribution": "Paris Musées / Musée Carnavalet, Histoire de Paris (CC0)",
-        "count": 4702,
+        "count": 5121,
         "rejected": {
           "year_end before year": 1
         },
-        "harvested_at": "2026-11-20T16:38:20Z"
+        "harvested_at": "2026-11-20T17:00:17Z"
       }
     ]
   },
@@ -166,5 +166,11 @@
       "pipeline/cache/street-junctions.json"
     ],
     "updated_at": "2026-11-20T11:18:51Z"
+  },
+  "places": {
+    "places": 1758,
+    "names": 1754,
+    "file": "pipeline/cache/paris-places.json",
+    "updated_at": "2026-11-20T16:45:39Z"
   }
 }

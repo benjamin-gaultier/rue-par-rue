@@ -124,15 +124,24 @@ export function extraOf(p: PhotoProps): Extra {
   }
 }
 
+function ordinal(n: number): string {
+  const suffix = n % 10 === 1 && n !== 11 ? 'st' : n % 10 === 2 && n !== 12 ? 'nd' : n % 10 === 3 && n !== 13 ? 'rd' : 'th'
+  return `${n}${suffix}`
+}
+
 /**
  * Explain how the photo was placed. Geocoded captions name the address,
- * corner, street or quarter they were matched to (see pipeline/rpr/geocode.py).
+ * corner, street, place or quarter they were matched to (see pipeline/rpr/geocode.py).
  */
 export function positionLabel(p: PhotoProps): string {
   const x = extraOf(p)
   if (p.pose !== 'geocoded' || typeof x.geocoded_street !== 'string') return POSE_LABELS[p.pose] ?? p.pose
   const place = x.geocoded_street.replace(/ \d{5} Paris$/, '')
-  const maybe = x.ambiguous ? '; the caption could also mean another place' : ''
+  const elsewhere =
+    typeof x.caption_arrondissement === 'number'
+      ? `; the caption says the ${ordinal(x.caption_arrondissement)} arrondissement, but it lies in the next one`
+      : ''
+  const maybe = elsewhere + (x.ambiguous ? '; the caption could also mean another place' : '')
   switch (x.precision) {
     case 'number':
       return x.method === 'vasserot-1836'
@@ -142,6 +151,10 @@ export function positionLabel(p: PhotoProps): string {
       return `At the corner of ${place.replace(' / ', ' and ')}, named in the caption${maybe}`
     case 'quarter':
       return `Rough: somewhere in ${String(x.from_caption ?? place)}, named in the caption`
+    case 'place':
+      return x.method === 'gate-way'
+        ? `Approximate: on ${place}, by the ${String(x.from_caption)} of the caption (a gate of the city wall)${maybe}`
+        : `Approximate: at ${place}, named in the caption${maybe}`
     default:
       if (x.method === 'vasserot-1836') return `Approximate: on ${place}, a street since demolished (where it ran in 1836)${maybe}`
       if (x.method === 'former-name') return `Approximate: on ${place}, today's name for the ${String(x.from_caption)} of the caption${maybe}`
