@@ -216,13 +216,13 @@ The depth is relative and estimated from a single image. It gives parallax, not 
 
 `python -m rpr trace --area cite` (needs `pip install -e ".[geo,vision]"`) traces real building footprints from Vasserot's ground-floor plans, one coloured sheet per building, published by the Archives nationales under the Licence Ouverte 2.0:
 
-1. Each sheet is matched to its parcel through the ALPAGE 1836 address points (street, number, quarter).
+1. Each sheet is matched to its parcel through the ALPAGE 1836 address points (street, number, quarter). The plans' index tells homonyms apart with a qualifier the points lack ("Sainte-Anne-en-la-Cité", "Harlay-au-Palais"), which is dropped, and spellings are compared loosely (Deux-Ermites, Deux-Hermites). A sheet for two houses ("n°6 et 8") is fitted to both parcels together. The place Dauphine's address points carry no street name: a point takes the name of a street still called the same today (and named by 1836, per the City's record) when it lies within 2 m of that street's outline, from the City of Paris street outlines (ODbL). Each footprint records how it was matched (`match`).
 2. The drawing is segmented in Lab colour, relative to the sheet's own paper: the pink wash marks built rooms, white areas closed by boundary lines are courtyards. Sheets that colour only the walls are flagged `walls_only`.
 3. The drawing is registered onto the parcel polygon (scale from areas, rotation searched to 0.25°, scored by IoU). Fits below 0.72 are rejected.
 
-On the Cité: 169 sheets with a street number, 57 traced (median IoU 0.82), 42 rejected for a poor fit, 63 without an address match, 7 with no detectable drawing. Traced buildings are shown in terracotta, with a link to the original sheet. Output: `web/public/data/3d/vasserot-traced-cite.geojson`.
+On the Cité: 169 sheets with a street number, 78 traced (median IoU 0.83), 49 rejected for a poor fit, 33 without an address match, 9 with no detectable drawing. The 33 left: 19 sheets on streets opened or renumbered after the cadastre was drawn (rue d'Arcole 1837, rue de Constantine, rue de la Cité 1834, rue Bossuet), whose numbers need a concordance with the old ones; 9 in the cour de la Sainte-Chapelle, whose address points all fall on the single parcel of the Palais; and 5 whose number has no point in the cadastre. Traced buildings are shown in terracotta, with a link to the original sheet. Output: `web/public/data/3d/vasserot-traced-cite.geojson`.
 
-Next: better address matching (renamed streets, number ranges), the Vasserot block atlas for full coverage, roof shapes, and facade textures from the archive photographs.
+Next: a concordance of old and new house numbers for the streets renumbered after 1836, the Vasserot block atlas for full coverage, roof shapes, and facade textures from the archive photographs.
 
 ## Repository layout
 
