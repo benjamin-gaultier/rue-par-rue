@@ -5,25 +5,34 @@ https://apicollections.parismusees.paris.fr/ and sent in the `auth-token`
 header. Set it as the PARISMUSEES_TOKEN environment variable.
 
 The catalogue has no coordinates for these photographs, so captions are
-geocoded street by street (see rpr.geocode). Positions are street-level
-approximations and carry pose "geocoded" with a low confidence.
+geocoded (see rpr.geocode): at the house number, the street corner or along
+the street they name, today's or a historical one. Positions carry pose
+"geocoded" and a confidence that follows that precision.
 """
 
 from __future__ import annotations
 
+import gzip
 import json
 import os
 import re
 import time
+import urllib.error
+from pathlib import Path
 from typing import Any, Callable, Iterator
 
 from rpr import net, paths
 from rpr.geocode import Geocoder
 from rpr.photo import Photo, SourceInfo
+from rpr.sources.streetnames import StreetHistory
 
 ENDPOINT = "https://apicollections.parismusees.paris.fr/graphql"
 SITE = "https://www.parismuseescollections.paris.fr"
 PAGE = 100
+MIN_PAGE = 10  # a page the API keeps failing on is split down to this size
+# Every work the last harvest saw, as the API returned it, so photos can be
+# placed again (`rpr parismusees --offline`) without a token.
+WORKS_CACHE = paths.REPO_ROOT / "pipeline" / "cache" / "parismusees-works.json.gz"
 
 # Photographers to harvest: (search string, display name)
 PHOTOGRAPHERS = [("Marville", "Charles Marville"), ("Atget", "Eugène Atget")]
@@ -114,14 +123,14 @@ def to_photo(work: dict, geocoder: Geocoder, stats: dict) -> Photo | None:
     if g and g.get("lat") and g.get("lng"):
         lon, lat, pose, confidence = g["lng"], g["lat"], "recorded", 0.6
     else:
-        m = geocoder.place(title)
+        date = work.get("fieldDateProduction") or {}
+        m = geocoder.place(title, year=date.get("startYear"))
         if not m:
             stats["not placed"] = stats.get("not placed", 0) + 1
             return None
-        lon, lat = m.lon, m.lat
-        # A street centroid can be hundreds of metres from the spot.
-        confidence = round(0.35 * m.score if m.role == "viewpoint" else 0.25 * m.score, 2)
-        extra = {"geocoded_street": m.label, "from_caption": m.street, "role": m.role}
+        # Confidence follows precision: a house number pins the building, a
+        # street centre can be hundreds of metres from the spot.
+        lon, lat, confidence, extra = m.lon, m.lat, m.confidence, m.extra()
     date = work.get("fieldDateProduction") or {}
     authors = [
         creator_name(a["entity"]["fieldAuteurAuteur"]["entity"]["name"])
@@ -156,10 +165,25 @@ def to_photo(work: dict, geocoder: Geocoder, stats: dict) -> Photo | None:
     )
 
 
+def page(author: str, offset: int, size: int, log: Callable[[str], Any] = print) -> dict:
+    """One page of works. The API answers big pages slowly and sometimes not at
+    all (502 after minutes), so a page that keeps failing is fetched in halves."""
+    try:
+        return query(WORKS, {"author": [f"%{author}%"], "offset": offset, "limit": size})["nodeQuery"]
+    except (urllib.error.URLError, TimeoutError) as err:
+        server_side = not isinstance(err, urllib.error.HTTPError) or err.code in net.RETRY_STATUS
+        if size <= MIN_PAGE or not server_side:
+            raise
+        log(f"parismusees: {author} {offset}+{size} failed ({err}), fetching it in halves")
+    half = size // 2
+    first, second = page(author, offset, half, log), page(author, offset + half, size - half, log)
+    return {"count": first["count"], "entities": first["entities"] + second["entities"]}
+
+
 def works(author: str, log: Callable[[str], Any], limit: int | None = None) -> Iterator[dict]:
     offset, total = 0, None
     while total is None or offset < total:
-        data = query(WORKS, {"author": [f"%{author}%"], "offset": offset, "limit": PAGE})["nodeQuery"]
+        data = page(author, offset, PAGE, log)
         total = data["count"] if limit is None else min(data["count"], limit)
         for w in data["entities"]:
             if w:
@@ -169,18 +193,48 @@ def works(author: str, log: Callable[[str], Any], limit: int | None = None) -> I
         time.sleep(0.5)
 
 
-def harvest(log: Callable[[str], Any] = print, limit: int | None = None):
-    geocoder = Geocoder(cache_path=paths.REPO_ROOT / "pipeline" / "cache" / "geocode.json")
+def save_works(items: list[dict], path: Path = WORKS_CACHE) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    items = sorted(items, key=lambda w: str(w.get("fieldLrefAdlib") or w.get("fieldUrlAlias")))
+    body = json.dumps(items, ensure_ascii=False, sort_keys=True, separators=(",", ":")).encode()
+    with gzip.GzipFile(path, "wb", mtime=0) as f:  # mtime=0: same works, same bytes
+        f.write(body)
+
+
+def load_works(path: Path = WORKS_CACHE) -> list[dict]:
+    if not path.exists():
+        raise SystemExit(f"{path} is missing: run `rpr parismusees` once with PARISMUSEES_TOKEN set.")
+    with gzip.open(path, "rb") as f:
+        return json.loads(f.read())
+
+
+def harvest(log: Callable[[str], Any] = print, limit: int | None = None, offline: bool = False):
+    geocoder = Geocoder(cache_path=paths.REPO_ROOT / "pipeline" / "cache" / "geocode.json", history=StreetHistory.load())
     stats: dict[str, int] = {}
     photos: list[Photo] = []
-    try:
+    if offline:
+        items = load_works()
+        log(f"parismusees: {len(items)} works from {WORKS_CACHE.name}")
+    else:
+        items, seen = [], set()
         for search, _name in PHOTOGRAPHERS:
             for w in works(search, log, limit):
-                p = to_photo(w, geocoder, stats)
-                if p:
-                    photos.append(p)
-            geocoder.save()
+                key = w.get("fieldLrefAdlib") or w.get("fieldUrlAlias")
+                if key not in seen:  # a work by both photographers comes back twice
+                    seen.add(key)
+                    items.append(w)
+        if limit is None:
+            save_works(items)
+    try:
+        for w in items:
+            p = to_photo(w, geocoder, stats)
+            if p:
+                photos.append(p)
     finally:
         geocoder.save()
-    log(f"parismusees: placed {len(photos)} photos; skipped {stats}; geocoder requests {geocoder.requests}")
+    precision: dict[str, int] = {}
+    for p in photos:
+        key = p.extra.get("precision", p.pose)
+        precision[key] = precision.get(key, 0) + 1
+    log(f"parismusees: placed {len(photos)} photos {precision}; skipped {stats}; geocoder requests {geocoder.requests}")
     return INFO, photos

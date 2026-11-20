@@ -5,6 +5,7 @@ We identify ourselves honestly and retry transient failures with backoff.
 
 from __future__ import annotations
 
+import gzip
 import json
 import time
 import urllib.error
@@ -35,7 +36,11 @@ def fetch_bytes(
     for attempt in range(retries + 1):
         try:
             with urllib.request.urlopen(_request(url, data=data, headers=headers), timeout=timeout) as resp:
-                return resp.read()
+                body = resp.read()
+                # Some portals gzip responses even when not asked to.
+                if resp.headers.get("Content-Encoding") == "gzip":
+                    body = gzip.decompress(body)
+                return body
         except urllib.error.HTTPError as err:
             if err.code not in RETRY_STATUS or attempt == retries:
                 raise

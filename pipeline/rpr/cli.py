@@ -49,7 +49,7 @@ def cmd_parismusees(args: argparse.Namespace) -> None:
     if args.introspect:
         parismusees.introspect()
         return
-    info, photos = parismusees.harvest()
+    info, photos = parismusees.harvest(offline=args.offline)
     summary = write_source(info, photos)
     print(f"parismusees: kept {summary['count']}, rejected {summary['rejected']}")
     build_index()
@@ -116,6 +116,12 @@ def cmd_vehicles(args: argparse.Namespace) -> None:
     _update_manifest(f"vehicles_{args.area}", vehicles.build(args.area, refresh=args.refresh))
 
 
+def cmd_streetnames(args: argparse.Namespace) -> None:
+    from rpr.sources import streetnames
+
+    _update_manifest("streetnames", streetnames.build())
+
+
 def cmd_index(args: argparse.Namespace) -> None:
     manifest = build_index()
     print(f"index: {manifest['photos']['count']} photos from {len(manifest['photos']['sources'])} sources")
@@ -138,6 +144,7 @@ def main(argv: list[str] | None = None) -> int:
 
     p = sub.add_parser("parismusees", help="Paris Musées photographs (needs PARISMUSEES_TOKEN)")
     p.add_argument("--inspect", "--introspect", dest="introspect", action="store_true", help="print the GraphQL query fields and stop")
+    p.add_argument("--offline", action="store_true", help="place the works saved by the last harvest again (no token needed)")
     p.set_defaults(func=cmd_parismusees)
 
     p = sub.add_parser("model3d", help="3D massing model of an area in 1836 (needs the [geo] extras)")
@@ -182,6 +189,9 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--area", choices=["cite"], default="cite")
     p.add_argument("--refresh", action="store_true", help="download BD TOPO roads and river again")
     p.set_defaults(func=cmd_vehicles)
+
+    p = sub.add_parser("streetnames", help="former street names and 1836 address points for geocoding captions (needs [geo])")
+    p.set_defaults(func=cmd_streetnames)
 
     p = sub.add_parser("index", help="rebuild photos.geojson and manifest.json")
     p.set_defaults(func=cmd_index)

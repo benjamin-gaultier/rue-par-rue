@@ -17,10 +17,11 @@
 | Landmarks of the Cité through time (detailed 3D area) | APUR `EQUIPEMENT_EMPRISE` (facility outlines, by name) and `EMPRISE_BATIE_PARIS`; IGN BD TOPO `BDTOPO_V3:batiment` (round towers, the Tribunal de commerce dome); the Vasserot parcel "Marché aux Fleurs" | ODbL (APUR, ALPAGE), Etalab 2.0 (IGN) | "APUR", "IGN BD TOPO" | `rpr landmarks` writes `web/public/data/3d/landmarks-cite.json`. Dates and sizes come from the histories cited in `rpr/sources/landmarks.py` and the README; reasoned values are flagged. |
 | Vasserot parcels for the 3D model | ALPAGE via Stanford Libraries ([qr091wq2775](https://purl.stanford.edu/qr091wq2775)), Lambert I (EPSG:27561) shapefile | ODbL | "Arch. nat. F31 73-96, Arch. Paris, © ALPAGE" | `rpr model3d` reprojects with pyproj (`pip install -e ".[geo]"`). |
 | Vasserot ground-floor plans, one sheet per building (1809–1854) | Archives nationales, "Plans cadastraux des immeubles de Paris 1809-1856" (index CSV on data.gouv.fr, images on siv.archives-nationales.culture.gouv.fr) | Licence Ouverte 2.0 | "Archives nationales" plus the sheet's call number | `rpr trace` downloads the sheets for the model area (not committed) and publishes the traced footprints. |
-| Vasserot address points (1810–1836) | ALPAGE via Stanford Libraries ([pn650tp5621](https://purl.stanford.edu/pn650tp5621)) | ODbL | "© ALPAGE" | Used by `rpr trace` to match sheets to parcels. |
+| Vasserot address points (1810–1836) | ALPAGE via Stanford Libraries ([pn650tp5621](https://purl.stanford.edu/pn650tp5621)), layer `Num_Voies_Vasserot`, Lambert I (EPSG:27561) | ODbL | "Arch. nat. F31 73-96, Arch. Paris, © ALPAGE" | Used by `rpr trace` to match sheets to parcels. `rpr streetnames` reduces the 29,164 points to streets and numbers (`pipeline/cache/vasserot-1836.json`) for placing captions on demolished streets, their house numbers and corners. |
 | Thumbnails for 3D photo frames | Paris Musées images in the 3D area, resized to 224 px | CC0 | "Paris Musées / Musée Carnavalet" | `rpr thumbs`, stored in `web/public/data/3d/thumbs/`. |
 | Depth maps for 3D photos (Notre-Dame set) | Computed with Depth Anything V2 Small (Apache 2.0) from the archive photos | Model: Apache 2.0. Depth maps follow the photo's licence | "Depth estimated by Depth Anything V2 Small" | `rpr depth`, stored in `web/public/data/3d/depth/` (Paris Musées images copied there, cropped from their mounts, CC0). |
-| Street positions for captions | IGN Géoplateforme geocoder (Base Adresse Nationale) | Licence Ouverte / Etalab 2.0 | "Base Adresse Nationale, IGN" | `rpr/geocode.py`, cached in `pipeline/cache/geocode.json`. |
+| Street positions for captions | IGN Géoplateforme geocoder (Base Adresse Nationale) | Licence Ouverte / Etalab 2.0 | "Base Adresse Nationale, IGN" | `rpr/geocode.py`, streets and house numbers, cached in `pipeline/cache/geocode.json`. |
+| Former street names, today's streets, arrondissements | Ville de Paris, Direction de l'Urbanisme, on Paris Data: `denominations-des-voies-caduques` (9,108 retired names with their history), `denominations-emprises-voies-actuelles`, `arrondissements` | ODbL | "Ville de Paris" | `rpr streetnames` reads which street carries each retired name today and in which arrondissement it ran, written to `pipeline/cache/former-street-names.json`; used by `rpr/geocode.py`. |
 | Street-level photos today | Panoramax (IGN and OpenStreetMap France instances) | CC BY-SA 4.0 or Etalab 2.0, per photo | "Panoramax contributors" plus the photo's licence | Queried in the browser by place (`place_position`). |
 
 ## Checked but not used yet
@@ -29,6 +30,5 @@
 - **Albert-Kahn films** (21 Paris films in the same dataset).
 - **SoDUCo trade directories** (1787–1914, geocoded): planned for shop names on the 1836 facades.
 - **APUR building construction periods**: planned for hiding buildings that did not exist yet.
-- **Paris former street names** (*dénominations caduques*): planned for geocoding captions.
 - **IGN 1980–1995 mosaic**: no tiles over central Paris.
 - **État-major 1:10,000 "environs de Paris"**: leaves the city itself blank.
