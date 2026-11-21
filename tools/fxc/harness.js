@@ -1,14 +1,17 @@
-// Load in the dev page (Vite), see README.md. Builds every city shader program with three.js, never links it
+// Loaded by check.html (python tools/fxc/check.py) or by hand in the dev page, see README.md. Builds every city shader program with three.js, never links it
 // (so the D3D compiler never runs in the browser), and posts the ANGLE-translated HLSL of each
 // fragment shader to the loopback receiver as <tag>__<label>.fs.hlsl.
 window.__harness = (async () => {
   const tag = window.__harnessTag || 'run'
   const t = Date.now()
-  const THREE = await import('/node_modules/three/build/three.module.js')
-  const S = await import(`/src/cityshaders.ts?t=${t}`)
-  const SS = await import(`/src/streetshaders.ts?t=${t}`)
-  const VS = await import(`/src/vehicleshaders.ts?t=${t}`)
-  const LS = await import(`/src/landmarkshaders.ts?t=${t}`)
+  // The Vite dev server the shaders come from ('' in the dev page itself), and the receiver this file came from.
+  const vite = window.__harnessBase || ''
+  const receiver = new URL(import.meta.url).origin
+  const THREE = await import(`${vite}/node_modules/three/build/three.module.js`)
+  const S = await import(`${vite}/src/cityshaders.ts?t=${t}`)
+  const SS = await import(`${vite}/src/streetshaders.ts?t=${t}`)
+  const VS = await import(`${vite}/src/vehicleshaders.ts?t=${t}`)
+  const LS = await import(`${vite}/src/landmarkshaders.ts?t=${t}`)
   const variant = S.shaderVariant || ((src) => src)
   const walls = (fam) => variant(S.wallFragment, fam)
   const progs = [
@@ -55,7 +58,7 @@ window.__harness = (async () => {
   geo.setAttribute('position', new THREE.Float32BufferAttribute([0, 0, 0, 1, 0, 0, 0, 1, 0], 3))
   geo.setAttribute('normal', new THREE.Float32BufferAttribute([0, 0, 1, 0, 0, 1, 0, 0, 1], 3))
   const camera = new THREE.PerspectiveCamera()
-  const post = (n, b) => fetch('http://127.0.0.1:8766/' + n, { method: 'POST', body: b }).then((r) => r.text())
+  const post = (n, b) => fetch(`${receiver}/${n}`, { method: 'POST', body: b }).then((r) => r.text())
   const out = []
   for (const [label, vs, fs] of progs) {
     const scene = new THREE.Scene()
