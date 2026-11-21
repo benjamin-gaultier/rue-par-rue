@@ -67,6 +67,25 @@ MATCH_ADDRESS = "address"
 MATCH_QUALIFIER = "street name without the index's qualifier"
 MATCH_SPELLING = "street name spelled differently"
 MATCH_OUTLINE = "unnamed address point on today's outline of the street"
+MATCH_SECOND = "second address of the house in the plans' index"
+
+# The index corrects some numbers in brackets: "n°22 [en fait : 20]". The
+# number written on the sheet is the cadastre's, and the correction is a later
+# numbering: see the README for the count on the Cité. The correction is dropped.
+CORRECTION = re.compile(r"\[\s*en fait[^\]]*\]", re.I)
+
+STREET_KINDS = "rue|ruelle|quai|place|cour|impasse|passage|pont"
+
+# The sheets are drawn at 1:200: of the 11,200 scale bars the index records,
+# 8,400 are within a tenth of "15 cm / 30 m" (most of the others are 1:400).
+USUAL_SCALE = 200.0
+# A fit is kept when the scale it implies is 0.7 to 1.5 times the sheet's own.
+# Because the fit takes its scale from the areas, a drawing of part of a
+# parcel is blown up to fill it, and one of two parcels is shrunk to fit one.
+# Measured from the paper sizes in the index, 87 of the 93 Cité sheets traced
+# before this check came out at 1:152 to 1:284 (median 1:209: the scans keep a
+# margin around the paper). The other six were at 1:119, 1:328 and 1:440 to 1:949.
+SCALE_RATIO = (0.7, 1.5)
 
 
 # ----------------------------------------------------------- addresses
@@ -79,12 +98,66 @@ def norm(s: str) -> str:
 
 def plan_street(adresse: str) -> tuple[str, str] | None:
     """'Paris - Marmousets (rue des) n°17' -> ('rue des marmousets', '17')."""
-    m = re.match(r"Paris\s*-\s*(.+?)\s*\((.+?)\)\s*(?:n°\s*([\w\s\-]+))?$", adresse.strip())
+    m = re.match(r"Paris\s*-\s*(.+?)\s*\((.+?)\)\s*(?:n°\s*([\w\s\-]+))?$", written(adresse))
     if not m:
         return None
     name, kind, number = m.group(1), m.group(2), (m.group(3) or "").strip()
     number = re.split(r"[\s\-]", number)[0] if number else ""
     return norm(f"{kind} {name}"), number
+
+
+def written(adresse: str) -> str:
+    """The address as written on the sheet: 'n°22 [en fait : 20]' -> 'n°22', 'n°4 [BIS]' -> 'n°4 BIS'."""
+    return re.sub(r"[\[\]]", "", CORRECTION.sub("", adresse)).strip()
+
+
+def second_addresses(detail: str) -> list[tuple[str, list[str]]]:
+    """Other addresses of the same house in the index's notes, as (street, numbers).
+
+    'quartier : Cité ; et 3 rue des Deux-Ermites ; propriétaire : Aune'
+    -> [('rue des deux ermites', ['3'])]. A corner house has a door on each
+    street, so a house on a street opened or renumbered after the cadastre
+    can still be found by its address on the side street. Notes with no
+    number ("et rue Chanoinesse") and corrections ("en fait : 13 quai
+    Napoléon") are not addresses to try.
+    """
+    out = []
+    for note in detail.replace("\xa0", " ").split(";"):
+        note = re.sub(r"\[.*?\]", "", note).strip()
+        m = re.match(rf"et\s+(\d[\w\s]*?),?\s+((?:{STREET_KINDS})\b.+)$", note, re.I)
+        if m:
+            numbers = plan_numbers("n°" + m.group(1))
+            if numbers:
+                out.append((norm(m.group(2)), numbers))
+    return out
+
+
+def sheet_long_cm(dimensions: str) -> float | None:
+    """'35,7 x 22 cm' -> 35.7: the long side of the paper."""
+    sizes = [float(v.replace(",", ".")) for v in re.findall(r"\d+(?:[.,]\d+)?", dimensions)]
+    return max(sizes) if sizes else None
+
+
+def sheet_scale(echelle: str) -> float:
+    """The scale a sheet is drawn at, from its scale bar ('14.8 cm / 30 m' -> 203), else 1:200."""
+    m = re.match(r"\s*([\d.,]+)\s*cm\s*/\s*([\d.,]+)\s*m\b", echelle or "")
+    if not m:
+        return USUAL_SCALE
+    try:
+        cm, metres = (float(v.replace(",", ".")) for v in m.groups())
+    except ValueError:
+        return USUAL_SCALE
+    return metres * 100 / cm if cm > 0 and metres > 0 else USUAL_SCALE
+
+
+def fitted_scale(sheet_m: float, long_cm: float | None) -> float | None:
+    """The scale a fit implies: the ground the sheet's long side covers, over its length on paper."""
+    return sheet_m * 100 / long_cm if long_cm else None
+
+
+def scale_holds(fitted: float | None, drawn: float) -> bool:
+    """True when the fitted scale agrees with the sheet's own, or the paper size is unknown."""
+    return fitted is None or SCALE_RATIO[0] <= fitted / drawn <= SCALE_RATIO[1]
 
 
 def address_key(street: str, number: str) -> str:
@@ -93,7 +166,7 @@ def address_key(street: str, number: str) -> str:
 
 def plan_numbers(adresse: str) -> list[str]:
     """The house numbers a sheet covers: 'n°6 et 8' -> ['6', '8'], 'n°9 BIS' -> ['9bis']."""
-    m = re.search(r"n°\s*(.+)$", adresse)
+    m = re.search(r"n°\s*(.+)$", written(adresse))
     if not m:
         return []
     return [n + suffix for n, suffix in re.findall(r"(\d+)\s*(bis|ter)?\b", m.group(1).lower())]
@@ -212,6 +285,9 @@ class Plan:
     street: str
     number: str
     numbers: tuple[str, ...] = ()
+    second: tuple[tuple[str, tuple[str, ...]], ...] = ()
+    long_cm: float | None = None
+    scale: float = USUAL_SCALE
 
 
 def load_plans(area: str, log: Callable[[str], Any]) -> list[Plan]:
@@ -229,7 +305,11 @@ def load_plans(area: str, log: Callable[[str], Any]) -> list[Plan]:
         if not parsed or not parsed[1]:
             continue
         numbers = tuple(plan_numbers(r["adresse"])) or (parsed[1],)
-        plans.append(Plan(r["id"], r["adresse"], q, r["image"], r["url_siv"], r["cote"], parsed[0], parsed[1], numbers))
+        second = tuple((street, tuple(ns)) for street, ns in second_addresses(r["detail"]))
+        long_cm, scale = sheet_long_cm(r.get("dimensions") or ""), sheet_scale(r.get("echelle") or "")
+        plans.append(
+            Plan(r["id"], r["adresse"], q, r["image"], r["url_siv"], r["cote"], parsed[0], parsed[1], numbers, second, long_cm, scale)
+        )
     log(f"plans: {len(plans)} sheets with a street number in {', '.join(wanted)}")
     return plans
 
@@ -526,12 +606,20 @@ def trace(area: str = "cite", log: Callable[[str], Any] = print, limit: int | No
             # the outline of a street still called the same today.
             name = display_name(p.adresse)
             outline = today_outline(name, log) if name else None
-            if outline is None:
-                continue
-            street, how = norm(name), MATCH_OUTLINE
-            for number, pid in name_unnamed_points(unnamed, outline).items():
-                address_index.setdefault(address_key(street, number), pid)
-        pids = match_parcels(street, list(p.numbers), address_index)
+            if outline is not None:
+                street, how = norm(name), MATCH_OUTLINE
+                for number, pid in name_unnamed_points(unnamed, outline).items():
+                    address_index.setdefault(address_key(street, number), pid)
+        pids = match_parcels(street, list(p.numbers), address_index) if street else None
+        if not pids:
+            # A street opened or renumbered after the cadastre was drawn, or a
+            # number it lacks: try the house's other address.
+            for other, numbers in p.second:
+                other_street, _ = resolve_street(other, named_streets)
+                pids = match_parcels(other_street, list(numbers), address_index) if other_street else None
+                if pids:
+                    how = MATCH_SECOND
+                    break
         if pids:
             matches[p.id] = (pids, how)
 
@@ -549,7 +637,7 @@ def trace(area: str = "cite", log: Callable[[str], Any] = print, limit: int | No
 
     out_dir = CACHE / "plans"
     out_dir.mkdir(parents=True, exist_ok=True)
-    features, stats = [], {"no parcel match": 0, "no drawing found": 0, "poor fit": 0, "traced": 0, "image missing": 0}
+    features, stats = [], {"no parcel match": 0, "no drawing found": 0, "poor fit": 0, "traced": 0, "image missing": 0, "wrong scale": 0}
     for p in plans:
         if p.id not in matches or any(pid not in parcels for pid in matches[p.id][0]):
             stats["no parcel match"] += 1
@@ -580,6 +668,11 @@ def trace(area: str = "cite", log: Callable[[str], Any] = print, limit: int | No
         if drawing == SEGMENT_INK and sheet_m > MAX_INK_SHEET_M:
             stats["poor fit"] += 1
             continue
+        scale = fitted_scale(sheet_m, p.long_cm)
+        if not scale_holds(scale, p.scale):
+            stats["poor fit"] += 1
+            stats["wrong scale"] += 1
+            continue
         footprint = place(to_math(built), fit).intersection(parcels[pid].buffer(0.5))
         if footprint.is_empty:
             stats["poor fit"] += 1
@@ -599,6 +692,7 @@ def trace(area: str = "cite", log: Callable[[str], Any] = print, limit: int | No
                     "walls_only": walls_only,
                     "drawing": drawing,
                     "sheet_m": round(sheet_m),
+                    "scale": round(scale) if scale else None,
                     "built_share": round(footprint.area / parcels[pid].area, 2),
                 },
                 "geometry": mapping(transform(l93_to_wgs, footprint)),
