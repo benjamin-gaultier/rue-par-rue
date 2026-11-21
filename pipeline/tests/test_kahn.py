@@ -88,13 +88,40 @@ def test_live_record_shape():
 
 
 def test_rights_flag():
-    assert kahn.license_of("Oui").startswith("Libre de droits")
-    assert kahn.license_of(None) == kahn.INFO.license
+    assert kahn.license_of("Oui") == kahn.LICENSE_CC0_OR_BY
+    assert kahn.license_of(None) == kahn.LICENSE_CC0_OR_BY
 
 
 def test_unknown_operator_is_blank():
     assert kahn.creator_of("opérateur non mentionné") is None
     assert kahn.creator_of(["Stéphane Passet"]) == "Stéphane Passet"
+
+
+def test_licence_follows_the_rights_field_and_the_operator():
+    # "Non" in the open data wins over everything else.
+    assert kahn.license_of("Non", ["Auguste Léon"]) == kahn.LICENSE_NOT_CLEARED
+    assert kahn.license_of("Non", None) == kahn.LICENSE_NOT_CLEARED
+    # Operators whose images are all CC BY 4.0 on the museum's portal.
+    for name in ("Frédéric Gadmer", "Georges Chevalier", "Roger Dumas"):
+        assert kahn.license_of(None, [name]) == kahn.LICENSE_CC_BY
+    # Two operators on one plate: the stricter licence.
+    assert kahn.license_of(None, ["Auguste Léon", "Roger Dumas"]) == kahn.LICENSE_CC_BY
+    # The others are CC0 with a few CC BY exceptions the open data cannot tell apart.
+    for name in ("Auguste Léon", "Fernand Cuville", "Stéphane Passet"):
+        assert kahn.license_of(None, [name]) == kahn.LICENSE_CC0_OR_BY
+    assert kahn.license_of(None, "Auguste Léon") == kahn.LICENSE_CC0_OR_BY
+
+
+def test_only_cleared_licences_may_become_textures():
+    assert kahn.LICENSE_CC_BY in kahn.DERIVABLE
+    assert kahn.LICENSE_CC0_OR_BY in kahn.DERIVABLE
+    assert kahn.LICENSE_NOT_CLEARED not in kahn.DERIVABLE
+
+
+def test_live_records_carry_their_licence():
+    assert kahn.to_photo(LIVE).license == kahn.LICENSE_CC_BY
+    unnamed = dict(LIVE, operateur=["opérateur non mentionné"], droits_cessibles="Non")
+    assert kahn.to_photo(unnamed).license == kahn.LICENSE_NOT_CLEARED
 
 
 def _at(ident, title, date, lon=2.349507, lat=48.853141):

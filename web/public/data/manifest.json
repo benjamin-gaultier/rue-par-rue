@@ -40,12 +40,12 @@
       {
         "key": "kahn",
         "name": "Albert-Kahn, Archives de la Planète (Paris)",
-        "license": "See Musée départemental Albert-Kahn terms (CC0 / CC BY per item)",
+        "license": "CC0 or CC BY 4.0 per photo; some not cleared for reuse (see each photo)",
         "homepage": "https://www.data.gouv.fr/datasets/archives-de-la-planete-paris",
         "attribution": "Musée départemental Albert-Kahn, Département des Hauts-de-Seine",
         "count": 4302,
         "rejected": {},
-        "harvested_at": "2026-11-21T13:16:31Z"
+        "harvested_at": "2026-11-21T13:22:57Z"
       },
       {
         "key": "parismusees",
