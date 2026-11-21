@@ -74,6 +74,15 @@ describe('positionLabel', () => {
     )
     expect(positionLabel(photo('recorded'))).toBe('Camera position recorded by the archive')
   })
+
+  it('says when a recorded point is a place that several photos share', () => {
+    const cathedral = photo('recorded', { position_of: 'place', shared_point: 44, shared_dates: 12 })
+    expect(positionLabel(cathedral)).toBe(
+      'The place shown or visited, not where the camera stood: the archive puts 44 photos of 12 dates on this one point'
+    )
+    const visit = photo('recorded', { position_of: 'place', shared_point: 4, shared_dates: 1 })
+    expect(positionLabel(visit)).toContain('4 photos of the same day')
+  })
 })
 
 describe('headingLabel', () => {
