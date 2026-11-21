@@ -346,22 +346,21 @@ def segment(path: Path):
     # The drawing is the largest cluster once rooms are merged.
     found = biggest_cluster(pink, 25) if int((pink > 0).sum()) >= 800 else None
     H, W = pink.shape
-    if found is not None:
-        x, y, w, h = found[1]
-        if x < 0.03 * W and x + w > 0.97 * W:
-            return None  # a sheet-wide frame, not a building
+    # A frame or a strip of the scanner's background is not a building.
+    if found is not None and touches_edge(found[1], pink.shape):
+        found = None
     walls = ink_walls(L, paper_l)
     ink = biggest_cluster(walls, 25)
     if ink is not None and not touches_edge(ink[1], pink.shape):
         enclosed = walled_area(cv2.bitwise_and(walls, ink[0]))
         if enclosed is not None and (
-            found is None or touches_edge(found[1], pink.shape) or 0 < box_share(found[1], ink[1]) < INK_SHARE
+            found is None or 0 < box_share(found[1], ink[1]) < INK_SHARE
         ):
             x, y, w, h = ink[1]
             pad = 10
             bbox = (max(0, x - pad), max(0, y - pad), min(W, x + w + pad), min(H, y + h + pad))
             return enclosed, enclosed.copy(), bbox, True, SEGMENT_INK
-    if found is None or touches_edge(found[1], pink.shape):
+    if found is None:
         return None
     cluster, (x, y, w, h), _ = found
     built = cv2.bitwise_and(pink, cluster)

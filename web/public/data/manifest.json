@@ -67,19 +67,19 @@
     "standing": 1606,
     "later": 813,
     "reconstructed": 6096,
-    "traced": 62,
+    "traced": 72,
     "license": "Vasserot parcels: ODbL (ALPAGE). APUR buildings: ODbL.",
-    "updated_at": "2026-11-20T22:36:08Z"
+    "updated_at": "2026-11-21T01:06:35Z"
   },
   "traced_cite": {
     "area": "cite",
     "no parcel match": 33,
-    "no drawing found": 9,
-    "poor fit": 49,
-    "traced": 78,
+    "no drawing found": 0,
+    "poor fit": 43,
+    "traced": 93,
     "image missing": 0,
     "file": "3d/vasserot-traced-cite.geojson",
-    "updated_at": "2026-11-20T22:34:44Z"
+    "updated_at": "2026-11-21T01:05:02Z"
   },
   "thumbs_cite": {
     "area": "cite",

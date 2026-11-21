@@ -69,3 +69,55 @@ def test_streets_named_after_1836_are_not_used():
     assert not vp.named_by_1836({"ouverture": None, "denomination": "Décision ministérielle du 13 février 1837."})
     assert vp.display_name("Paris - Arcole (rue d') n°5") == "rue d'Arcole"
     assert vp.display_name("Paris - Dauphine (place) n°27") == "place Dauphine"
+
+
+def _sheet(tmp_path, draw):
+    import cv2
+    import numpy as np
+
+    img = np.full((1000, 700, 3), (200, 222, 228), np.uint8)  # yellowed paper (BGR)
+    draw(cv2, img)
+    path = tmp_path / "sheet.jpg"
+    cv2.imwrite(str(path), img)
+    return path
+
+
+def test_segment_reads_a_sheet_drawn_in_ink_from_its_walls(tmp_path):
+    def draw(cv2, img):
+        cv2.rectangle(img, (200, 300), (400, 700), (30, 30, 30), 9)  # walls
+        cv2.line(img, (200, 500), (400, 500), (30, 30, 30), 9)  # a partition
+        cv2.line(img, (280, 700), (320, 700), (200, 222, 228), 11)  # a door in the street wall
+        cv2.putText(img, "Rue de la Juiverie", (150, 800), cv2.FONT_HERSHEY_SCRIPT_SIMPLEX, 1, (40, 40, 40), 1)
+        cv2.rectangle(img, (0, 0), (699, 25), (150, 140, 235), -1)  # pink strip along the scan's edge
+
+    prop, built, _, walls_only, how = vp.segment(_sheet(tmp_path, draw))
+    assert how == vp.SEGMENT_INK and walls_only
+    ys, xs = (prop > 0).nonzero()
+    assert abs(xs.min() - 196) < 8 and abs(xs.max() - 404) < 8 and abs(ys.min() - 296) < 8 and abs(ys.max() - 704) < 8
+    assert (built > 0).sum() == (prop > 0).sum()
+
+
+def test_segment_keeps_the_pink_wash_when_the_building_is_washed(tmp_path):
+    def draw(cv2, img):
+        cv2.rectangle(img, (200, 300), (400, 700), (150, 140, 235), -1)  # washed rooms
+        cv2.rectangle(img, (200, 300), (400, 700), (30, 30, 30), 9)
+        cv2.rectangle(img, (500, 100), (650, 160), (30, 30, 30), 9)  # an inked box away from the drawing
+
+    *_, how = vp.segment(_sheet(tmp_path, draw))
+    assert how == vp.SEGMENT_PINK
+
+
+def test_segment_ignores_a_washed_fragment_inside_an_ink_drawing(tmp_path):
+    def draw(cv2, img):
+        cv2.rectangle(img, (150, 250), (500, 750), (30, 30, 30), 9)
+        cv2.rectangle(img, (160, 260), (200, 300), (150, 140, 235), -1)  # one washed corner
+
+    *_, how = vp.segment(_sheet(tmp_path, draw))
+    assert how == vp.SEGMENT_INK
+
+
+def test_box_share_and_edge():
+    assert vp.box_share((0, 0, 10, 10), (0, 0, 20, 20)) == 0.25
+    assert vp.box_share((50, 50, 10, 10), (0, 0, 20, 20)) == 0
+    assert vp.touches_edge((0, 400, 700, 20), (1000, 700))
+    assert not vp.touches_edge((200, 300, 200, 400), (1000, 700))
