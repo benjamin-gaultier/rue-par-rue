@@ -122,3 +122,40 @@ def test_live_records_carry_their_licence():
     assert kahn.to_photo(LIVE).license == kahn.LICENSE_CC_BY
     unnamed = dict(LIVE, operateur=["opérateur non mentionné"], droits_cessibles="Non")
     assert kahn.to_photo(unnamed).license == kahn.LICENSE_NOT_CLEARED
+
+
+def _at(ident, title, date, lon=2.349507, lat=48.853141):
+    return kahn.to_photo({"Cote": ident, "Légende": title, "Date de prise de vue": date, "geo_point_2d": {"lon": lon, "lat": lat}, "Image": {"url": "https://example.org/a.jpg"}})
+
+
+def test_point_of_its_own_is_the_camera():
+    (p,) = kahn.mark_shared_points([_at("A 1", "La rue Saint-Martin vue de la rue Meslay", "juillet 1914")])
+    assert (p.pose, p.confidence, p.extra) == ("recorded", kahn.CAMERA_CONFIDENCE, {})
+
+
+def test_plates_of_one_view_keep_the_camera_position():
+    photos = kahn.mark_shared_points([_at("A 2", "Le pont de la Concorde", "29 juin 1918"), _at("A 2 S", "Le pont de la Concorde", "29 juin 1918")])
+    assert all(p.extra == {} and p.confidence == kahn.CAMERA_CONFIDENCE for p in photos)
+
+
+def test_point_shared_by_views_of_one_day_is_a_place():
+    photos = kahn.mark_shared_points([_at("A 3", "Nef de l'église", "3 juillet 1914"), _at("A 4", "Le maître-autel de l'église", "3 juillet 1914")])
+    for p in photos:
+        assert p.extra == {"position_of": "place", "shared_point": 2, "shared_dates": 1}
+        assert p.confidence == kahn.SHARED_DAY_CONFIDENCE
+        assert p.pose == "recorded" and p.problems() == []
+
+
+def test_point_shared_across_days_is_a_place_with_less_confidence():
+    photos = kahn.mark_shared_points(
+        [
+            _at("A 5", "La cathédrale Notre-Dame", "29 juin 1921"),
+            _at("A 6", "La cathédrale Notre-Dame", "28 juin 1920"),
+            _at("A 7", "Les obsèques du maréchal Foch à Notre-Dame", "26 mars 1929"),
+            _at("A 8", "Rue de la Huchette", "1911", lon=2.34566, lat=48.853),
+        ]
+    )
+    assert [p.extra.get("shared_point") for p in photos] == [3, 3, 3, None]
+    assert photos[0].extra["shared_dates"] == 3
+    assert photos[0].confidence == kahn.SHARED_PLACE_CONFIDENCE
+    assert photos[3].confidence == kahn.CAMERA_CONFIDENCE

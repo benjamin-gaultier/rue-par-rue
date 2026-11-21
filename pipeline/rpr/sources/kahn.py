@@ -1,10 +1,13 @@
 """Albert-Kahn Archives de la Planète, Paris subset (about 5,000 items).
 
-Published by the Hauts-de-Seine department on its Opendatasoft portal. Each
-record carries the operator's position when the plate was exposed, so the
-pose method is "recorded". Field names are matched loosely because the
-portal's labels have changed over time; run `python -m rpr kahn --inspect`
-to print the live field list.
+Published by the Hauts-de-Seine department on its Opendatasoft portal. Its
+description says each point is "the operator's position when the picture was
+taken", so the pose method is "recorded". That holds for a point used once,
+or by plates of one view. A point that photos with different captions or
+dates share is the place they show, not a tripod position: see
+`mark_shared_points`. Field names are matched loosely because the portal's
+labels have changed over time; run `python -m rpr kahn --inspect` to print
+the live field list.
 
 Note: the Opendatasoft portals reset connections from some cloud egress
 ranges. The GitHub Actions harvest workflow runs this source.
@@ -52,6 +55,13 @@ FIELDS = {
 }
 
 RECORD_URL = "https://opendata.hauts-de-seine.fr/explore/dataset/" + DATASET + "/table/?q={q}"
+
+# Confidence of a position (Photo.confidence). A point of its own is where the
+# operator stood, to about 20 m. A point shared by different views is the
+# place: the operator was there or looking at it, up to about 150 m away.
+CAMERA_CONFIDENCE = 0.8
+SHARED_DAY_CONFIDENCE = 0.5  # one visit, several views
+SHARED_PLACE_CONFIDENCE = 0.3  # several visits: a monument, an exhibition, a quarter
 
 YEAR_RE = re.compile(r"\b(18[5-9]\d|19[0-4]\d)\b")
 
@@ -205,8 +215,34 @@ def to_photo(record: dict) -> Photo | None:
         heading=heading,
         heading_method="recorded" if heading is not None else None,
         heading_confidence=CONFIDENCE["recorded"] if heading is not None else None,
-        confidence=0.8 if heading is None else 0.9,
+        confidence=CAMERA_CONFIDENCE if heading is None else 0.9,
     )
+
+
+def mark_shared_points(photos: list[Photo]) -> list[Photo]:
+    """Flag positions that are a place rather than where the camera stood.
+
+    The archive gives one exact point to all the photos of a place: 44 photos
+    share a point inside Notre-Dame, among them views from the square, from
+    across the Seine and of the Hôtel de Ville. Plates of one view (same
+    caption, same date) do share a real camera position and stay as they are.
+    A point with several captions or dates gets `position_of: "place"`, the
+    number of photos and of dates that share it, and a lower confidence.
+    """
+    groups: dict[tuple[float, float], list[Photo]] = {}
+    for p in photos:
+        groups.setdefault((round(p.lon, 6), round(p.lat, 6)), []).append(p)
+    for group in groups.values():
+        dates = {p.date_text for p in group}
+        views = {norm(p.title) for p in group}
+        if len(dates) == 1 and len(views) == 1:
+            continue
+        for p in group:
+            if p.heading is not None:
+                continue  # a recorded heading belongs to a camera
+            p.extra = {**p.extra, "position_of": "place", "shared_point": len(group), "shared_dates": len(dates)}
+            p.confidence = SHARED_DAY_CONFIDENCE if len(dates) == 1 else SHARED_PLACE_CONFIDENCE
+    return photos
 
 
 def harvest_records() -> list[dict]:
@@ -218,8 +254,9 @@ def harvest_records() -> list[dict]:
 
 def harvest(log: Callable[[str], Any] = print) -> tuple[SourceInfo, Iterable[Photo]]:
     records = harvest_records()
-    photos = [p for p in (to_photo(r) for r in records) if p is not None]
-    log(f"kahn: {len(records)} records, {len(photos)} with an id and a position")
+    photos = mark_shared_points([p for p in (to_photo(r) for r in records) if p is not None])
+    shared = sum(1 for p in photos if p.extra.get("position_of") == "place")
+    log(f"kahn: {len(records)} records, {len(photos)} with an id and a position, {shared} at a point shared by different views")
     return INFO, photos
 
 

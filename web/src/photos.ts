@@ -135,9 +135,15 @@ function ordinal(n: number): string {
 /**
  * Explain how the photo was placed. Geocoded captions name the address,
  * corner, street, place or quarter they were matched to (see pipeline/rpr/geocode.py).
+ * A recorded point that different views share is said to be a place.
  */
 export function positionLabel(p: PhotoProps): string {
   const x = extraOf(p)
+  if (x.position_of === 'place' && typeof x.shared_point === 'number') {
+    // The archive gives one point to every photo of a place (pipeline/rpr/sources/kahn.py).
+    const days = typeof x.shared_dates === 'number' && x.shared_dates > 1 ? `${x.shared_dates} dates` : 'the same day'
+    return `The place shown or visited, not where the camera stood: the archive puts ${x.shared_point} photos of ${days} on this one point`
+  }
   if (p.pose !== 'geocoded' || typeof x.geocoded_street !== 'string') return POSE_LABELS[p.pose] ?? p.pose
   const place = x.geocoded_street.replace(/ \d{5} Paris$/, '')
   const elsewhere =
