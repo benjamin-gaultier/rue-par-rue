@@ -18,3 +18,5 @@ Notes:
 - Mount cropping exists in `pipeline/rpr/sources/depth.py`.
 - Around the Cité: 1,166 photos dated within three years in 1900–1929 (690 Albert-Kahn, 476 Paris Musées). Fetch Kahn images only for the licences cleared by `era1920-kahn-licence`.
 - The app reads `photos.geojson` through `web/src/photos.ts`; add the camera to its types, unused for now.
+- Kahn licences are settled (DATA_SOURCES.md, "Albert-Kahn licences"): fetch only photos whose `license` is in `rpr.sources.kahn.DERIVABLE`. Around the Cité that is 550 of the 588 Kahn photos dated within three years (38 are not cleared).
+- Kahn images without an account stop at 800 px on the long side (the open data files). The 2,560 px files need an account on the museum's portal: see `era1920-kahn-large-images`. Work with 800 px until then.

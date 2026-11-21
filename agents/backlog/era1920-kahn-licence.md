@@ -1,7 +1,8 @@
 ---
 stream: era1920
 priority: 1
-status: open
+status: done
+done: 2026-11-21, PR #25. Every Kahn photo carries its licence; of the 3,994 dated 1900–1929, 3,718 may become textures (credit as for CC BY 4.0) and 276 may not.
 added: 2026-11-21
 needs: []
 ---
