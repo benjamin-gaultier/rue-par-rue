@@ -123,3 +123,46 @@ def test_box_share_and_edge():
     assert vp.box_share((50, 50, 10, 10), (0, 0, 20, 20)) == 0
     assert vp.touches_edge((0, 400, 700, 20), (1000, 700))
     assert not vp.touches_edge((200, 300, 200, 400), (1000, 700))
+
+
+def test_a_corrected_number_keeps_the_number_written_on_the_sheet():
+    assert vp.plan_street("Paris - Arcole (rue d') n°22 [en fait : 20]") == ("rue d arcole", "22")
+    assert vp.plan_numbers("Paris - Chanoinesse (rue) n°20 [en fait 24]") == ["20"]
+    assert vp.plan_numbers("Paris - Cloître-Notre-Dame (rue du) n°24 [en fait : 24 et 26]") == ["24"]
+    assert vp.plan_numbers("Paris - Marmousets (rue des) n°18 bis [en fait : 22]") == ["18bis"]
+    # Brackets that are not a correction are part of the number.
+    assert vp.plan_numbers("Paris - Orfèvres (quai des) n°4 [BIS]") == ["4bis"]
+    assert vp.plan_street("Paris - Cité (quai de la) n°sans numéro : au bord du quai, plan de 4 bateaux") is None
+
+
+def test_second_addresses_need_a_number_and_skip_corrections():
+    detail = "division ou quartier : Cité ; et 3 rue des Deux-Ermites ; actuellement rue de Lutèce ; propriétaire : Aune"
+    assert vp.second_addresses(detail) == [("rue des deux ermites", ["3"])]
+    assert vp.second_addresses("quartier : Cité ; et 2 rue Chanoinesse [Fournel propriétaire] ; et quai de la Cité") == [
+        ("rue chanoinesse", ["2"])
+    ]
+    assert vp.second_addresses("quartier : Cité ; et 4 et 6 rue de Glatigny") == [("rue de glatigny", ["4", "6"])]
+    assert vp.second_addresses("quartier : Cité ; en fait : 13 quai Napoléon ; et rue Basse-des-Ursins") == []
+    assert vp.second_addresses("quartier : Palais de Justice ; et 22, rue de la Barillerie") == [("rue de la barillerie", ["22"])]
+
+
+def test_sheet_size_and_scale_bar():
+    assert vp.sheet_long_cm("35,7 x 22 cm") == 35.7
+    assert vp.sheet_long_cm("19 x 32 cm") == 32
+    assert vp.sheet_long_cm("") is None
+    assert round(vp.sheet_scale("14.8 cm / 30 m")) == 203
+    assert vp.sheet_scale("10 cm / 20 m") == 200
+    assert vp.sheet_scale("sans échelle") == 200
+    assert vp.sheet_scale("incomplète") == 200
+
+
+def test_a_fit_at_the_wrong_scale_is_refused():
+    # A 30 cm sheet at 1:200 covers 60 m.
+    assert vp.scale_holds(vp.fitted_scale(63, 30.0), 200)
+    # Rue du Milieu-des-Ursins n°4: fitted so that a 37.4 cm sheet would cover 351 m.
+    assert not vp.scale_holds(vp.fitted_scale(351, 37.4), vp.sheet_scale("14.8 cm / 30 m"))
+    assert not vp.scale_holds(vp.fitted_scale(38, 32.1), 200)
+    # A sheet drawn at 1:400 may cover twice the ground.
+    assert vp.scale_holds(vp.fitted_scale(120, 30.0), vp.sheet_scale("7.4 cm / 30 m"))
+    # No paper size in the index: nothing to check against.
+    assert vp.scale_holds(vp.fitted_scale(351, None), 200)
