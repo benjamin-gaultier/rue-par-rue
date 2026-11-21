@@ -72,7 +72,9 @@ def test_streets_named_after_1836_are_not_used():
 
 
 def _sheet(tmp_path, draw):
-    import cv2
+    import pytest
+
+    cv2 = pytest.importorskip("cv2")  # [vision] extra; CI installs only [dev,geo]
     import numpy as np
 
     img = np.full((1000, 700, 3), (200, 222, 228), np.uint8)  # yellowed paper (BGR)
