@@ -1,0 +1,16 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Shader capture</title>
+<!-- Opened by check.py in headless Chrome: runs harness.js against the Vite dev server given in ?vite=,
+     then posts its report as "done", or what went wrong as "error". -->
+<script type="module">
+  const post = (name, body) => fetch('/' + name, { method: 'POST', body })
+  try {
+    window.__harnessTag = 'check'
+    window.__harnessBase = new URLSearchParams(location.search).get('vite') || ''
+    await import('/harness.js')
+    await post('done', await window.__harness)
+  } catch (e) {
+    await post('error', String((e && e.stack) || e))
+  }
+</script>

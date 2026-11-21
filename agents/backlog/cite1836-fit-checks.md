@@ -12,3 +12,5 @@ Why: IoU alone accepts some wrong placements. Rue du Haut-Moulin n°3 (parcel PA
 Done when: the outliers are checked against the scale bar or the dimensions written on the sheet, an edge-alignment test (the main walls parallel to the parcel's sides, within a few degrees) is added to the registration, and wrong fits are rejected or corrected, with the numbers in the PR.
 
 Notes: `register()` in `pipeline/rpr/sources/vasserot_plans.py`. Ink readings already have a 100 m bound (`MAX_INK_SHEET_M`); one bound for all sheets may do, if the scale bars agree.
+
+Progress (PR #23): the scale half is done. Each fit is checked against the sheet's own scale (1:200, or its scale bar) through the paper size in the index. It rejects the four outliers named above, rue du Haut-Moulin n°3 (it came out at 1:328) and rue des Marmousets n°20 (1:119). Left for this item: the edge-alignment test. Fits to look at first: Cocatrix n°16 (plan 8133, IoU 0.788) and Marmousets n°18 bis (plan 8221, IoU 0.774) fit loosely; plans 8078, 8272 and 8273 have the right outline but a patchy built area.
