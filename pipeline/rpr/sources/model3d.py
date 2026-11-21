@@ -23,20 +23,8 @@ from pathlib import Path
 from typing import Any, Callable
 
 from rpr import net, paths
+from rpr.areas import AREAS, area_file, manifest_file  # AREAS: other modules import it from here
 
-AREAS = {
-    # Île de la Cité and the quays facing it. `focus` is the area rendered
-    # with detailed buildings (facades, roofs) in the app: with
-    # `focus_river_m`, only the islands and the banks within that many metres
-    # of the Seine inside it (site.focus_area), so the whole island and the
-    # facing quays are detailed and the streets behind stay plain blocks.
-    "cite": {
-        "name": "Île de la Cité",
-        "bbox": (2.3385, 48.8505, 2.3565, 48.8590),
-        "focus": (2.3385, 48.8505, 2.3565, 48.8590),
-        "focus_river_m": 90,
-    },
-}
 
 # APUR roof codes (c_forme_toit): 1 flat, 2 two-pitch tile, 3 two-pitch small-scale,
 # 4 brisis-terrasson (the Paris mansard). Materials (c_toiture_mat): T tile,
@@ -119,7 +107,7 @@ def load_traced(area: str, to_metric) -> dict[str, dict]:
     from shapely.geometry import Polygon, MultiPolygon, shape
     from shapely.ops import transform
 
-    path = paths.DATA_DIR / "3d" / f"vasserot-traced-{area}.geojson"
+    path = area_file(area, "traced")
     if not path.exists():
         return {}
     out = {}
@@ -201,7 +189,7 @@ def load_institutions(area: str) -> tuple[list[dict], set[str]]:
     """Traced institutions (python -m rpr institutions) and the parcels they replace."""
     from rpr.sources.institutions import INSTITUTIONS
 
-    path = paths.DATA_DIR / "3d" / f"institutions-{area}.geojson"
+    path = area_file(area, "institutions")
     if not path.exists():
         return [], set()
     features = json.loads(path.read_text())["features"]
@@ -449,7 +437,7 @@ def build(area: str, log: Callable[[str], Any] = print) -> dict:
     log(f"model3d: {len(reconstructed)} demolished buildings reconstructed ({used_traced} with traced footprints); skipped {skipped}")
 
     features = survivors + later + reconstructed
-    out = paths.DATA_DIR / "3d" / f"{area}-1836.geojson"
+    out = area_file(area, "model")
     out.parent.mkdir(parents=True, exist_ok=True)
     coll = {
         "type": "FeatureCollection",
@@ -474,7 +462,7 @@ def build(area: str, log: Callable[[str], Any] = print) -> dict:
     out.write_text(text)
     log(f"model3d: wrote {out.relative_to(paths.REPO_ROOT)} ({len(text) / 1e6:.1f} MB)")
     return {
-        "file": f"3d/{area}-1836.geojson",
+        "file": manifest_file(area, "model"),
         "area": cfg["name"],
         "standing": len(survivors),
         "later": len(later),

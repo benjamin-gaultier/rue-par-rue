@@ -25,7 +25,6 @@ import * as S from './cityshaders'
 import * as G from './landmarkgen'
 import { propFragment, propVertex } from './landmarkshaders'
 
-export const LANDMARKS_URL = 'data/3d/landmarks-cite.json'
 
 type LonLat = [number, number]
 type Life = G.Life
@@ -279,8 +278,8 @@ const landmarks: CityModule = {
   name: 'landmarks',
 
   async prepare(ctx) {
-    const res = await fetch(`${ctx.base}${LANDMARKS_URL}`)
-    if (!res.ok) throw new Error(`landmarks: ${res.status} for ${LANDMARKS_URL}`)
+    const res = await fetch(`${ctx.base}${ctx.files.landmarks}`)
+    if (!res.ok) throw new Error(`landmarks: ${res.status} for ${ctx.files.landmarks}`)
     file = (await res.json()) as LandmarkFile
     applied = applyLandmarks(ctx.buildings.specs, ctx.buildings.props, file)
   },

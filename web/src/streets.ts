@@ -47,8 +47,6 @@ import {
 } from './streetgen'
 import * as SS from './streetshaders'
 
-export const STREETS_URL = 'data/3d/streets-cite.json'
-const GREENERY_URL = 'data/3d/greenery-cite.json'
 /** Pavements bigger than this are squares (the parvis), paved with stone slabs. */
 const SQUARE_M2 = 1500
 /** Build what lies within this distance of the detailed ground box. */
@@ -524,11 +522,11 @@ const streets: CityModule = {
   name: 'streets',
   async build(ctx: CityContext) {
     const [data, greenery] = await Promise.all([
-      fetch(`${ctx.base}${STREETS_URL}`).then((r) => {
+      fetch(`${ctx.base}${ctx.files.streets}`).then((r) => {
         if (!r.ok) throw new Error(`streets: ${r.status}`)
         return r.json() as Promise<StreetsData>
       }),
-      fetch(`${ctx.base}${GREENERY_URL}`)
+      fetch(`${ctx.base}${ctx.files.greenery}`)
         .then((r) => (r.ok ? (r.json() as Promise<Greenery>) : undefined))
         .catch(() => undefined)
     ])

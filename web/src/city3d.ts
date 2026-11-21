@@ -37,9 +37,7 @@ import { addBridgeHistory, type BridgeProps } from './bridges'
 import { packMesh } from './meshpack'
 import { signAtlas } from './signs'
 import type { ModelProps } from './model3d'
-
-export const SITE_URL = 'data/3d/site-cite.geojson'
-export const GREENERY_URL = 'data/3d/greenery-cite.json'
+import type { AreaFiles } from './areas'
 
 interface Greenery {
   gardens: { features: { geometry: Geometry; properties: { name: string; from: number; until?: number; dated: boolean; note: string } }[] }
@@ -244,6 +242,8 @@ export interface PrepareContext {
   project: (lonlat: number[]) => Pt
   /** URL prefix for data files: fetch(`${ctx.base}data/3d/…`). */
   base: string
+  /** The data files of the area being drawn (areas.ts): fetch(`${ctx.base}${ctx.files.streets}`). */
+  files: AreaFiles
   model: { features: Feature<CityProps>[]; metadata?: Record<string, unknown> }
   site: { features: Feature<Record<string, unknown>>[]; metadata?: Record<string, unknown> }
   /** The detailed buildings; index i is the owner id of their wall and roof triangles. */
@@ -337,15 +337,13 @@ export class City3D implements CustomLayerInterface {
   }
 
   /** Build every mesh from the model and site files, then let each module add its own. */
-  async load(modelUrl: string, siteUrl: string, greeneryUrl?: string, modules: CityModule[] = [], base = '') {
+  async load(files: AreaFiles, modules: CityModule[] = [], base = '') {
     const [model, site, greenery] = await Promise.all([
-      fetch(modelUrl).then((r) => r.json()),
-      fetch(siteUrl).then((r) => r.json()),
-      greeneryUrl
-        ? fetch(greeneryUrl)
-            .then((r) => (r.ok ? (r.json() as Promise<Greenery>) : undefined))
-            .catch(() => undefined)
-        : Promise.resolve(undefined)
+      fetch(base + files.model).then((r) => r.json()),
+      fetch(base + files.site).then((r) => r.json()),
+      fetch(base + files.greenery)
+        .then((r) => (r.ok ? (r.json() as Promise<Greenery>) : undefined))
+        .catch(() => undefined)
     ])
     const features = (model.features as Feature<CityProps>[]).filter((f) => f.properties.focus)
     const cathedral = (site.features as Feature<{ kind: string; ids?: string[]; axis_bearing?: number }>[]).find((f) => f.properties.kind === 'cathedral')?.properties
@@ -362,7 +360,7 @@ export class City3D implements CustomLayerInterface {
       this.specs.push(spec)
       this.props.push(f.properties)
     }
-    const prepare: PrepareContext = { project: this.project, base, model, site, buildings: { specs: this.specs, props: this.props } }
+    const prepare: PrepareContext = { project: this.project, base, files, model, site, buildings: { specs: this.specs, props: this.props } }
     for (const mod of modules) {
       try {
         await mod.prepare?.(prepare)

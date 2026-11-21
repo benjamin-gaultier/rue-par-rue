@@ -25,6 +25,7 @@ import urllib.parse
 from typing import Any, Callable
 
 from rpr import net, paths
+from rpr.areas import area_file, manifest_file
 
 TREES = "https://opendata.paris.fr/api/explore/v2.1/catalog/datasets/les-arbres/exports/json"
 APUR_FACILITIES = "https://carto2.apur.org/apur/rest/services/OPENDATA/EQUIPEMENT_EMPRISE/MapServer/0/query"
@@ -121,7 +122,7 @@ def palace_gardens(area: str, water: list) -> list[dict]:
 
     from rpr.sources.institutions import INSTITUTIONS, load_parcels
 
-    path = paths.DATA_DIR / "3d" / f"institutions-{area}.geojson"
+    path = area_file(area, "institutions")
     if not path.exists():
         return []
     cfg = INSTITUTIONS["archeveche"]
@@ -154,8 +155,8 @@ def build(area: str = "cite", log: Callable[[str], Any] = print) -> dict:
     from shapely.geometry import Point, box, mapping, shape
     from shapely.strtree import STRtree
 
-    site = json.loads((paths.DATA_DIR / "3d" / f"site-{area}.geojson").read_text())
-    model = json.loads((paths.DATA_DIR / "3d" / f"{area}-1836.geojson").read_text())
+    site = json.loads((area_file(area, "site")).read_text())
+    model = json.loads((area_file(area, "model")).read_text())
     ground_box = tuple(site["metadata"]["ground_box"])
     water = [shape(f["geometry"]) for f in site["features"] if f["properties"]["kind"] == "water"]
     bridges = [shape(f["geometry"]) for f in site["features"] if f["properties"]["kind"] == "bridge"]
@@ -244,7 +245,7 @@ def build(area: str = "cite", log: Callable[[str], Any] = print) -> dict:
             ]
         )
     rows.sort()
-    out = paths.DATA_DIR / "3d" / f"greenery-{area}.json"
+    out = area_file(area, "greenery")
     out.write_text(
         json.dumps(
             {
@@ -262,4 +263,4 @@ def build(area: str = "cite", log: Callable[[str], Any] = print) -> dict:
         )
     )
     log(f"greenery: {len(gardens)} gardens ({sum(g['properties']['dated'] for g in gardens)} dated), {len(rows)} trees; skipped {skipped} -> {out.relative_to(paths.REPO_ROOT)}")
-    return {"area": area, "file": f"3d/greenery-{area}.json", "gardens": len(gardens), "trees": len(rows)}
+    return {"area": area, "file": manifest_file(area, "greenery"), "gardens": len(gardens), "trees": len(rows)}

@@ -37,6 +37,7 @@ from collections import defaultdict
 from typing import Any, Callable, Iterable
 
 from rpr import net, paths
+from rpr.areas import area_file, manifest_file
 from rpr.sources.model3d import AREAS, DEMOLISHED_BY, VASSEROT_EPSG
 
 CACHE = paths.REPO_ROOT / "pipeline" / "cache" / "streets"
@@ -481,7 +482,7 @@ def build(area: str = "cite", log: Callable[[str], Any] = print) -> dict:
     to_wgs = Transformer.from_crs(2154, 4326, always_xy=True).transform
 
     water = transform(to_m, river(bbox)).buffer(0)
-    model = json.loads((paths.DATA_DIR / "3d" / f"{area}-1836.geojson").read_text())
+    model = json.loads((area_file(area, "model")).read_text())
     old_shapes, today_shapes = [], []
     for f in model["features"]:
         g = make_valid(transform(to_m, shape(f["geometry"])))
@@ -795,7 +796,7 @@ def build(area: str = "cite", log: Callable[[str], Any] = print) -> dict:
 
     # Trees, so benches and columns keep clear of them.
     try:
-        greenery = json.loads((paths.DATA_DIR / "3d" / f"greenery-{area}.json").read_text())
+        greenery = json.loads((area_file(area, "greenery")).read_text())
         tf = greenery["trees"]["fields"]
         furniture_pts += [to_m(r[tf.index("lon")], r[tf.index("lat")]) for r in greenery["trees"]["rows"]]
     except (OSError, KeyError, ValueError):
@@ -845,7 +846,7 @@ def build(area: str = "cite", log: Callable[[str], Any] = print) -> dict:
                 item("plaque", fx + out[0] * 0.04, fy + out[1] * 0.04, math.atan2(out[1], out[0]), MODERN_FROM, OPEN)
 
     groups = group_items(items)
-    out = paths.DATA_DIR / "3d" / f"streets-{area}.json"
+    out = area_file(area, "streets")
     data = {
         "metadata": {
             "origin": list(origin),
@@ -876,7 +877,7 @@ def build(area: str = "cite", log: Callable[[str], Any] = print) -> dict:
     out.write_text(json.dumps(data, ensure_ascii=False, separators=(",", ":")))
     size = out.stat().st_size
     log(f"streets: {dict(stats)} -> {out.relative_to(paths.REPO_ROOT)} ({size / 1000:.0f} kB)")
-    return {"area": area, "file": f"3d/streets-{area}.json", "bytes": size, **{k: v for k, v in stats.items()}}
+    return {"area": area, "file": manifest_file(area, "streets"), "bytes": size, **{k: v for k, v in stats.items()}}
 
 
 def group_items(items: list[list]) -> list[list]:

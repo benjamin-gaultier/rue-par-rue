@@ -20,6 +20,7 @@ import urllib.parse
 from typing import Any, Callable
 
 from rpr import net, paths
+from rpr.areas import area_file, manifest_file
 from rpr.sources.model3d import AREAS
 
 WFS = "https://data.geopf.fr/wfs/ows"
@@ -741,7 +742,7 @@ def build(area: str = "cite", log: Callable[[str], Any] = print) -> dict:
         props = {k: v for k, v in lm.items() if k != "at"}
         features.append({"type": "Feature", "properties": props, "geometry": {"type": "Point", "coordinates": list(lm["at"])}})
 
-    out = paths.DATA_DIR / "3d" / f"site-{area}.geojson"
+    out = area_file(area, "site")
     text = json.dumps(
         {
             "type": "FeatureCollection",
@@ -761,4 +762,4 @@ def build(area: str = "cite", log: Callable[[str], Any] = print) -> dict:
     text = re.sub(r"(-?\d+\.\d{7})\d+", r"\1", text)  # about 1 cm
     out.write_text(text)
     log(f"site: river at {level} m, {bridges} bridge crossing(s), {len(LANDMARKS.get(area, []))} landmark detail(s) -> {out.relative_to(paths.REPO_ROOT)} ({len(text) / 1e3:.0f} kB)")
-    return {"area": area, "file": f"3d/site-{area}.geojson", "water_level_m": level, "bridges": bridges}
+    return {"area": area, "file": manifest_file(area, "site"), "water_level_m": level, "bridges": bridges}

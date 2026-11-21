@@ -28,6 +28,7 @@ from pathlib import Path
 from typing import Any, Callable
 
 from rpr import net, paths
+from rpr.areas import AREAS, area_file
 
 DATASET_API = "https://www.data.gouv.fr/api/1/datasets/plans-cadastraux-des-immeubles-de-paris-1809-1856/"
 ADDRESS_DRUID = "pn650tp5621"
@@ -35,11 +36,6 @@ ADDRESS_STEM = "Num_Voies_Vasserot"
 PARCEL_STEM = "Vasserots_parcelles2_v"
 STACKS = "https://stacks.stanford.edu/file/druid:{druid}/{name}"
 VASSEROT_EPSG = 27561
-
-# Quarters as written in the plans' index and in the ALPAGE layers.
-AREA_QUARTERS = {
-    "cite": {"plans": ("Cité", "Palais de Justice"), "alpage": ("Cite", "Palais de Justice")},
-}
 
 MIN_IOU = 0.72
 # The ground a sheet's long side covers once fitted. On the Cité, 73 of the 77
@@ -290,11 +286,19 @@ class Plan:
     scale: float = USUAL_SCALE
 
 
+def quarters_of(area: str) -> dict:
+    """The area's quarters as written in the plans' index (`plans`) and in the ALPAGE layers (`alpage`)."""
+    quarters = AREAS[area].get("vasserot")
+    if not quarters:
+        raise ValueError(f"no Vasserot quarters for the area {area!r}: name them under 'vasserot' in AREAS (rpr/areas.py)")
+    return quarters
+
+
 def load_plans(area: str, log: Callable[[str], Any]) -> list[Plan]:
     meta = net.fetch_json(DATASET_API)
     csv_url = next(r["url"] for r in meta["resources"] if r["format"].lower() == "csv")
     text = net.fetch_bytes(csv_url, timeout=120).decode("utf-8-sig")
-    wanted = AREA_QUARTERS[area]["plans"]
+    wanted = quarters_of(area)["plans"]
     plans = []
     for r in csv.DictReader(io.StringIO(text), delimiter=";"):
         m = re.search(r"quartier\s*:\s*([^;]+)", r["detail"])
@@ -579,7 +583,7 @@ def trace(area: str = "cite", log: Callable[[str], Any] = print, limit: int | No
 
     to_l93 = Transformer.from_crs(VASSEROT_EPSG, 2154, always_xy=True).transform
     l93_to_wgs = Transformer.from_crs(2154, 4326, always_xy=True).transform
-    alpage_q = AREA_QUARTERS[area]["alpage"]
+    alpage_q = quarters_of(area)["alpage"]
 
     # Addresses -> parcel ids.
     addr = shapefile.Reader(str(download_layer(ADDRESS_DRUID, ADDRESS_STEM, log)), encoding="latin-1")
@@ -720,4 +724,4 @@ def trace(area: str = "cite", log: Callable[[str], Any] = print, limit: int | No
 
 
 def traced_path(area: str) -> Path:
-    return paths.DATA_DIR / "3d" / f"vasserot-traced-{area}.geojson"
+    return area_file(area, "traced")

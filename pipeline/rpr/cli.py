@@ -7,6 +7,7 @@ import json
 from datetime import datetime, timezone
 
 from rpr import paths
+from rpr.areas import area_names
 from rpr.photo import build_index, write_source
 
 
@@ -145,6 +146,12 @@ def cmd_index(args: argparse.Namespace) -> None:
     print(f"index: {manifest['photos']['count']} photos from {len(manifest['photos']['sources'])} sources")
 
 
+def add_area(parser: argparse.ArgumentParser) -> None:
+    """`--area`: any area of AREAS (rpr/areas.py), the first by default."""
+    names = area_names()
+    parser.add_argument("--area", choices=names, default=names[0])
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(prog="rpr", description="Rue par Rue data pipeline")
     sub = parser.add_subparsers(dest="command", required=True)
@@ -166,16 +173,16 @@ def main(argv: list[str] | None = None) -> int:
     p.set_defaults(func=cmd_parismusees)
 
     p = sub.add_parser("model3d", help="3D massing model of an area in 1836 (needs the [geo] extras)")
-    p.add_argument("--area", choices=["cite"], default="cite")
+    add_area(p)
     p.set_defaults(func=cmd_model3d)
 
     p = sub.add_parser("trace", help="trace building footprints from Vasserot's plans (needs [geo] and [vision])")
-    p.add_argument("--area", choices=["cite"], default="cite")
+    add_area(p)
     p.add_argument("--limit", type=int, default=None)
     p.set_defaults(func=cmd_trace)
 
     p = sub.add_parser("thumbs", help="same-origin thumbnails for photo frames in the 3D view (needs Pillow, OpenCV)")
-    p.add_argument("--area", choices=["cite"], default="cite")
+    add_area(p)
     p.add_argument("--rebuild", action="store_true", help="redo existing thumbnails")
     p.set_defaults(func=cmd_thumbs)
 
@@ -184,27 +191,27 @@ def main(argv: list[str] | None = None) -> int:
     p.set_defaults(func=cmd_depth)
 
     p = sub.add_parser("site", help="the Seine, bridges and landmark details of a model area (IGN BD TOPO, needs shapely)")
-    p.add_argument("--area", choices=["cite"], default="cite")
+    add_area(p)
     p.set_defaults(func=cmd_site)
 
     p = sub.add_parser("institutions", help="Hôtel-Dieu and archbishop's palace traced from Verniquet's atlas (needs [geo,vision] and the atlas screenshots)")
-    p.add_argument("--area", choices=["cite"], default="cite")
+    add_area(p)
     p.set_defaults(func=cmd_institutions)
 
     p = sub.add_parser("greenery", help="gardens and trees of a model area (Paris tree register, APUR; needs shapely)")
-    p.add_argument("--area", choices=["cite"], default="cite")
+    add_area(p)
     p.set_defaults(func=cmd_greenery)
 
     p = sub.add_parser("streets", help="streets and street furniture of a model area through time (Vasserot, plan de voirie; needs shapely)")
-    p.add_argument("--area", choices=["cite"], default="cite")
+    add_area(p)
     p.set_defaults(func=cmd_streets)
 
     p = sub.add_parser("landmarks", help="landmarks of a model area through time: styles, dates, spires, towers, statues (needs shapely)")
-    p.add_argument("--area", choices=["cite"], default="cite")
+    add_area(p)
     p.set_defaults(func=cmd_landmarks)
 
     p = sub.add_parser("vehicles", help="period vehicles and boats of a model area (BD TOPO, Vasserot; needs shapely)")
-    p.add_argument("--area", choices=["cite"], default="cite")
+    add_area(p)
     p.add_argument("--refresh", action="store_true", help="download BD TOPO roads and river again")
     p.set_defaults(func=cmd_vehicles)
 

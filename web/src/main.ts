@@ -9,7 +9,8 @@ import {
   type MapGeoJSONFeature
 } from 'maplibre-gl'
 import { BASEMAPS, basemapForYear, YEAR_MAX } from './timeline'
-import { CITE_BOUNDS, CITE_CAMERA, CITE_VIEW, describeBuilding, Model3D, MODEL_COLORS, MODEL_LABELS, MODEL_URL, type ModelProps } from './model3d'
+import { describeBuilding, Model3D, MODEL_COLORS, MODEL_LABELS, type ModelProps } from './model3d'
+import { AREA, areaCenter, inArea } from './areas'
 import type { PhotoFrames } from './frames3d'
 import type { City3D } from './city3d'
 import type { DepthIndex } from './depth'
@@ -52,7 +53,7 @@ map.once('idle', foldCredits)
 map.addControl(new ScaleControl({ unit: 'metric' }), 'bottom-left')
 
 const basemaps = new BasemapSwitcher(map, BASE)
-const model = new Model3D(map, BASE, 'selection-cone')
+const model = new Model3D(map, BASE, 'selection-cone', AREA)
 let ready = false // set once the load handler has added sources and layers
 let photos: PhotoFeature[] = []
 const byId = new Map<string, PhotoFeature>()
@@ -257,7 +258,7 @@ for (const kind of ['standing', 'traced', 'reconstructed', 'later'] as const) {
 }
 
 /* Photos as frames in the 3D streets (frames3d.ts, loaded on demand). */
-const CITE_CENTER: [number, number] = [(CITE_BOUNDS[0] + CITE_BOUNDS[2]) / 2, (CITE_BOUNDS[1] + CITE_BOUNDS[3]) / 2]
+const AREA_CENTER = areaCenter(AREA)
 let frames: PhotoFrames | undefined
 let framesModule: typeof import('./frames3d') | undefined
 let thumbIndex: Record<string, string> = {}
@@ -271,7 +272,7 @@ async function ensureFrames() {
     thumbIndex = {}
   }
   frames = new framesModule.PhotoFrames(
-    CITE_CENTER,
+    AREA_CENTER,
     (f) => {
       const thumb = thumbIndex[f.properties.id]
       if (thumb) return `${BASE}data/3d/thumbs/${thumb}`
@@ -294,7 +295,7 @@ let cityLoading: Promise<void> | undefined
 function ensureCity(): Promise<void> {
   cityLoading ??= (async () => {
     try {
-      const [{ City3D, SITE_URL, GREENERY_URL }, { CITY_MODULES }] = await Promise.all([import('./city3d'), import('./citymodules')])
+      const [{ City3D }, { CITY_MODULES }] = await Promise.all([import('./city3d'), import('./citymodules')])
       const modules = (
         await Promise.all(
           CITY_MODULES.map((load) =>
@@ -307,7 +308,7 @@ function ensureCity(): Promise<void> {
           )
         )
       ).filter((m): m is NonNullable<typeof m> => m !== undefined)
-      const layer = new City3D(CITE_CENTER)
+      const layer = new City3D(AREA_CENTER)
       layer.onFail = (reason) => {
         // Fall back to the plain blocks, and say why.
         model.setHideFocus(false)
@@ -318,7 +319,7 @@ function ensureCity(): Promise<void> {
         note.textContent = `The detailed island cannot be drawn on this device: ${reason}. Showing plain blocks instead.`
         banner3d.querySelector('.banner-3d-text')?.append(note)
       }
-      await layer.load(BASE + MODEL_URL, BASE + SITE_URL, BASE + GREENERY_URL, modules, BASE)
+      await layer.load(AREA.files, modules, BASE)
       map.addLayer(layer, map.getLayer('photo-frames') ? 'photo-frames' : undefined)
       city = layer
       city.setYear(state.year)
@@ -336,7 +337,7 @@ function ensureCity(): Promise<void> {
 function refreshFrames() {
   if (!frames || !framesModule) return
   if (!model.active || !controls.photos) return frames.setGroups([])
-  const groups = framesModule.groupPhotos(photos, state.year, controls.allYears, CITE_BOUNDS, undefined, (f) => f.properties.id in depthIndex)
+  const groups = framesModule.groupPhotos(photos, state.year, controls.allYears, AREA.bounds, undefined, (f) => f.properties.id in depthIndex)
   const c = map.getCenter()
   frames.setGroups(framesModule.nearestGroups(groups, [c.lng, c.lat], 120))
 }
@@ -376,21 +377,20 @@ function exit3D() {
 }
 
 /* Walking at street level (walk.ts). */
-const walker = new Walker(map, BASE + MODEL_URL, () => state.year)
+const walker = new Walker(map, BASE + AREA.files.model, () => state.year)
 const walkUi = $('#walk-ui')
-const DEFAULT_WALK_START: [number, number] = [2.34838, 48.85336] // on the parvis, facing Notre-Dame
 
 async function startWalk() {
   if (!model.active) enter3D(false)
   await ensureCity() // so the river blocks the way from the first step
   const c = map.getCenter()
-  const inside = c.lng > CITE_BOUNDS[0] && c.lng < CITE_BOUNDS[2] && c.lat > CITE_BOUNDS[1] && c.lat < CITE_BOUNDS[3]
+  const inside = inArea(AREA, c.lng, c.lat)
   // Straight after the fly-in the centre is the camera target, at the foot of
   // Notre-Dame's tower: start on the parvis instead, facing the west front.
-  const [tx, ty] = CITE_CAMERA.to
+  const [tx, ty] = AREA.camera.to
   const atTarget = Math.hypot((c.lng - tx) * 73300, (c.lat - ty) * 111200) < 40
   const here = inside && !atTarget
-  await walker.start(here ? [c.lng, c.lat] : DEFAULT_WALK_START, here ? map.getBearing() : 115)
+  await walker.start(here ? [c.lng, c.lat] : AREA.walk.start, here ? map.getBearing() : AREA.walk.bearing)
   basemaps.setDimmed(true)
   walkUi.hidden = false
   banner3d.classList.add('is-walking')
@@ -469,7 +469,7 @@ map.on('load', async () => {
   setYear(state.year)
   if (initial.view3d) {
     enter3D(false)
-    if (initial.pitch === undefined) map.jumpTo(CITE_VIEW)
+    if (initial.pitch === undefined) map.jumpTo(AREA.view)
     else map.jumpTo({ pitch: initial.pitch, bearing: initial.bearing ?? 0 })
   }
 

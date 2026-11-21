@@ -27,6 +27,7 @@ from pathlib import Path
 from typing import Any, Callable
 
 from rpr import paths
+from rpr.areas import area_file, manifest_file
 
 CAPTURES = paths.REPO_ROOT / "pipeline" / "cache" / "verniquet"
 
@@ -149,7 +150,7 @@ def build(area: str = "cite", log: Callable[[str], Any] = print) -> dict:
     hatched = trace_captures()
     if hatched is None:
         raise SystemExit(f"No atlas screenshots in {CAPTURES}: run pipeline/scripts/capture_verniquet.cjs first")
-    site = json.loads((paths.DATA_DIR / "3d" / f"site-{area}.geojson").read_text())
+    site = json.loads((area_file(area, "site")).read_text())
     water = unary_union([shape(f["geometry"]) for f in site["features"] if f["properties"]["kind"] == "water"])
     to_l93 = Transformer.from_crs(4326, 2154, always_xy=True).transform
     from_l93 = Transformer.from_crs(2154, 4326, always_xy=True).transform
@@ -200,10 +201,10 @@ def build(area: str = "cite", log: Callable[[str], Any] = print) -> dict:
             else:
                 features.append({"type": "Feature", "properties": props, "geometry": mapping(geom)})
         log(f"institutions: {cfg['name']}: {len(pieces)} building(s), {round(sum(p.area for p in pieces))} m²")
-    out = paths.DATA_DIR / "3d" / f"institutions-{area}.geojson"
+    out = area_file(area, "institutions")
     text = json.dumps({"type": "FeatureCollection", "features": features}, ensure_ascii=False, separators=(",", ":"))
     out.write_text(_round_coords(text))
-    return {"area": area, "file": f"3d/institutions-{area}.geojson", "buildings": len(features)}
+    return {"area": area, "file": manifest_file(area, "institutions"), "buildings": len(features)}
 
 
 def _same_bank(p, q, water) -> bool:
