@@ -115,6 +115,22 @@ The detailed island has 3,463 buildings across all years (167,000 wall and roof 
 - Identical vertices are merged behind an index, normals are stored as bytes and years as 16-bit integers (`web/src/meshpack.ts`): GPU buffers come to about 20 MB, less than the old area's 23 MB.
 - Tree crowns have three levels of detail by distance (180, 80 and 20 faces, within 160 m, 450 m and beyond), refilled when the camera moves 30 m: about 318,000 triangles are drawn in a view over the island (308,000 before, with less than half the trees).
 
+On Windows, Chrome compiles every shader with Direct3D's FXC compiler before the first 3D frame. `python -I tools/fxc/check.py` (on a Windows PC, see [tools/fxc/README.md](tools/fxc/README.md)) compiles all 19 fragment shaders the app draws the same way, on a 1 MB stack, and fails when one takes more than 5 seconds. On 2026-11-21 (AMD Ryzen 7 5700X, d3dcompiler_47 10.0.26100.9711) they took 8.6 s in all, with no stack overflow:
+
+| Shader | HLSL kB | Compile s | Instruction slots |
+| --- | ---: | ---: | ---: |
+| walls-landmarks | 60 | 2.52 | 4,679 |
+| facades | 55 | 2.20 | 2,748 |
+| details | 38 | 1.27 | 1,846 |
+| walls-bridges | 41 | 1.12 | 2,473 |
+| walls-institutions | 28 | 0.50 | 1,551 |
+| walls | 22 | 0.38 | 1,231 |
+| decal | 11 | 0.15 | 757 |
+| roofs | 18 | 0.15 | 703 |
+| the 11 others | 1–6 each | 0.35 in all | 21–361 each |
+
+The wall shader with every family in one program, as it was before it was split, takes 4.72 s and 6,236 slots; the app no longer draws it.
+
 #### Streets through time
 
 `python -m rpr streets --area cite` (needs shapely) writes `web/public/data/3d/streets-cite.json` (about 415 kB) for the whole Cité area, and `web/src/streets.ts` draws it. There are two street networks:

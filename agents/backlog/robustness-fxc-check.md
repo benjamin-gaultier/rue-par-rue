@@ -1,7 +1,8 @@
 ---
 stream: robustness
 priority: 1
-status: open
+status: done
+done: 2026-11-21, PR #PRNUM, `python -I tools/fxc/check.py` compiles the 19 drawn fragment shaders in about 20 s; baseline 8.6 s in all, slowest walls-landmarks 2.52 s, no stack overflow
 added: 2026-11-20
 needs: []
 ---
