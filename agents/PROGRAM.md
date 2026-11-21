@@ -1,6 +1,6 @@
 # The agent program
 
-Four scheduled Claude sessions improve Rue par Rue on their own, one workstream each, on this PC. Each run finishes or advances one backlog item, ships it as a pull request, merges it when CI passes, and leaves the backlog ready for the next run. Read [CLAUDE.md](../CLAUDE.md) first: its standing rules apply to every run.
+Scheduled Claude sessions improve Rue par Rue on their own, one workstream each, on this PC. Each run finishes or advances one backlog item, ships it as a pull request, merges it when CI passes, and leaves the backlog ready for the next run. Read [CLAUDE.md](../CLAUDE.md) first: its standing rules apply to every run.
 
 ## Workstreams
 
@@ -10,6 +10,7 @@ Four scheduled Claude sessions improve Rue par Rue on their own, one workstream 
 | `cite1836` | The Île de la Cité as it stood in 1836: real footprints, addresses, shop names, roofs | Vasserot sheets traced (57 of 169 on 2026-11-20), median IoU, buildings drawn from a source rather than estimated |
 | `quarters` | Take the detailed 3D model beyond the Cité, one quarter at a time | quarters in 3D, buildings, data size, frame time on this PC and a phone-sized viewport |
 | `robustness` | Fast and reliable everywhere, Windows Chrome and phones first | FXC compile time per shader, time to first 3D frame, GPU memory, bundle size, test count |
+| `era1920` | The Cité of 1900–1929 with facades from its dated photos: the photo where a wall was photographed, a facade generated from the photos of the same street where it was not, each labelled (README roadmap, phase 5) | photos of the era with a full camera pose, walls with a photo, walls generated, walls still drawn by rule, texture download size and GPU memory |
 
 Each scheduled task names its stream. Work only on items of your stream.
 
@@ -50,7 +51,7 @@ gh pr create --draft --base main --title "<what it does, in plain words>" --body
 - One item per run, about two hours of work. If an item is bigger, do the first useful slice, and write the rest as new items.
 - Measure before and after with the stream's numbers. Spot-check data changes by hand (open 10 to 20 changed records and compare them with their source).
 - Add tests for new logic. Update the README where the numbers or commands it gives change.
-- Web changes: run the app from your worktree in the background on your stream's port, so the four streams never clash (`npm run dev -- --host 127.0.0.1 --port <port> --strictPort`; photos 5174, cite1836 5175, quarters 5176, robustness 5177), and look at the change in a browser when a browser tool is available (open `http://127.0.0.1:<port>`). Stop the server before the run ends. For anything 3D, open the Île de la Cité in 3D at 1790, 1836, 1900 and today, walk the streets, and check there is no "could not be drawn" message and no console error. If you could not look, say so in the PR.
+- Web changes: run the app from your worktree in the background on your stream's port, so the streams never clash (`npm run dev -- --host 127.0.0.1 --port <port> --strictPort`; photos 5174, cite1836 5175, quarters 5176, robustness 5177, era1920 5178), and look at the change in a browser when a browser tool is available (open `http://127.0.0.1:<port>`). Stop the server before the run ends. For anything 3D, open the Île de la Cité in 3D at 1790, 1836, 1900 and today, walk the streets, and check there is no "could not be drawn" message and no console error. If you could not look, say so in the PR.
 - In the same PR, set the item's `status: done` with a `done:` line (date, PR number, one-line result), and add new items for the follow-ups you found.
 
 ### 5. Check
@@ -125,7 +126,7 @@ One file per item, `agents/backlog/<stream>-<slug>.md`, so that parallel PRs nev
 
 ```markdown
 ---
-stream: photos            # photos | cite1836 | quarters | robustness
+stream: photos            # photos | cite1836 | quarters | robustness | era1920
 priority: 2               # 1 = first
 status: open              # open | blocked | done
 added: 2026-11-20
