@@ -42,6 +42,11 @@ AREA_QUARTERS = {
 }
 
 MIN_IOU = 0.72
+# The ground a sheet's long side covers once fitted. On the Cité, 73 of the 77
+# sheets traced from their wash cover 37-92 m (median 67 m). A reading of the
+# ink walls that covers more has caught only part of the drawing, scaled up to
+# fill the parcel (8240 and 8243, checked by eye, came out at 208 and 134 m).
+MAX_INK_SHEET_M = 100.0
 CACHE = paths.REPO_ROOT / "pipeline" / "cache" / "vasserot"
 
 # An address point with no street name takes the name of a street still
@@ -241,12 +246,88 @@ def download_layer(druid: str, stem: str, log: Callable[[str], Any]) -> Path:
 
 # ---------------------------------------------------------- segmentation
 
+INK_SHARE = 0.15
+"""A pink cluster inside an ink drawing whose box covers less than this share
+of the drawing's box is a stray mark or a single washed room, not the
+building: the sheet is read from its walls. (On the Cité the fragments cover
+1-14%; the smallest whole washed drawing found inside ink walls covers 16%.)"""
+
+SEGMENT_PINK = "pink wash"
+SEGMENT_INK = "ink walls"
+
+
+def biggest_cluster(mask, grow: int):
+    """The cluster of `mask` with the most pixels once marks `grow` px apart are
+    joined, as (cluster_mask, (x, y, w, h), pixels), or None."""
+    import cv2
+    import numpy as np
+
+    n, labels, stats, _ = cv2.connectedComponentsWithStats(cv2.dilate(mask, np.ones((grow, grow), np.uint8)), 8)
+    if n <= 1:
+        return None
+    weights = [int(((labels == i) & (mask > 0)).sum()) for i in range(1, n)]
+    k = 1 + int(np.argmax(weights))
+    return (labels == k).astype(np.uint8) * 255, tuple(int(v) for v in stats[k, :4]), weights[k - 1]
+
+
+def touches_edge(box, shape, edge: float = 0.03) -> bool:
+    """True for a cluster that runs into the sheet's margin: a strip of the
+    scanner's background or a frame, not a drawing."""
+    x, y, w, h = box
+    H, W = shape[:2]
+    return x < edge * W or y < edge * H or x + w > (1 - edge) * W or y + h > (1 - edge) * H
+
+
+def box_share(inner, outer) -> float:
+    """The share of box `outer` that box `inner` covers (boxes as x, y, w, h)."""
+    x0, y0 = max(inner[0], outer[0]), max(inner[1], outer[1])
+    x1, y1 = min(inner[0] + inner[2], outer[0] + outer[2]), min(inner[1] + inner[3], outer[1] + outer[3])
+    return max(0, x1 - x0) * max(0, y1 - y0) / float(outer[2] * outer[3])
+
+
+def ink_walls(L, paper_l: int):
+    """Thick dark strokes away from the margins: the walls of a drawing in ink.
+
+    Handwriting and thin lines are narrower than the 5 px opening and go.
+    """
+    import cv2
+    import numpy as np
+
+    dark = (L < paper_l - 60).astype(np.uint8) * 255
+    H, W = dark.shape
+    m = int(0.02 * max(H, W))
+    dark[:m], dark[-m:], dark[:, :m], dark[:, -m:] = 0, 0, 0, 0
+    return cv2.morphologyEx(dark, cv2.MORPH_OPEN, cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (5, 5)))
+
+
+def walled_area(walls):
+    """The area a wall drawing encloses: walls closed over door gaps, filled;
+    the convex hull when the closed walls still leave it open."""
+    import cv2
+    import numpy as np
+
+    closed = cv2.morphologyEx(walls, cv2.MORPH_CLOSE, np.ones((31, 31), np.uint8))
+    contours, _ = cv2.findContours(closed, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+    if not contours:
+        return None
+    main = max(contours, key=cv2.contourArea)
+    hull = cv2.convexHull(main)
+    filled = np.zeros_like(walls)
+    cv2.drawContours(filled, [hull if cv2.contourArea(main) < 0.6 * cv2.contourArea(hull) else main], -1, 255, thickness=-1)
+    return filled
+
+
 def segment(path: Path):
-    """Return (property_mask, built_mask, bbox, walls_only) for a sheet, or None.
+    """Return (property_mask, built_mask, bbox, walls_only, how) for a sheet, or None.
 
     Colour is measured against the sheet's own paper (Lab a* and b* minus
     their medians), so yellowed and pale sheets behave alike. Pink wash and
     pink walls are redder than the paper without being yellower.
+
+    Some sheets have no wash: the walls are drawn in ink only. When the pink
+    found is missing, runs into the margin, or is a small fragment inside the
+    ink drawing (INK_SHARE), the walled area is the building (`how` is
+    SEGMENT_INK and `walls_only` is True).
     """
     import cv2
     import numpy as np
@@ -261,22 +342,28 @@ def segment(path: Path):
     paper_l = int(np.median(L))
     pink = ((da >= 5) & (da - np.maximum(db, 0) // 2 >= 4) & (L > 60)).astype(np.uint8) * 255
     pink = cv2.morphologyEx(pink, cv2.MORPH_OPEN, np.ones((3, 3), np.uint8))
-    if int((pink > 0).sum()) < 800:
-        return None
 
     # The drawing is the largest cluster once rooms are merged.
-    clusters = cv2.dilate(pink, np.ones((25, 25), np.uint8))
-    n, labels, stats, _ = cv2.connectedComponentsWithStats(clusters, 8)
-    if n <= 1:
-        return None
-    weights = [int(((labels == i) & (pink > 0)).sum()) for i in range(1, n)]
-    k = 1 + int(np.argmax(weights))
-    x, y, w, h = (int(v) for v in stats[k, :4])
-    edge = 0.03
+    found = biggest_cluster(pink, 25) if int((pink > 0).sum()) >= 800 else None
     H, W = pink.shape
-    if x < edge * W and x + w > (1 - edge) * W:
-        return None  # a sheet-wide frame, not a building
-    cluster = (labels == k).astype(np.uint8) * 255
+    if found is not None:
+        x, y, w, h = found[1]
+        if x < 0.03 * W and x + w > 0.97 * W:
+            return None  # a sheet-wide frame, not a building
+    walls = ink_walls(L, paper_l)
+    ink = biggest_cluster(walls, 25)
+    if ink is not None and not touches_edge(ink[1], pink.shape):
+        enclosed = walled_area(cv2.bitwise_and(walls, ink[0]))
+        if enclosed is not None and (
+            found is None or touches_edge(found[1], pink.shape) or 0 < box_share(found[1], ink[1]) < INK_SHARE
+        ):
+            x, y, w, h = ink[1]
+            pad = 10
+            bbox = (max(0, x - pad), max(0, y - pad), min(W, x + w + pad), min(H, y + h + pad))
+            return enclosed, enclosed.copy(), bbox, True, SEGMENT_INK
+    if found is None or touches_edge(found[1], pink.shape):
+        return None
+    cluster, (x, y, w, h), _ = found
     built = cv2.bitwise_and(pink, cluster)
     built = cv2.morphologyEx(built, cv2.MORPH_CLOSE, np.ones((9, 9), np.uint8))
 
@@ -312,7 +399,7 @@ def segment(path: Path):
         built = prop_filled.copy()
     pad = 10
     bbox = (max(0, x - pad), max(0, y - pad), min(W, x + w + pad), min(H, y + h + pad))
-    return prop_filled, built, bbox, bool(walls_only)
+    return prop_filled, built, bbox, bool(walls_only), SEGMENT_PINK
 
 
 def mask_polygons(mask, simplify_px: float = 2.0):
@@ -483,11 +570,15 @@ def trace(area: str = "cite", log: Callable[[str], Any] = print, limit: int | No
         if seg is None:
             stats["no drawing found"] += 1
             continue
-        prop_mask, built_mask, _, walls_only = seg
+        prop_mask, built_mask, _, walls_only, drawing = seg
         outline = mask_polygons(prop_mask, 3.0)
         built = mask_polygons(built_mask, 2.0)
         fit = register(outline, parcels[pid])
         if fit is None or built is None or fit.iou < MIN_IOU:
+            stats["poor fit"] += 1
+            continue
+        sheet_m = fit.scale * max(prop_mask.shape[:2])
+        if drawing == SEGMENT_INK and sheet_m > MAX_INK_SHEET_M:
             stats["poor fit"] += 1
             continue
         footprint = place(to_math(built), fit).intersection(parcels[pid].buffer(0.5))
@@ -507,6 +598,8 @@ def trace(area: str = "cite", log: Callable[[str], Any] = print, limit: int | No
                     "iou": fit.iou,
                     "match": how,
                     "walls_only": walls_only,
+                    "drawing": drawing,
+                    "sheet_m": round(sheet_m),
                     "built_share": round(footprint.area / parcels[pid].area, 2),
                 },
                 "geometry": mapping(transform(l93_to_wgs, footprint)),
