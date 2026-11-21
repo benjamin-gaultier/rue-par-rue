@@ -150,7 +150,8 @@ export function positionLabel(p: PhotoProps): string {
     typeof x.caption_arrondissement === 'number'
       ? `; the caption says the ${ordinal(x.caption_arrondissement)} arrondissement, but it lies in the next one`
       : ''
-  const maybe = elsewhere + (x.ambiguous ? '; the caption could also mean another place' : '')
+  const respelt = x.respelt && typeof x.from_caption === 'string' ? `; the caption spells the street "${x.from_caption}"` : ''
+  const maybe = respelt + elsewhere + (x.ambiguous ? '; the caption could also mean another place' : '')
   switch (x.precision) {
     case 'number':
       return x.method === 'vasserot-1836'

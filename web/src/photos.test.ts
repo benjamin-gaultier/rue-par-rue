@@ -75,6 +75,17 @@ describe('positionLabel', () => {
     expect(positionLabel(q)).toContain('the 13th arrondissement')
   })
 
+  it("says when the caption's spelling was set aside", () => {
+    const p = photo('geocoded', {
+      geocoded_street: '36 Rue Quincampoix 75004 Paris',
+      precision: 'number',
+      method: 'ban',
+      from_caption: 'rue Quimcampoix',
+      respelt: true
+    })
+    expect(positionLabel(p)).toBe('At 36 Rue Quincampoix, the address in the caption; the caption spells the street "rue Quimcampoix"')
+  })
+
   it('keeps the street wording for older records and other poses', () => {
     expect(positionLabel(photo('geocoded', { geocoded_street: 'Rue Galande 75005 Paris' }))).toBe(
       'Approximate: on Rue Galande, the street named in the caption'

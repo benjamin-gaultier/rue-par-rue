@@ -1,7 +1,8 @@
 ---
 stream: photos
 priority: 3
-status: open
+status: done
+done: 2026-11-21, PR #26 — unplaced captions bucketed; streets misspelt by a letter or two now placed: 5,693 → 5,723 captions placed, none lost, all 48 changed placements read by hand; follow-ups in photos-other-towns, photos-landmark-names, photos-markets-squares, photos-bois-de-boulogne
 added: 2026-11-20
 needs: [photos-land-pr12-pr14]
 ---
