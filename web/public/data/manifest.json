@@ -35,7 +35,7 @@
     "updated_at": "2026-11-17T12:40:03Z"
   },
   "photos": {
-    "count": 10002,
+    "count": 10032,
     "sources": [
       {
         "key": "kahn",
@@ -53,11 +53,11 @@
         "license": "CC0-1.0",
         "homepage": "https://www.parismuseescollections.paris.fr/",
         "attribution": "Paris Musées / Musée Carnavalet, Histoire de Paris (CC0)",
-        "count": 5700,
+        "count": 5730,
         "rejected": {
           "year_end before year": 1
         },
-        "harvested_at": "2026-11-20T23:35:29Z"
+        "harvested_at": "2026-11-21T13:22:33Z"
       }
     ]
   },
@@ -86,8 +86,8 @@
     "area": "cite",
     "count": 1068,
     "bytes": 7561866,
-    "failed": 2,
-    "updated_at": "2026-11-20T23:35:31Z"
+    "failed": 4,
+    "updated_at": "2026-11-21T13:23:16Z"
   },
   "depth_notre_dame": {
     "set": "notre-dame",
