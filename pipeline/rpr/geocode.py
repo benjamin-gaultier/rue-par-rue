@@ -23,14 +23,17 @@ de Turenne, 3ème et 4ème"), most precise answer first:
    and the City of Paris street outlines, see rpr.sources.places), at its
    centre; a gate of the Thiers wall ("porte d'Italie") on the avenue or
    place named after it;
-5. today's street with a close name (BAN score of 0.8 or more), unless the
+5. today's street of the same kind spelt a letter or two apart ("rue
+   Quimcampoix" is the rue Quincampoix), if only one such street is in the
+   arrondissement; flagged, as the caption's spelling was set aside;
+6. today's street with a close name (BAN score of 0.8 or more), unless the
    name is a known historical one;
-6. when nothing of the caption is found in its arrondissements: today's
+7. when nothing of the caption is found in its arrondissements: today's
    street or place of exactly that name in a neighbouring arrondissement
    ("5 rue du Mail, 1er arrondissement": the rue du Mail is in the 2e),
    flagged with the arrondissement the caption gave and at lower confidence;
    not when a street of that name is recorded there and gone since;
-7. when no street is found: the building the caption names ("Église
+8. when no street is found: the building the caption names ("Église
    Saint-Julien-le-Pauvre", "Hôtel Lambert"), from the Mérimée list and IGN
    BD TOPO (rpr.sources.monuments), if the name means one building in the
    caption's arrondissement that stood in the photo's year (see _landmark).
@@ -112,6 +115,10 @@ PARIS_VILLAGES = {
     "clignancourt", "les ternes", "ternes", "la glacière", "glacière", "butte aux cailles", "butte-aux-cailles",
 }
 _TOWN_LINKS = {"de", "du", "des", "la", "le", "les", "sur", "sous", "en", "lès", "lez", "aux", "d", "l", "et", "saint", "sainte"}
+# A caption's name a letter or two from today's street of the same kind: names of up
+# to SPELLING_SHORT letters (particles aside) may be one letter apart, longer ones two.
+SPELLING_SHORT = 7
+SPELLING_FACTOR = 0.9  # below the same street under the caption's own spelling
 OTHER_ARRONDISSEMENT_FACTOR = 0.6  # found only outside the arrondissement the caption gives
 ELSEWHERE_MIN_SCORE = 0.9  # and then only under exactly the caption's name, in a neighbouring arrondissement
 # Arrondissements that share a boundary (City of Paris outlines; across the Seine too).
@@ -247,7 +254,8 @@ _ABBREVIATIONS = [
 
 
 def _clean(street: str) -> str:
-    street = re.sub(r"\s+", " ", street).strip(" .'\"’")
+    # A typographic apostrophe would glue "l’" to the name: "rue de l’Estrapade" is the rue de l'Estrapade.
+    street = re.sub(r"\s+", " ", street).strip(" .'\"’").replace("’", "'")
     for pattern, full in _ABBREVIATIONS:
         street = re.sub(pattern, full, street, flags=re.IGNORECASE)
     return street
@@ -345,6 +353,33 @@ def same_street(a: str, b: str) -> bool:
     return skeleton(na) == skeleton(nb)
 
 
+def spelling(name: str) -> tuple[str, str]:
+    """('rue', 'kincampoix')-style key for comparing spellings: the kind of way, then
+    the name's letters without accents, particles, spaces or doubled letters."""
+    from rpr.sources.streetnames import norm
+
+    words = norm(name).split()
+    if not words:
+        return "", ""
+    letters = "".join(w for w in words[1:] if w not in _PARTICLES)
+    return words[0], re.sub(r"(.)\1+", r"\1", letters)
+
+
+def edits(a: str, b: str) -> int:
+    """Letters to change, add, drop or swap with a neighbour to turn `a` into `b`."""
+    prev2: list[int] = []
+    prev = list(range(len(b) + 1))
+    for i, ca in enumerate(a, 1):
+        row = [i]
+        for j, cb in enumerate(b, 1):
+            d = min(prev[j] + 1, row[j - 1] + 1, prev[j - 1] + (ca != cb))
+            if i > 1 and j > 1 and ca == b[j - 2] and a[i - 2] == cb:
+                d = min(d, prev2[j - 2] + 1)
+            row.append(d)
+        prev2, prev = prev, row
+    return prev[-1]
+
+
 def distance_m(a: list[float] | tuple[float, float], b: list[float] | tuple[float, float]) -> float:
     k = math.cos(math.radians((a[1] + b[1]) / 2))
     return math.hypot((a[0] - b[0]) * 111_320 * k, (a[1] - b[1]) * 110_540)
@@ -366,6 +401,7 @@ class Match:
     historical: bool = False  # the street no longer exists
     ambiguous: int = 0  # other places the caption's name could mean
     caption_arrondissement: int | None = None  # found outside the arrondissement the caption gives
+    respelt: bool = False  # today's street is spelt a letter or two apart from the caption's name
 
     def extra(self) -> dict:
         out: dict = {
@@ -385,6 +421,8 @@ class Match:
             out["ambiguous"] = self.ambiguous
         if self.caption_arrondissement:
             out["caption_arrondissement"] = self.caption_arrondissement
+        if self.respelt:
+            out["respelt"] = True
         return out
 
 
@@ -414,6 +452,7 @@ class Geocoder:
         self.places = places
         self.monuments = monuments
         self.requests = 0
+        self._spellings: dict[str, list[tuple[str, str]]] | None = None  # kind of way -> (letters, today's name)
 
     def save(self) -> None:
         if self.cache_path:
@@ -507,7 +546,8 @@ class Geocoder:
             return 0
         return sum(1 for e in self.history.former_names(name) if e.get("until") and e["until"] >= year)
 
-    def _resolve(self, name: str, role: str, number: str | None, arrondissement: int | None, year: int | None) -> Match | None:
+    def _resolve(self, name: str, role: str, number: str | None, arrondissement: int | None, year: int | None,
+                 respell: bool = True) -> Match | None:
         citycode = f"751{arrondissement:02d}" if arrondissement else None
         view = role == "viewpoint"
         street_conf = CONFIDENCE["street_viewpoint" if view else "street_subject"]
@@ -574,11 +614,57 @@ class Geocoder:
         if place:
             return place
 
-        # 5. Today's street with a close name, unless the name is a known old one.
+        # 5. Today's street of the same kind, spelt a letter or two apart.
+        alike = self._spelt_alike(name, arrondissement) if respell and not former else None
+        if alike:
+            t, letters_apart = alike
+            factor = SPELLING_FACTOR if letters_apart else 1.0  # 0: only BAN's reading of the caption failed
+            hn = self._at_number(number, t) if number else None
+            if hn:
+                return Match(hn["lon"], hn["lat"], hn["label"], hn["score"], name, role, "number", "ban",
+                             round(CONFIDENCE["number"] * factor, 2), number, respelt=bool(letters_apart))
+            return Match(t["lon"], t["lat"], t["label"], t["score"], name, role, "street", "ban",
+                         round(street_conf * t["score"] * factor, 2), respelt=bool(letters_apart))
+
+        # 6. Today's street with a close name, unless the name is a known old one.
         if usable and not former:
             return Match(r["lon"], r["lat"], r["label"], r["score"], name, role, "street", "ban",
                          round(street_conf * r["score"], 2))
         return None
+
+    def _spelt_alike(self, name: str, arrondissement: int | None) -> tuple[dict, int] | None:
+        """Today's street the caption misspells, and how many letters apart: the one
+        street of the same kind whose name is a letter or two away ("rue Quimcampoix",
+        "impasse de la Baudoirie", "rue Brise-Miche"), as BAN finds it in the
+        arrondissement. Without an arrondissement, one letter at most. None if several
+        streets are as near, or if the name is too short to tell."""
+        if not self.history:
+            return None
+        if self._spellings is None:
+            self._spellings = {}
+            for today in self.history.today.values():
+                kind, letters = spelling(today)
+                self._spellings.setdefault(kind, []).append((letters, today))
+        kind, letters = spelling(name)
+        if len(letters) < 4:
+            return None
+        limit = 1 if len(letters) <= SPELLING_SHORT or not arrondissement else 2
+        near = sorted(
+            (d, today)
+            for other, today in self._spellings.get(kind, [])
+            if abs(len(other) - len(letters)) <= limit and (d := edits(letters, other)) <= limit
+        )
+        citycode = f"751{arrondissement:02d}" if arrondissement else None
+        found: dict[str, dict] = {}
+        nearest = None
+        for d, today in near:
+            if nearest is not None and d > nearest:
+                break
+            r = self.street(today, citycode)
+            if self._same_name(r, citycode, today, MIN_SCORE):
+                found[r["label"]] = r
+                nearest = d
+        return (next(iter(found.values())), nearest) if len(found) == 1 else None
 
     def _today_keys(self, name: str, arrondissement: int | None) -> tuple[list[tuple[str, float]], list[tuple[str, float]]]:
         """Today's streets a caption's name stands for, as (junction-table key, factor).
@@ -744,11 +830,11 @@ class Geocoder:
         m.caption_arrondissement = arrondissements[0]
         return m
 
-    def _all(self, parsed: ParsedCaption, arrondissement: int | None, year: int | None) -> list[Match]:
+    def _all(self, parsed: ParsedCaption, arrondissement: int | None, year: int | None, respell: bool = True) -> list[Match]:
         """Every street, place and corner of the caption found in this arrondissement."""
         found = []
         for name, role in parsed.candidates():
-            m = self._resolve(name, role, parsed.numbers.get(name), arrondissement, year)
+            m = self._resolve(name, role, parsed.numbers.get(name), arrondissement, year, respell)
             if m:
                 found.append(m)
         for pair in parsed.junctions() if self.history else []:
@@ -761,9 +847,12 @@ class Geocoder:
     def place(self, caption: str, year: int | None = None) -> Match | None:
         parsed = parse_caption(caption)
         found: list[Match] = []
+        # A caption that ends on another town ("Rue des Cuvettes, Beauvais") is not respelt into a Paris street.
+        respell = bool(parsed.arrondissements) or not self._other_town(
+            [q for p in _PIECES.split(caption) for q in _BRACKETS.split(p) if q.strip()])
         # Every arrondissement the caption lists ("14 rue de Turenne, 3ème et 4ème": the number is in the 4th).
         for arr in parsed.arrondissements or [None]:
-            found += self._all(parsed, arr, year)
+            found += self._all(parsed, arr, year, respell)
         if not found and parsed.arrondissement:
             found = [m for name, role in parsed.candidates()
                      if (m := self._elsewhere(name, role, parsed.numbers.get(name), parsed.arrondissements))]
