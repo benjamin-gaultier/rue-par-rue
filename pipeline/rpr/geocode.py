@@ -29,7 +29,11 @@ de Turenne, 3ème et 4ème"), most precise answer first:
    street or place of exactly that name in a neighbouring arrondissement
    ("5 rue du Mail, 1er arrondissement": the rue du Mail is in the 2e),
    flagged with the arrondissement the caption gave and at lower confidence;
-   not when a street of that name is recorded there and gone since.
+   not when a street of that name is recorded there and gone since;
+7. when no street is found: the building the caption names ("Église
+   Saint-Julien-le-Pauvre", "Hôtel Lambert"), from the Mérimée list and IGN
+   BD TOPO (rpr.sources.monuments), if the name means one building in the
+   caption's arrondissement that stood in the photo's year (see _landmark).
 
 A street BAN finds under the caption's own name (accents, particles and "St"
 aside: "rue Candolle" is the rue de Candolle) is taken at a lower BAN score
@@ -41,7 +45,7 @@ where today's street outlines meet (streets laid out after 1836, such as the
 boulevard du Palais). Streets that only meet across a third one get no corner.
 Confidence follows precision: house number, corner, street, place (by its
 size; below the streets of the same caption, which it never displaces),
-quarter. A name that could mean several places is placed on the likeliest
+building (by its size; only when no street is found), quarter. A name that could mean several places is placed on the likeliest
 one and flagged.
 Nothing is placed on a street that cannot be found: no position is invented.
 """
@@ -59,6 +63,7 @@ from typing import TYPE_CHECKING, Callable
 from rpr import net
 
 if TYPE_CHECKING:
+    from rpr.sources.monuments import Monuments
     from rpr.sources.places import Places
     from rpr.sources.streetnames import StreetHistory
 
@@ -89,6 +94,24 @@ LONG_STREET_FACTOR = 0.8
 # ("Port du Louvre, vers le Pont Neuf" is on the port).
 PLACE_CONFIDENCE = ((150, 0.2), (400, 0.15))
 PLACE_LARGE = 0.1  # the Tuileries or the Jardin des Plantes
+# A building the caption names, at its Mérimée position or the centre of its
+# BD TOPO outline: (largest spread in metres, confidence), else LANDMARK_LARGE.
+LANDMARK_CONFIDENCE = ((150, 0.3), (400, 0.2))
+LANDMARK_LARGE = 0.1
+LANDMARK_MAX_M = 1000  # a larger site (a cemetery, a wood) pins nothing down
+LANDMARK_SAME_M = 300  # landmarks of that name closer than this are one building
+# Grounds the gazetteer knows only by a point (Mérimée's "Parc de Bagatelle" is the château's):
+# how far they reach is unknown, so they rank as a large site.
+LANDMARK_GROUNDS = {"parc", "jardin", "jardins", "bois", "cimetiere", "domaine", "cite", "enclos"}
+FORMER_MIN_AGE = 50  # "l'ancien X" is today's X only if it stood this many years before the photo
+FIRST_PHOTOS = 1850  # an undated photo is no older than this
+# Villages annexed to Paris in 1860, which captions name as places of their own ("Passy").
+PARIS_VILLAGES = {
+    "passy", "auteuil", "batignolles", "monceau", "montmartre", "la chapelle", "chapelle", "la villette", "villette",
+    "belleville", "menilmontant", "ménilmontant", "charonne", "bercy", "vaugirard", "grenelle", "montrouge", "plaisance",
+    "clignancourt", "les ternes", "ternes", "la glacière", "glacière", "butte aux cailles", "butte-aux-cailles",
+}
+_TOWN_LINKS = {"de", "du", "des", "la", "le", "les", "sur", "sous", "en", "lès", "lez", "aux", "d", "l", "et", "saint", "sainte"}
 OTHER_ARRONDISSEMENT_FACTOR = 0.6  # found only outside the arrondissement the caption gives
 ELSEWHERE_MIN_SCORE = 0.9  # and then only under exactly the caption's name, in a neighbouring arrondissement
 # Arrondissements that share a boundary (City of Paris outlines; across the Seine too).
@@ -154,6 +177,10 @@ _NUMBER_BEFORE = re.compile(
 # "rue ..., n° 12", "rue ... n°12"
 _NUMBER_AFTER = re.compile(r"^\s*,?\s*(?:n°|no\.?|numéro)\s*(\d{1,3})\b", re.IGNORECASE)
 _CORNER = re.compile(r"\b(?:angle|coin|carrefour|croisement|encoignure)\b", re.IGNORECASE)
+# A caption's pieces, where a landmark's name may stand ("Palais du Louvre / cour Carrée").
+# Brackets stay in: "Hôtel de Montmorency [petit]" qualifies the name (see Monuments.mentions).
+_PIECES = re.compile(r"\s*(?:[,;:()/«»\"]|(?<=\w{3})\.\s|\s[-–—]\s)\s*")
+_BRACKETS = re.compile(r"\s*[\[\]]\s*")
 _QUARTER = re.compile(
     r"\b(île\s+(?:de\s+la\s+Cité|Saint-Louis|Saint\s+Louis)|quartier\s+(?:de\s+la\s+|de\s+l['’]\s*|du\s+|des\s+|de\s+|d['’]\s*)?[A-ZÀ-Ý][\w'’ -]*?)(?=\s*[,;:().]|$)",
     re.IGNORECASE,
@@ -366,7 +393,8 @@ class Geocoder:
 
     Without `history` only the national address base is used: today's
     streets and house numbers. Without `places` gardens, squares and bridges
-    are found only where the address base lists them as streets.
+    are found only where the address base lists them as streets. Without
+    `monuments` a caption that names only a building is not placed.
     """
 
     def __init__(
@@ -375,6 +403,7 @@ class Geocoder:
         fetch: Callable[[str], dict] | None = None,
         history: StreetHistory | None = None,
         places: Places | None = None,
+        monuments: Monuments | None = None,
     ):
         self.cache_path = cache_path
         self.cache: dict[str, dict | None] = {}
@@ -383,6 +412,7 @@ class Geocoder:
         self.fetch = fetch or (lambda url: net.fetch_json(url, timeout=30))
         self.history = history
         self.places = places
+        self.monuments = monuments
         self.requests = 0
 
     def save(self) -> None:
@@ -632,6 +662,65 @@ class Geocoder:
         return Match(lon, lat, q["name"], 1.0, parsed.quarter, "quarter", "quarter", "vasserot-1836",
                      CONFIDENCE["quarter"])
 
+    def _landmark(self, caption: str, parsed: ParsedCaption, year: int | None) -> Match | None:
+        """The first building the caption names that stood when the photo was taken, in the
+        caption's arrondissement, if its name means one building there.
+
+        Without an arrondissement, the name must mean one building in all Paris,
+        and none is placed if it is a hôtel (a family often had several, some
+        demolished and so missing from the gazetteer: the Hôtel de Luynes of the
+        rue Saint-Dominique), if the caption carries the name on ("Hôtel-Dieu de
+        Montlhéry") or if the caption ends on another town ("église Saint-Laurent, Rouen").
+        """
+        if not self.monuments:
+            return None
+        from rpr.sources.streetnames import norm
+
+        arrs = set(parsed.arrondissements)
+        pieces = [p for p in _PIECES.split(caption) if p.strip()]
+        if not arrs and self._other_town([q for p in pieces for q in _BRACKETS.split(p) if q.strip()]):
+            return None
+        for piece in pieces:
+            for mention in self.monuments.mentions(piece):
+                entries = [e for e in mention.entries
+                           if _standing(e, year, mention.former) and (not arrs or arrs & set(e["arr"]))]
+                if not entries:
+                    continue
+                sites = _sites(entries)
+                if len(sites) > 1 or (not arrs and (mention.carried_on or mention.words.split()[0] == "hotel")):
+                    return None  # several buildings of that name: no telling which
+                site = sites[0]
+                lon = sum(e["center"][0] for e in site) / len(site)
+                lat = sum(e["center"][1] for e in site) / len(site)
+                spread = max(max(e["spread"], distance_m(e["center"], (lon, lat))) for e in site)
+                if spread > LANDMARK_MAX_M:
+                    return None
+                conf = next((c for limit, c in LANDMARK_CONFIDENCE if spread <= limit), LANDMARK_LARGE)
+                label = self.monuments.name(site[0], mention.words)
+                if spread == 0 and norm(label).split()[0] in LANDMARK_GROUNDS:
+                    conf = LANDMARK_LARGE
+                method = "merimee" if any(e["source"] == "merimee" for e in site) else "bdtopo"
+                return Match(lon, lat, label, 1.0, piece, "subject", "landmark", method, conf)
+        return None
+
+    def _other_town(self, pieces: list[str]) -> bool:
+        """The caption's last words name a place that is neither Paris nor one of its quarters."""
+        words = [p.strip(" .'\"«»") for p in pieces]
+        words = [p for p in words if re.search(r"[^\W\d_]{3,}", p) and not re.fullmatch(r"[IVXL]+(?:e|ème)?", p)]
+        if not words:
+            return False
+        last = words[-1]
+        parts = re.split(r"[\s'’-]+", last)
+        if not all(w[:1].isupper() or w.lower() in _TOWN_LINKS for w in parts if w) or re.search(r"\d", last):
+            return False
+        key = re.sub(r"^(?:la|le|les) ", "", last.lower())
+        return not (
+            key in {"paris"} | PARIS_VILLAGES
+            or (self.history and self.history.quarter(last))
+            or (self.places and self.places.find(last))
+            or (self.monuments and self.monuments.mentions(last))
+        )
+
     def _elsewhere(self, name: str, role: str, number: str | None, arrondissements: list[int]) -> Match | None:
         """Today's street or place of exactly that name in a neighbouring arrondissement (a slip in the caption)."""
         view = role == "viewpoint"
@@ -679,5 +768,29 @@ class Geocoder:
             found = [m for name, role in parsed.candidates()
                      if (m := self._elsewhere(name, role, parsed.numbers.get(name), parsed.arrondissements))]
         if not found:
-            return self._quarter(parsed)
+            return self._landmark(caption, parsed, year) or self._quarter(parsed)
         return max(found, key=lambda m: m.confidence)  # ties: first arrondissement, then caption order (viewpoint first)
+
+
+def _standing(landmark: dict, year: int | None, former: bool) -> bool:
+    """Built by the photo's year; and, for a caption's "ancien X", long before it (the
+    Hôtel-Dieu Marville photographed in the 1860s is not today's, built from 1866).
+    An undated photo is taken to be no older than FIRST_PHOTOS."""
+    built = landmark.get("built")
+    if year and built and year < built:
+        return False
+    if former:
+        return bool(built and built + FORMER_MIN_AGE <= (year or FIRST_PHOTOS))
+    return True
+
+
+def _sites(landmarks: list[dict]) -> list[list[dict]]:
+    """Landmarks grouped into buildings: a name's entries within LANDMARK_SAME_M of each other."""
+    sites: list[list[dict]] = []
+    for e in landmarks:
+        site = next((s for s in sites if distance_m(s[0]["center"], e["center"]) <= LANDMARK_SAME_M), None)
+        if site:
+            site.append(e)
+        else:
+            sites.append([e])
+    return sites

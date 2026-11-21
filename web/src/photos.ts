@@ -160,6 +160,8 @@ export function positionLabel(p: PhotoProps): string {
       return `At the corner of ${place.replace(' / ', ' and ')}, named in the caption${maybe}`
     case 'quarter':
       return `Rough: somewhere in ${String(x.from_caption ?? place)}, named in the caption`
+    case 'landmark':
+      return `At ${place}, the building named in the caption${maybe}`
     case 'place':
       return x.method === 'gate-way'
         ? `Approximate: on ${place}, by the ${String(x.from_caption)} of the caption (a gate of the city wall)${maybe}`
