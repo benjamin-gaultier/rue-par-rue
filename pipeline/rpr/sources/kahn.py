@@ -32,7 +32,7 @@ INFO_URL = f"{PORTAL}/{DATASET}"
 INFO = SourceInfo(
     key="kahn",
     name="Albert-Kahn, Archives de la Planète (Paris)",
-    license="See Musée départemental Albert-Kahn terms (CC0 / CC BY per item)",
+    license="CC0 or CC BY 4.0 per photo; some not cleared for reuse (see each photo)",
     homepage="https://www.data.gouv.fr/datasets/archives-de-la-planete-paris",
     attribution="Musée départemental Albert-Kahn, Département des Hauts-de-Seine",
 )
@@ -147,11 +147,35 @@ def creator_of(value: Any) -> str | None:
     return name
 
 
-def license_of(value: Any) -> str:
-    v = (text(value) or "").lower()
-    if v in ("oui", "yes", "true", "1", "libre de droits"):
-        return "Libre de droits (Musée départemental Albert-Kahn)"
-    return INFO.license
+# Licences, one per photo. The museum's terms of use
+# (https://collections.albert-kahn.hauts-de-seine.fr/cgu_media, read on
+# 2026-11-21) put every reusable image under CC0 or CC BY 4.0. The open data
+# does not say which: it only marks some records "Non" (still under
+# copyright). The museum's collections portal shows the licence of each image,
+# and there it follows the operator. Counts of still images on the portal on
+# 2026-11-21: Gadmer 20,722, Chevalier 10,219 and Dumas 8,707, all CC BY 4.0;
+# Léon 12,602 CC0 and 10 CC BY; Cuville 3,584 and 50; Passet 4,288 and 5.
+# So the first three are CC BY 4.0 for certain, and the others are "CC0 or
+# CC BY 4.0": use them under the stricter of the two, CC BY 4.0.
+LICENSE_CC_BY = "CC-BY-4.0"
+LICENSE_CC0_OR_BY = "CC0-1.0 or CC-BY-4.0"
+LICENSE_NOT_CLEARED = "Not cleared for reuse (open data: libre de droits = Non)"
+
+CC_BY_OPERATORS = {"frederic_gadmer", "georges_chevalier", "roger_dumas"}
+
+# Licences under which a photo may be cut into textures or used to generate
+# a facade, with credit and a note that it was modified (DATA_SOURCES.md).
+DERIVABLE = {LICENSE_CC_BY, LICENSE_CC0_OR_BY}
+
+
+def license_of(rights: Any, operators: Any = None) -> str:
+    """The licence of one record, from its "libre de droits" field and operators."""
+    if norm(text(rights) or "") in ("non", "no", "false", "0"):
+        return LICENSE_NOT_CLEARED
+    names = operators if isinstance(operators, list) else [operators]
+    if any(norm(str(n)) in CC_BY_OPERATORS for n in names if n):
+        return LICENSE_CC_BY
+    return LICENSE_CC0_OR_BY
 
 
 def to_photo(record: dict) -> Photo | None:
@@ -184,7 +208,7 @@ def to_photo(record: dict) -> Photo | None:
         thumb=image,
         image=image,
         url=url,
-        license=license_of(pick(record, "license")),
+        license=license_of(pick(record, "license"), pick(record, "creator")),
         credit=INFO.attribution,
         media=media,
         pose="recorded",
