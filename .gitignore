@@ -12,6 +12,7 @@ pipeline/cache/verniquet/
 pipeline/cache/streets/
 pipeline/cache/vehicles/
 pipeline/cache/places/
+pipeline/cache/monuments/
 
 # Claude Code: personal settings and session worktrees
 .claude/settings.local.json
