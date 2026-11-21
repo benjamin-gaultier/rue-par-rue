@@ -91,11 +91,12 @@
   },
   "depth_notre_dame": {
     "set": "notre-dame",
-    "count": 89,
-    "failed": 0,
-    "bytes": 1486009,
+    "count": 81,
+    "failed": 15,
+    "not_cleared": 8,
+    "bytes": 1422037,
     "model": "Depth Anything V2 Small (Apache 2.0)",
-    "updated_at": "2026-11-17T20:34:49Z"
+    "updated_at": "2026-11-21T14:42:13Z"
   },
   "site_cite": {
     "area": "cite",

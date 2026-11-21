@@ -1,7 +1,8 @@
 ---
 stream: photos
 priority: 2
-status: blocked
+status: done
+done: 2026-11-21. The owner said to remove them. `rpr depth` now skips photos not cleared for reuse and removes their maps: 89 → 81 depth maps, the eight are gone.
 blocked: owner — 8 published depth maps were computed from Albert-Kahn photos the open data marks as still under copyright. Remove them (deleting committed data), or keep them?
 added: 2026-11-21
 needs: []

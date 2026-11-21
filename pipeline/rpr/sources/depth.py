@@ -9,6 +9,10 @@ Output in web/public/data/3d/depth/:
   <source>-<id>.jpg   same-origin copy of the photo (only where the archive
                       sends no CORS headers: Paris Musées)
   index.json          photo id -> files and sizes
+
+A depth map is derived from its photo, so only photos cleared for reuse get
+one: Albert-Kahn photos whose licence is not in `kahn.DERIVABLE` are skipped,
+and maps made from them earlier are removed.
 """
 
 from __future__ import annotations
@@ -20,6 +24,7 @@ import re
 from typing import Any, Callable
 
 from rpr import net, paths
+from rpr.sources import kahn
 
 MODEL_URL = "https://huggingface.co/onnx-community/depth-anything-v2-small/resolve/main/onnx/model.onnx"
 MODEL = paths.REPO_ROOT / "pipeline" / "cache" / "models" / "depth-anything-v2-small.onnx"
@@ -45,6 +50,27 @@ def selected(photos: list[dict], name: str) -> list[dict]:
         if d <= cfg["radius_m"] and re.search(cfg["title"], f["properties"]["title"], re.I):
             out.append(f)
     return out
+
+
+def derivable(p: dict) -> bool:
+    """Whether a depth map may be made from this photo (its licence allows derived works)."""
+    return p["source"] != "kahn" or p.get("license") in kahn.DERIVABLE
+
+
+def prune(index: dict[str, dict], photos: list[dict], out_dir) -> list[str]:
+    """Remove the depth maps of photos not cleared for reuse. Returns their ids."""
+    blocked = {f["properties"]["id"] for f in photos if not derivable(f["properties"])}
+    gone = sorted(i for i in index if i in blocked)
+    for i in gone:
+        entry = index.pop(i)
+        for key in ("depth", "image"):
+            if key in entry:
+                (out_dir / entry[key]).unlink(missing_ok=True)
+    return gone
+
+
+def stem_of(p: dict) -> str:
+    return f"{p['source']}-{re.sub(r'[^A-Za-z0-9]+', '_', p['source_id'])}"
 
 
 def input_size(w: int, h: int) -> tuple[int, int]:
@@ -90,27 +116,30 @@ def crop_mount(img):
 
 
 def build(name: str = "notre-dame", log: Callable[[str], Any] = print) -> dict:
-    import numpy as np
-    import onnxruntime as ort
-    from PIL import Image
-
-    if not MODEL.exists():
-        size = net.download(MODEL_URL, MODEL, timeout=600)
-        log(f"depth: downloaded model ({size / 1e6:.0f} MB)")
-    session = ort.InferenceSession(str(MODEL), providers=["CPUExecutionProvider"])
-
-    photos = json.loads((paths.DATA_DIR / "photos.geojson").read_text())["features"]
-    chosen = selected(photos, name)
+    photos = json.loads((paths.DATA_DIR / "photos.geojson").read_text(encoding="utf-8"))["features"]
     out_dir = paths.DATA_DIR / "3d" / "depth"
     out_dir.mkdir(parents=True, exist_ok=True)
     index_path = out_dir / "index.json"
-    index: dict[str, dict] = json.loads(index_path.read_text()) if index_path.exists() else {}
+    index: dict[str, dict] = json.loads(index_path.read_text(encoding="utf-8")) if index_path.exists() else {}
+    removed = prune(index, photos, out_dir)
+    if removed:
+        log(f"depth: removed {len(removed)} maps of photos not cleared for reuse: {', '.join(removed)}")
+    in_set = selected(photos, name)
+    chosen = [f for f in in_set if derivable(f["properties"])]
+    todo = [f for f in chosen if not (f["properties"]["id"] in index and (out_dir / f"{stem_of(f['properties'])}.png").exists())]
     made = failed = 0
-    for f in chosen:
+    if todo:  # the model is only needed when there is a photo to compute
+        import numpy as np
+        import onnxruntime as ort
+        from PIL import Image
+
+        if not MODEL.exists():
+            size = net.download(MODEL_URL, MODEL, timeout=600)
+            log(f"depth: downloaded model ({size / 1e6:.0f} MB)")
+        session = ort.InferenceSession(str(MODEL), providers=["CPUExecutionProvider"])
+    for f in todo:
         p = f["properties"]
-        stem = f"{p['source']}-{re.sub(r'[^A-Za-z0-9]+', '_', p['source_id'])}"
-        if p["id"] in index and (out_dir / f"{stem}.png").exists():
-            continue
+        stem = stem_of(p)
         try:
             raw = net.fetch_bytes(p.get("image") or p["thumb"], timeout=90, retries=5)
             img = Image.open(io.BytesIO(raw)).convert("RGB")
@@ -140,8 +169,15 @@ def build(name: str = "notre-dame", log: Callable[[str], Any] = print) -> dict:
         made += 1
         if made % 10 == 0:
             log(f"depth: {made} done")
-            index_path.write_text(json.dumps(index, sort_keys=True))
-    index_path.write_text(json.dumps(index, sort_keys=True))
+            index_path.write_text(json.dumps(index, sort_keys=True), encoding="utf-8")
+    index_path.write_text(json.dumps(index, sort_keys=True), encoding="utf-8")
     size = sum(f.stat().st_size for f in out_dir.glob("*") if f.suffix in (".png", ".jpg"))
     log(f"depth: {made} new, {failed} failed, {len(index)} total, {size / 1e6:.1f} MB")
-    return {"set": name, "count": len(index), "failed": failed, "bytes": size, "model": "Depth Anything V2 Small (Apache 2.0)"}
+    return {
+        "set": name,
+        "count": len(index),
+        "failed": failed,
+        "not_cleared": len(in_set) - len(chosen),
+        "bytes": size,
+        "model": "Depth Anything V2 Small (Apache 2.0)",
+    }

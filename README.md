@@ -222,7 +222,7 @@ WebGL can only draw images served with CORS headers. Albert-Kahn images load fro
 
 #### 3D photos (AI depth)
 
-`python -m rpr depth --set notre-dame` (needs `pip install -e ".[depth]"`) runs **Depth Anything V2 Small** (Apache 2.0, ONNX export by onnx-community, on CPU) on the 89 photos of Notre-Dame within 350 m of the cathedral: 78 Albert-Kahn autochromes and 11 Paris Musées prints. Paris Musées scans show the whole mounted card, so each print is cut out of its mount first. Each photo gets an 8-bit depth map (white = near), stored in `web/public/data/3d/depth/`.
+`python -m rpr depth --set notre-dame` (needs `pip install -e ".[depth,vision]"`) runs **Depth Anything V2 Small** (Apache 2.0, ONNX export by onnx-community, on CPU) on photos of Notre-Dame within 350 m of the cathedral: 81 have a depth map, 70 Albert-Kahn autochromes and 11 Paris Musées prints. A depth map is derived from its photo, so the 8 Albert-Kahn photos of the set that are not cleared for reuse get none, and 15 Paris Musées photos placed since the first run are still to do. Paris Musées scans show the whole mounted card, so each print is cut out of its mount first. Each photo gets an 8-bit depth map (white = near), stored in `web/public/data/3d/depth/`.
 
 In the app these photos get a **View as a 3D photo** button: the photo becomes a relief that shifts with the pointer, like looking through a window. In the 3D streets their frames become reliefs too, and they are shown first where several photos share a spot. The mesh is torn at sharp depth edges so foreground and background stay apart.
 
