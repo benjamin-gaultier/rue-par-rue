@@ -9,15 +9,7 @@
  */
 
 import { LngLat, type FilterSpecification, type Map as MapLibreMap } from 'maplibre-gl'
-
-export const MODEL_URL = 'data/3d/cite-1836.geojson'
-
-/** From above the Pont Saint-Michel, 160 m up, looking north-east at Notre-Dame. */
-export const CITE_CAMERA = { from: [2.3455, 48.8522] as [number, number], altitude: 160, to: [2.3488, 48.8535] as [number, number] }
-/** The same view as plain camera options (bearing 59°, pitch 60°). */
-export const CITE_VIEW = { center: [2.3488, 48.8535] as [number, number], zoom: 17.3, pitch: 60, bearing: 59 }
-/** The model's box (AREAS["cite"]["bbox"] in the pipeline): the whole island, its bridges and the facing quays. */
-export const CITE_BOUNDS: [number, number, number, number] = [2.3385, 48.8505, 2.3565, 48.859]
+import type { Area } from './areas'
 
 export const MODEL_COLORS = {
   standing: '#ece2cc',
@@ -109,13 +101,14 @@ export class Model3D {
   constructor(
     private map: MapLibreMap,
     private base: string,
-    private beforeLayer: string
+    private beforeLayer: string,
+    private area: Area
   ) {}
 
   enter(year: number, fly = true) {
     const map = this.map
     if (!this.added) {
-      map.addSource('model', { type: 'geojson', data: this.base + MODEL_URL, attribution: 'Massing model: APUR (ODbL), Vasserot cadastre/ALPAGE (ODbL); river and bridges: IGN BD TOPO; trees, pavements, street lamps and furniture: Ville de Paris (ODbL)' })
+      map.addSource('model', { type: 'geojson', data: this.base + this.area.files.model, attribution: 'Massing model: APUR (ODbL), Vasserot cadastre/ALPAGE (ODbL); river and bridges: IGN BD TOPO; trees, pavements, street lamps and furniture: Ville de Paris (ODbL)' })
       map.addLayer(
         {
           id: 'model',
@@ -156,7 +149,8 @@ export class Model3D {
     this.active = true
     this.setYear(year)
     if (fly) {
-      const camera = map.calculateCameraOptionsFromTo(LngLat.convert(CITE_CAMERA.from), CITE_CAMERA.altitude, LngLat.convert(CITE_CAMERA.to), 0)
+      const { from, altitude, to } = this.area.camera
+      const camera = map.calculateCameraOptionsFromTo(LngLat.convert(from), altitude, LngLat.convert(to), 0)
       map.flyTo({ ...camera, duration: 2400, essential: true })
     }
   }

@@ -31,6 +31,7 @@ from pathlib import Path
 from typing import Any, Callable, Iterable
 
 from rpr import net, paths
+from rpr.areas import area_file, file_name, manifest_file
 from rpr.sources.model3d import AREAS
 
 CACHE = paths.REPO_ROOT / "pipeline" / "cache" / "vehicles"
@@ -1100,7 +1101,7 @@ def build(area: str = "cite", log: Callable[[str], Any] = print, refresh: bool =
         log(f"vehicles: no traffic dates for {', '.join(sorted(unknown))}: no vehicles on them")
 
     # Buildings of the massing model, with the years they stand.
-    model = json.loads((paths.DATA_DIR / "3d" / f"{area}-1836.geojson").read_text())
+    model = json.loads((area_file(area, "model")).read_text())
     shapes, lives = [], []
     for f in model["features"]:
         g = shape(f["geometry"])
@@ -1126,7 +1127,7 @@ def build(area: str = "cite", log: Callable[[str], Any] = print, refresh: bool =
     counts: dict[str, int] = {}
     for r in parked + placer.moving:
         counts[TYPES[r[0]]["id"]] = counts.get(TYPES[r[0]]["id"], 0) + 1
-    out = paths.DATA_DIR / "3d" / f"vehicles-{area}.json"
+    out = area_file(area, "vehicles")
     out.write_text(
         json.dumps(
             {
@@ -1136,7 +1137,7 @@ def build(area: str = "cite", log: Callable[[str], Any] = print, refresh: bool =
                         "streets": "IGN BD TOPO troncon_de_route (Etalab 2.0), from 1860",
                         "streets_before_1860": "Vasserot cadastre, Emprise de la voirie (ALPAGE, ODbL)",
                         "river": "IGN BD TOPO surface_hydrographique (Etalab 2.0)",
-                        "buildings": f"{area}-1836.geojson (vehicles never stand inside a building of their year)",
+                        "buildings": f"{file_name(area, 'model')} (vehicles never stand inside a building of their year)",
                     },
                     "notes": "Types, dates and density from the archive photographs and transport history (README, "
                              "Vehicles and boats). Positions are plausible, not recorded: no particular cart or boat "
@@ -1159,5 +1160,5 @@ def build(area: str = "cite", log: Callable[[str], Any] = print, refresh: bool =
     size = out.stat().st_size
     log(f"vehicles: {len(parked)} parked, {len(placer.moving)} moving on {len(placer.paths)} paths "
         f"({size / 1e3:.0f} kB) -> {out.relative_to(paths.REPO_ROOT)}")
-    return {"area": area, "file": f"3d/vehicles-{area}.json", "parked": len(parked), "moving": len(placer.moving),
+    return {"area": area, "file": manifest_file(area, "vehicles"), "parked": len(parked), "moving": len(placer.moving),
             "bytes": size}

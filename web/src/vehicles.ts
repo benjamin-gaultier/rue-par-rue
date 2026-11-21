@@ -21,7 +21,6 @@ import { GridIndex, insidePoly, polyBbox, type BuildingSpec, type Pt } from './c
 import { MODELS, ModelBuilder } from './vehiclemodels'
 import * as S from './vehicleshaders'
 
-export const VEHICLES_URL = 'data/3d/vehicles-cite.json'
 
 /** Instances uploaded around the year shown (± years). */
 const WINDOW = 6
@@ -543,8 +542,8 @@ class VehicleLayer {
 const vehicles: CityModule = {
   name: 'vehicles',
   async build(ctx) {
-    const res = await fetch(`${ctx.base}${VEHICLES_URL}`)
-    if (!res.ok) throw new Error(`${VEHICLES_URL}: HTTP ${res.status}`)
+    const res = await fetch(`${ctx.base}${ctx.files.vehicles}`)
+    if (!res.ok) throw new Error(`${ctx.files.vehicles}: HTTP ${res.status}`)
     const data = (await res.json()) as VehicleData
     const index = new BuildingIndex(ctx.buildings.specs)
     const list = keepOutOfBuildings(parseVehicles(data, ctx.project, ctx.waterZ), index)

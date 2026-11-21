@@ -28,6 +28,7 @@ import urllib.parse
 from typing import Any, Callable, Iterable
 
 from rpr import net, paths
+from rpr.areas import area_file, manifest_file
 from rpr.sources.model3d import AREAS
 
 APUR_EQUIPMENT = "https://carto2.apur.org/apur/rest/services/OPENDATA/EQUIPEMENT_EMPRISE/MapServer/0/query"
@@ -555,7 +556,7 @@ def build(area: str = "cite", log: Callable[[str], Any] = print) -> dict:
         u = unary_union(parts)
         return u if u.is_valid else u.buffer(0)
 
-    model_path = paths.DATA_DIR / "3d" / f"{area}-1836.geojson"
+    model_path = area_file(area, "model")
     features = json.loads(model_path.read_text())["features"]
     model = [
         {
@@ -820,10 +821,10 @@ def build(area: str = "cite", log: Callable[[str], Any] = print) -> dict:
         "vasserot": vasserot,
         "parts": parts,
     }
-    path = paths.DATA_DIR / "3d" / f"landmarks-{area}.json"
+    path = area_file(area, "landmarks")
     text = json.dumps(_plain(out), ensure_ascii=False, separators=(",", ":"))
     path.write_text(text + "\n")
     for n in notes:
         log(f"landmarks: {n}")
     log(f"landmarks: {len(buildings)} buildings, {len(parts)} parts -> {path.relative_to(paths.REPO_ROOT)} ({len(text) / 1e3:.0f} kB)")
-    return {"area": area, "file": f"3d/landmarks-{area}.json", "buildings": len(buildings), "parts": len(parts)}
+    return {"area": area, "file": manifest_file(area, "landmarks"), "buildings": len(buildings), "parts": len(parts)}
