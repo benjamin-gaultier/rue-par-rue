@@ -1,7 +1,8 @@
 ---
 stream: photos
 priority: 1
-status: open
+status: done
+done: 2026-11-21, PR #24 — the dataset documents the point as the operator's position; a hand check confirms it for 2,213 photos (own point, or plates of one view) and shows the other 2,089 share a point that is a place; those are flagged, at confidence 0.5 or 0.3, and the photo card says so
 added: 2026-11-21
 needs: []
 ---
