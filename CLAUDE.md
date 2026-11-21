@@ -4,7 +4,8 @@ A street view of Paris through time; see [README.md](README.md). The app is in `
 
 ## Standing rules
 
-- **Nothing is invented.** Every position, date, height and shape comes from a source. A reasoned value (a garden's opening year from its history, an estimated height) is flagged in the data and said in the app. A photo that cannot be placed stays unplaced.
+- **Nothing is passed off as real.** Every position, date, height and shape comes from a source. A reasoned value (a garden's opening year from its history, an estimated height) is flagged in the data and said in the app. A photo that cannot be placed stays unplaced.
+- **What no source shows may be generated, from dated photos only.** A wall no photo shows can be generated from photos of the same place and period. The data records the photos and the model it came from, and the app labels it as generated. Generation runs in the pipeline, never in the browser. Positions, dates and footprints are never generated.
 - **Licences travel with the data.** Keep each source's licence and credit. Databases derived from the Vasserot data stay ODbL. Do not use what DATA_SOURCES.md says cannot be reused.
 - **Generated data is rebuilt, never hand-edited.** `web/public/data/` and `pipeline/cache/` come from `python -m rpr …` commands. On a merge conflict in a generated file, take main's version and run the command again.
 - **Shaders must compile on Windows Chrome.** ANGLE hands them to Direct3D's FXC compiler, which is slow on long, branchy code and can overflow its stack on deep call chains (PR #10). Keep functions shallow, loops small, and split rarely used code into its own shader variant as `web/src/cityshaders.ts` does for wall families. `tools/fxc/` measures compile time.

@@ -2,7 +2,7 @@
 
 A street view of Paris through time. Drag a year slider from 1790 to today: the map changes to the survey or aerial photograph of that period, the 1810–1836 cadastre shows the city before Haussmann, and archive photographs appear where they were taken. Select a photograph to see the same spot today in Panoramax street-level imagery.
 
-Everything shown comes from public archives. Nothing on the map is generated.
+Everything shown comes from public archives. Where the 3D view reconstructs or generates what no archive shows, it says so, and names the sources it worked from.
 
 ## What works now (phases 1 and 2)
 
@@ -307,6 +307,13 @@ For Paris Musées, create a free token at <https://apicollections.parismusees.pa
 2. **Phase 2, then-and-now viewer** (this release): archive photo over the nearest Panoramax panorama, with alignment saved in the URL.
 3. **Phase 3, pose refinement** (started): Marville and Atget captions are now placed at their house number, corner, former or demolished street, or the garden, square, bridge or city gate they name, using the City of Paris former street names and street outlines, the 1836 address points and IGN BD TOPO (see Paris Musées above). Still to do: the 1,295 unplaced captions that name no street, about 680 of them a church, a hôtel or a palace (a gazetteer of landmarks); the 1888 street network; more headings (photos at a house number face their building; Kahn records and street views still have no direction); refine poses by matching against Panoramax imagery; let people submit the alignments they make in the viewer.
 4. **Phase 4, 3D**: the Île de la Cité as a massing model, with footprints traced from Vasserot's plans, photos in the streets, an eye-level walk, and the whole island in detail with its bridges through time, the Hôtel-Dieu and the archbishop's palace (see above). Next: landmarks through time, streets and street furniture, period vehicles and richer facades, then more quarters.
+5. **Phase 5, Paris around 1920 from its photographs** (planned): 6,331 of the 7,305 dated photographs were taken between 1900 and 1929, 1,270 of them around the Île de la Cité, and most buildings of those years still stand. The plan, one street of the Cité first:
+   - give each photo of the era a full camera pose (position, bearing, pitch, field of view), by hand against the 3D model or by matching Panoramax pictures;
+   - lay each posed photo on the walls it shows, as their facade for 1900–1929;
+   - generate the walls no photo shows from the photos of the same street, in the pipeline, recording the photos and the model used;
+   - say on each building's card whether a wall is a photo, generated from photos, or drawn by rule.
+
+   The work is in `agents/backlog/era1920-*.md`.
 
 ## Licences
 

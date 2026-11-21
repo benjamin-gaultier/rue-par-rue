@@ -1,6 +1,6 @@
 ---
 stream: photos
-priority: 3
+priority: 1
 status: open
 added: 2026-11-21
 needs: []
@@ -14,3 +14,4 @@ Done when: the meaning of the coordinates is established from the dataset's docu
 Notes:
 - Dataset: `archives-de-la-planete-paris` on opendata.hauts-de-seine.fr (Opendatasoft); read its field descriptions first.
 - A shared point used by many photos with different subjects is a sign of a rough position.
+- Raised to priority 1 on 2026-11-21: 3,993 of the 5,752 photos dated to 1900–1929 are Albert-Kahn's, and `era1920-pose-auto` needs to know what their positions mean.
