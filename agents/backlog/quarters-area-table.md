@@ -1,7 +1,8 @@
 ---
 stream: quarters
 priority: 1
-status: open
+status: done
+done: 2026-11-21, PR #27, the Cité is one entry in `AREAS` (`pipeline/rpr/areas.py`) and one in `web/src/areas.ts`; the six Cité files rebuild to the same bytes with main's code and with this one; tests 214 → 230 (pipeline), 171 → 176 (web)
 added: 2026-11-21
 needs: []
 ---
