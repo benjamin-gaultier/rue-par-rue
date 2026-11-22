@@ -56,7 +56,7 @@ The whole Île de la Cité and the quays facing it are drawn by `web/src/city3d.
 - **Roofs from APUR.** `c_forme_toit` gives the shape: brisis-terrasson becomes a mansard with dormers lined up on the windows below, two-pitch roofs a ridge along the footprint's long axis, flat roofs a terrace. `c_toiture_mat` gives tile, zinc, stone or planting. Demolished houses get tile roofs with gables; chimney stacks with terracotta pots rise from party walls. Mansard dormers are geometry, and mansards rise straight from party walls.
 - **Notre-Dame.** Towers come from APUR (about 67 m). The west front is laid out along the line across the cathedral's westernmost points: three portals, the gallery of kings, the rose window between two traceried windows, the great gallery and the belfries. The spire stands from 1860 (Viollet-le-Duc), is missing from April 2019 and back in 2024.
 - **The river.** `python -m rpr site --area cite` fetches the Seine from IGN BD TOPO with its water level (27 m, against 34 m in the streets), so the river sits 7 m down between stone quays. The ground box is the focus box plus about 90 m, where the detail fades out, so paving, river, quay walls and trees cover the whole island and the facing quays. Streets and squares are paved by year (see Streets through time below). Each bridge stands only in the years it stood (see below).
-- **Gardens and trees.** `python -m rpr greenery --area cite` takes the 2,493 trees in the ground box from the City of Paris tree register (species, height, girth) and the garden outlines from APUR. Neither has dates, so the dates are reasoned:
+- **Gardens and trees.** `python -m rpr greenery --area cite` takes the 2,491 trees in the ground box from the City of Paris tree register (species, height, girth) and the garden outlines from APUR. Neither has dates, so the dates are reasoned:
   - Gardens open in the year their history gives (square Jean-XXIII 1844, square de la Tour-Saint-Jacques 1856, square du Vert-Galant 1884, square de l'Île-de-France 1914, square René-Viviani 1928…). Gardens with no source found (the place Dauphine's among them, and small ones at the edge) are shown from 1950 and flagged in the data.
   - Trees in a garden are planted when it opens, street trees with the Second Empire's tree-lined quays (from 1855).
   - No tree grows inside a building standing that year, so trees on the site of demolished houses are planted after 1860.
@@ -114,7 +114,7 @@ What is estimated, not sourced:
 
 #### Performance
 
-The detailed island has 3,157 buildings across all years: 3,025 from the model and 132 houses on the bridges. To keep it usable on phones:
+The detailed island has 3,162 buildings across all years: 3,030 from the model and 132 houses on the bridges. To keep it usable on phones:
 
 - Identical vertices are merged behind an index, normals are stored as bytes and years as 16-bit integers (`web/src/meshpack.ts`).
 - Tree crowns have three levels of detail by distance (180, 80 and 20 faces, within 160 m, 450 m and beyond), refilled when the camera moves 30 m.
@@ -125,17 +125,17 @@ Every new quarter is measured against these numbers. They were taken on 2026-11-
 
 | Year | Detailed buildings, all years | Standing that year | Trees | GPU buffers MB |
 | --- | ---: | ---: | ---: | ---: |
-| 1836 | 3,157 | 2,749 | 2,493 | 74.3 |
-| 2026 | 3,157 | 907 | 2,493 | 74.3 |
+| 1836 | 3,162 | 2,754 | 2,491 | 74.2 |
+| 2026 | 3,162 | 907 | 2,491 | 74.2 |
 
-The model file holds 8,487 buildings for the whole box, 3,025 of them in the detailed area. The year is a shader uniform, so the GPU holds every year at once: the buffers are the same at 1836 and today. They come to 74 MB, not the "about 20 MB" this page gave before the facade details, the landmarks, the streets and the vehicles were added:
+The model file holds 8,492 buildings for the whole box, 3,030 of them in the detailed area. The year is a shader uniform, so the GPU holds every year at once: the buffers are the same at 1836 and today. They come to 74 MB, not the "about 20 MB" this page gave before the facade details, the landmarks, the streets and the vehicles were added:
 
 | GPU buffers by material | MB |
 | --- | ---: |
 | trees, streets, street furniture and vehicles (materials without a name) | 19.6 |
-| details | 17.7 |
+| details | 17.6 |
 | roofs | 16.4 |
-| facades | 10.9 |
+| facades | 10.8 |
 | landmarks | 7.2 |
 | walls, all families | 2.5 |
 | lawns, ground and water | 0.2 |
@@ -146,13 +146,13 @@ Download, from `python -I tools/baseline/sizes.py`:
 | --- | ---: | ---: |
 | cite-1836.geojson | 4.80 | 0.51 |
 | streets-cite.json | 0.44 | 0.17 |
-| vasserot-traced-cite.geojson | 0.38 | 0.08 |
+| vasserot-traced-cite.geojson | 0.36 | 0.08 |
 | vehicles-cite.json | 0.35 | 0.08 |
 | greenery-cite.json | 0.20 | 0.06 |
 | site-cite.geojson | 0.03 | 0.01 |
 | institutions-cite.geojson | 0.02 | 0.00 |
 | landmarks-cite.json | 0.02 | 0.00 |
-| All data files (8) | 6.25 | 0.91 |
+| All data files (8) | 6.23 | 0.91 |
 | thumbs/ (1,068 images and their index) | 7.62 | |
 | depth/ (93 files) | 1.43 | |
 
@@ -189,7 +189,7 @@ The wall shader with every family in one program, as it was before it was split,
 
 #### Streets through time
 
-`python -m rpr streets --area cite` (needs shapely) writes `web/public/data/3d/streets-cite.json` (about 415 kB) for the whole Cité area, and `web/src/streets.ts` draws it. There are two street networks:
+`python -m rpr streets --area cite` (needs shapely) writes `web/public/data/3d/streets-cite.json` (about 440 kB) for the whole Cité area, and `web/src/streets.ts` draws it. There are two street networks:
 
 - **Before Haussmann (1780–1860): the Vasserot street space of about 1836.** A centreline is traced through every street (the medial axis of the street space, from a Voronoi diagram of its edges). Streets 2.4–14 m wide have a central gutter (ruisseau) and no pavements. Streets at least 10 m wide get 1.6 m pavements with granite kerbs from 1845: Prefect Chabrol required kerbed pavements on new streets from 1823, and the law of 7 June 1845 and the Paris rules of 1846 made them general; the 10 m rule is an approximation. The same streets are used before 1810.
 - **From 1860: today's streets.** Pavements and pedestrian crossings from the City of Paris road plan (plan de voirie), main roads from IGN BD TOPO. Streets that survived the clearances (around rue Chanoinesse) switch to today's pavements in 1860 too. Pavements over the river wait for the present bridge (Petit-Pont 1853, Pont Saint-Michel 1857, Pont au Double 1883…).
@@ -266,7 +266,7 @@ Seen but not drawn: horse trams (320043333) and heavy stone drays (fardiers, 320
 
 **Drawing.** Each type is a low-poly model of a few hundred triangles (horses included: about 100 each) and one instanced draw call; the year is checked in the vertex shader, per vehicle and per part (the omnibus's upper deck, a barge's mast). Horses' legs swing as they walk, spoked wheels are cut out in the fragment shader, unhitched carts tip onto their shafts, and a soft shadow lies under each street vehicle. Paint colours are reasoned (the photographs are black and white): dark lacquer for cabs, the blue and weathered wood of carts, green and cream buses.
 
-**Cost on phones.** Only vehicles within a few years of the one shown and inside the detailed ground are uploaded: 1960, the busiest year, draws about 800 (some 200,000 triangles), 1840 about 200. The 50 to 80 moving in a given year are animated on the CPU, at most 30 times a second and fewer when frames are slow, and only while one of them is on screen in the 3D view; otherwise the map is left idle. Data: `web/public/data/3d/vehicles-cite.json` (340 kB, about 7,000 parked and 550 moving vehicles across all years).
+**Cost on phones.** Only vehicles within a few years of the one shown and inside the detailed ground are uploaded: 1960, the busiest year, draws about 800 (some 200,000 triangles), 1840 about 200. The 50 to 80 moving in a given year are animated on the CPU, at most 30 times a second and fewer when frames are slow, and only while one of them is on screen in the 3D view; otherwise the map is left idle. Data: `web/public/data/3d/vehicles-cite.json` (354 kB, about 7,300 parked and 570 moving vehicles across all years).
 
 #### Photos in 3D and walking the streets
 
