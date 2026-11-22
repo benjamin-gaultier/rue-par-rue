@@ -23,7 +23,7 @@ import json
 import math
 import re
 import unicodedata
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from pathlib import Path
 from typing import Any, Callable
 
@@ -82,6 +82,21 @@ USUAL_SCALE = 200.0
 # before this check came out at 1:152 to 1:284 (median 1:209: the scans keep a
 # margin around the paper). The other six were at 1:119, 1:328 and 1:440 to 1:949.
 SCALE_RATIO = (0.7, 1.5)
+# The best overlap is not always the right way round: a near-square drawing
+# overlaps a near-square parcel almost as well when turned. So the walls are
+# also compared with the parcel's sides (`turn_between`). A wall counts when it
+# runs straight for 2.5 m once kinks under 0.6 m are smoothed away.
+TURN_SIMPLIFY_M = 0.6
+TURN_MIN_SIDE_M = 2.5
+# Of the 114 Cité fits made on overlap alone, half were turned under 2.7° and
+# 94 were turned 6° or less. The 20 beyond were looked at one by one: all sat
+# visibly askew. Such a fit is turned back (`straighten`), up to 20° either
+# way, to the best overlap whose walls are within 3° of the parcel's sides, or
+# failing that to the least turned. It is rejected when the overlap falls
+# under MIN_IOU before the walls come within 6°.
+MAX_TURN = 6.0
+GOOD_TURN = 3.0
+STRAIGHTEN_WITHIN = 20.0
 
 
 # ----------------------------------------------------------- addresses
@@ -521,6 +536,10 @@ class Fit:
     dx: float
     dy: float
     iou: float
+    turn: float | None = None
+    """Degrees between the placed walls and the parcel's sides (`turn_between`)."""
+    turned_back: float = 0.0
+    """Degrees `straighten` turned the fit away from the best overlap."""
 
 
 def to_math(geom):
@@ -567,6 +586,93 @@ def register(outline_px, parcel_m) -> Fit | None:
         if iou > best_iou:
             best_iou, best_angle, dx, dy = iou, q / 4, tx, ty
     return Fit(scale=s, angle=best_angle, dx=dx, dy=dy, iou=round(best_iou, 3))
+
+
+def sides(geom, simplify_m: float, min_m: float) -> list[tuple[float, float, float, float, float]]:
+    """The straight sides of a polygon's outer ring, at least `min_m` long, once
+    kinks under `simplify_m` are smoothed away: (x0, y0, x1, y1, length)."""
+    polys = getattr(geom, "geoms", [geom])
+    out = []
+    for poly in polys:
+        if poly.geom_type != "Polygon" or poly.is_empty:
+            continue
+        ring = list(poly.simplify(simplify_m).exterior.coords)
+        for (x0, y0), (x1, y1) in zip(ring, ring[1:]):
+            length = math.hypot(x1 - x0, y1 - y0)
+            if length >= min_m:
+                out.append((x0, y0, x1, y1, length))
+    return out
+
+
+def turn_between(placed, parcel_m, simplify_m: float = TURN_SIMPLIFY_M, min_m: float = TURN_MIN_SIDE_M) -> float | None:
+    """How far, in degrees, the sides of a placed outline are turned from the
+    sides of the parcel they run along.
+
+    Each side of the outline is compared with the parcel side nearest to its
+    middle. The answer is the median of those angles, each side counting for its
+    length: 0 when the walls run along the parcel's sides, up to 90. None when
+    either shape has no side long enough to compare.
+    """
+    from shapely.geometry import LineString, Point
+
+    theirs = [(LineString([(a, b), (c, d)]), math.atan2(d - b, c - a)) for a, b, c, d, _ in sides(parcel_m, simplify_m, min_m)]
+    ours = sides(placed, simplify_m, min_m)
+    if not theirs or not ours:
+        return None
+    turns = []
+    for x0, y0, x1, y1, length in ours:
+        mid = Point((x0 + x1) / 2, (y0 + y1) / 2)
+        _, bearing = min(theirs, key=lambda t: t[0].distance(mid))
+        d = abs(math.degrees(math.atan2(y1 - y0, x1 - x0) - bearing)) % 180
+        turns.append((min(d, 180 - d), length))
+    turns.sort()
+    half, run = sum(w for _, w in turns) / 2, 0.0
+    for d, w in turns:
+        run += w
+        if run >= half:
+            return round(d, 1)
+    return None
+
+
+def straighten(outline_px, parcel_m, fit: Fit) -> Fit | None:
+    """Check a fit's walls against the parcel's sides, and turn it back if askew.
+
+    A fit turned MAX_TURN or less is returned as it is, with its turn. Beyond,
+    the angles within STRAIGHTEN_WITHIN of it are tried every half degree,
+    keeping those that still overlap the parcel by MIN_IOU: the best overlap
+    among those within GOOD_TURN of the parcel's sides, or else the least
+    turned. None when even that one is turned more than MAX_TURN: the drawing
+    and the parcel disagree.
+    """
+    from shapely.affinity import rotate, scale, translate
+
+    o = scale(to_math(outline_px), xfact=fit.scale, yfact=fit.scale, origin=(0, 0))
+    pc = parcel_m.centroid
+
+    def at(angle: float):
+        g = rotate(o, angle, origin=(0, 0))
+        c = g.centroid
+        dx, dy = pc.x - c.x, pc.y - c.y
+        g = translate(g, dx, dy)
+        union = g.union(parcel_m).area
+        return g, (g.intersection(parcel_m).area / union if union else 0.0), dx, dy
+
+    turn = turn_between(at(fit.angle)[0], parcel_m)
+    if turn is None or turn <= MAX_TURN:
+        return replace(fit, turn=turn)
+    tried = []
+    steps = int(STRAIGHTEN_WITHIN * 2)
+    for q in range(-steps, steps + 1):
+        g, iou, dx, dy = at(fit.angle + q / 2)
+        t = turn_between(g, parcel_m) if iou >= MIN_IOU else None
+        if t is not None:
+            tried.append((t, iou, q / 2, dx, dy))
+    good = [c for c in tried if c[0] <= GOOD_TURN]
+    best = max(good, key=lambda c: c[1]) if good else min(tried, key=lambda c: (c[0], -c[1]), default=None)
+    if best is None or best[0] > MAX_TURN:
+        return None
+    t, iou, by, dx, dy = best
+    return Fit(scale=fit.scale, angle=(fit.angle + by) % 360, dx=dx, dy=dy, iou=round(iou, 3), turn=t, turned_back=by)
 
 
 # ------------------------------------------------------------------ run
@@ -641,7 +747,7 @@ def trace(area: str = "cite", log: Callable[[str], Any] = print, limit: int | No
 
     out_dir = CACHE / "plans"
     out_dir.mkdir(parents=True, exist_ok=True)
-    features, stats = [], {"no parcel match": 0, "no drawing found": 0, "poor fit": 0, "traced": 0, "image missing": 0, "wrong scale": 0}
+    features, stats = [], {"no parcel match": 0, "no drawing found": 0, "poor fit": 0, "traced": 0, "image missing": 0, "wrong scale": 0, "turned": 0, "turned back": 0}
     for p in plans:
         if p.id not in matches or any(pid not in parcels for pid in matches[p.id][0]):
             stats["no parcel match"] += 1
@@ -677,6 +783,13 @@ def trace(area: str = "cite", log: Callable[[str], Any] = print, limit: int | No
             stats["poor fit"] += 1
             stats["wrong scale"] += 1
             continue
+        fit = straighten(outline, parcels[pid], fit)
+        if fit is None:
+            stats["poor fit"] += 1
+            stats["turned"] += 1
+            continue
+        if fit.turned_back:
+            stats["turned back"] += 1
         footprint = place(to_math(built), fit).intersection(parcels[pid].buffer(0.5))
         if footprint.is_empty:
             stats["poor fit"] += 1
@@ -697,6 +810,8 @@ def trace(area: str = "cite", log: Callable[[str], Any] = print, limit: int | No
                     "drawing": drawing,
                     "sheet_m": round(sheet_m),
                     "scale": round(scale) if scale else None,
+                    "turn": fit.turn,
+                    "turned_back": fit.turned_back or None,
                     "built_share": round(footprint.area / parcels[pid].area, 2),
                 },
                 "geometry": mapping(transform(l93_to_wgs, footprint)),
