@@ -35,6 +35,7 @@ import {
 import * as S from './cityshaders'
 import { addBridgeHistory, type BridgeProps } from './bridges'
 import { packMesh } from './meshpack'
+import { FIRST_FRAME_MARK, sceneBuffers } from './measure'
 import { signAtlas } from './signs'
 import type { ModelProps } from './model3d'
 import type { AreaFiles } from './areas'
@@ -588,6 +589,10 @@ export class City3D implements CustomLayerInterface {
       this.treeLod?.(this.uniforms.u_camera.value)
       this.renderer.resetState()
       this.renderer.render(this.scene, this.camera)
+      if (!this.drawn) {
+        this.drawn = true
+        performance.mark(FIRST_FRAME_MARK)
+      }
       if (this.fallbacks.size) {
         const plain = this.plainWalls!
         this.scene.traverse((o) => {
@@ -608,6 +613,19 @@ export class City3D implements CustomLayerInterface {
       for (const step of this.steps) more = step(t) || more
       if (more) this.map?.triggerRepaint()
     }
+  }
+
+  private drawn = false
+
+  /** Detailed buildings standing in `year`, as drawn. */
+  standing(year: number): number {
+    return this.specs.filter((s) => aliveIn(s.life, year)).length
+  }
+
+  /** What the layer holds on the GPU, and what its last frame drew (measure.ts). */
+  stats(): { bytes: number; meshes: number; buffers: number; textures: number; triangles: number; calls: number } {
+    const info = this.renderer?.info
+    return { ...sceneBuffers(this.scene), textures: info?.memory.textures ?? 0, triangles: info?.render.triangles ?? 0, calls: info?.render.calls ?? 0 }
   }
 
   /** The building under a screen point, if a detailed one is visible there. */
