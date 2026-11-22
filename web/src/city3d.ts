@@ -312,6 +312,8 @@ export class City3D implements CustomLayerInterface {
   /** Number of detailed buildings and trees, for the legend and tests. */
   count = 0
   trees = 0
+  /** Frames of the detailed city drawn without error so far, for the smoke test (tools/smoke). */
+  frames = 0
   private extras: THREE.Mesh[] = []
   private treeLod?: (camera: THREE.Vector3) => void
   private blockers: ((p: Pt, year: number) => boolean)[] = []
@@ -602,6 +604,7 @@ export class City3D implements CustomLayerInterface {
       return
     }
     if (this.broken) return
+    this.frames++
     if (this.steps.length) {
       const t = performance.now() / 1000
       let more = false
