@@ -24,6 +24,97 @@ YEAR_RANGE = (1820, 2030)
 # How a photo's position was obtained. Order matters: later is better.
 POSE_METHODS = ("estimated", "geocoded", "recorded", "matched", "manual")
 
+# How a full camera was solved: by a person clicking the same points in the
+# photo and on the 3D model, or by matching the photo against posed pictures.
+CAMERA_METHODS = ("matched", "manual")
+
+# The years whose photos become walls (README roadmap, phase 5).
+ERA_1920 = (1900, 1929)
+ERA_MAX_SPAN = 3  # a date looser than this many years does not date a wall
+
+
+@dataclass
+class Camera:
+    """Where the camera stood and how it looked: enough to lay the photo on a wall.
+
+    Stricter than `Photo.heading`, which is a bearing alone and may be worked
+    out from a street outline. A camera is solved, never estimated: a photo
+    without one keeps `camera = None`. The angles describe the picture itself,
+    so for a print scanned on its card, the print cut out of its mount.
+    """
+
+    lon: float
+    lat: float
+    height: float  # metres above the ground where the camera stood
+    bearing: float  # compass bearing of the optical axis, degrees, 0 = north, clockwise
+    pitch: float  # degrees above the horizon (negative: looking down)
+    roll: float  # degrees the picture is turned clockwise about the optical axis
+    hfov: float  # horizontal field of view of the whole picture, degrees
+    method: str  # CAMERA_METHODS
+    confidence: float  # 0..1
+    # When solved from point pairs: the mean distance between a clicked point
+    # and where the camera puts it, as a share of the picture's width (0.01 = 1%).
+    reprojection_error: float | None = None
+    points: int | None = None  # how many point pairs it was solved from
+
+    def problems(self) -> list[str]:
+        values = (self.lon, self.lat, self.height, self.bearing, self.pitch, self.roll, self.hfov, self.confidence)
+        if not all(isinstance(v, (int, float)) and math.isfinite(v) for v in values):
+            return ["camera has a non-finite value"]
+        out = []
+        min_lon, min_lat, max_lon, max_lat = PARIS_BBOX
+        if not (min_lon <= self.lon <= max_lon and min_lat <= self.lat <= max_lat):
+            out.append("camera outside Paris")
+        if not 0.0 <= self.height <= 350.0:  # the ground to above the Eiffel Tower
+            out.append("camera height outside 0..350 m")
+        if not 0.0 <= self.bearing < 360.0:
+            out.append("camera bearing outside 0..360")
+        if not -90.0 <= self.pitch <= 90.0:
+            out.append("camera pitch outside -90..90")
+        if not -180.0 <= self.roll <= 180.0:
+            out.append("camera roll outside -180..180")
+        if not 1.0 <= self.hfov <= 150.0:
+            out.append("camera field of view outside 1..150")
+        if self.method not in CAMERA_METHODS:
+            out.append(f"unknown camera method {self.method!r}")
+        if not 0.0 <= self.confidence <= 1.0:
+            out.append("camera confidence outside 0..1")
+        if self.reprojection_error is not None and not (math.isfinite(self.reprojection_error) and self.reprojection_error >= 0.0):
+            out.append("camera reprojection error below 0")
+        if self.points is not None and self.points < 4:
+            out.append("camera solved from fewer than 4 points")
+        return out
+
+    def to_props(self) -> dict:
+        """Flat `camera_*` properties (MapLibre stringifies nested objects)."""
+        props = {f"camera_{k}": v for k, v in asdict(self).items() if v is not None}
+        for key in ("camera_lon", "camera_lat"):
+            props[key] = round(props[key], 7)
+        return props
+
+
+CAMERA_FIELDS = ("lon", "lat", "height", "bearing", "pitch", "roll", "hfov", "method", "confidence")
+
+
+def camera_of(props: dict) -> Camera | None:
+    """The camera written in a feature's properties, or None when it has none."""
+    if any(f"camera_{k}" not in props for k in CAMERA_FIELDS):
+        return None
+    return Camera(
+        **{k: props[f"camera_{k}"] for k in CAMERA_FIELDS},
+        reprojection_error=props.get("camera_reprojection_error"),
+        points=props.get("camera_points"),
+    )
+
+
+def in_era(props: dict, era: tuple[int, int] = ERA_1920, max_span: int = ERA_MAX_SPAN) -> bool:
+    """Whether a photo is dated inside the era, to within `max_span` years."""
+    year = props.get("year")
+    if year is None:
+        return False
+    end = props.get("year_end") or year
+    return era[0] <= year and end <= era[1] and end - year <= max_span
+
 
 @dataclass
 class Photo:
@@ -49,6 +140,7 @@ class Photo:
     heading_confidence: float | None = None
     fov: float | None = None
     confidence: float = 0.0
+    camera: Camera | None = None  # the full camera, when it was solved (see Camera)
     extra: dict = field(default_factory=dict)
 
     @property
@@ -82,6 +174,8 @@ class Photo:
             out.append("heading method without a heading")
         if not (self.thumb or self.image or self.iiif):
             out.append("no image")
+        if self.camera is not None:
+            out.extend(self.camera.problems())
         return out
 
     def to_feature(self) -> dict:
@@ -89,7 +183,10 @@ class Photo:
         props.pop("lon")
         props.pop("lat")
         extra = props.pop("extra")
+        props.pop("camera")
         props = {k: v for k, v in props.items() if v is not None}
+        if self.camera is not None:
+            props.update(self.camera.to_props())
         props["id"] = self.id
         if extra:
             props["extra"] = json.dumps(extra, ensure_ascii=False)
@@ -156,6 +253,12 @@ def build_index(photos_dir: Path | None = None, data_dir: Path | None = None) ->
     (data_dir / "photos.geojson").write_text(json.dumps(merged, ensure_ascii=False, separators=(",", ":")))
     manifest_path = data_dir / "manifest.json"
     manifest = json.loads(manifest_path.read_text()) if manifest_path.exists() else {}
-    manifest["photos"] = {"count": len(features), "sources": sources}
+    posed = [f["properties"] for f in features if camera_of(f["properties"]) is not None]
+    manifest["photos"] = {
+        "count": len(features),
+        # Photos with a full camera (position, height, bearing, pitch, roll, field of view).
+        "cameras": {"count": len(posed), "era_1900_1929": sum(1 for p in posed if in_era(p))},
+        "sources": sources,
+    }
     manifest_path.write_text(json.dumps(manifest, ensure_ascii=False, indent=2) + "\n")
     return manifest

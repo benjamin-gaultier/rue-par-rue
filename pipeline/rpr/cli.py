@@ -81,6 +81,12 @@ def cmd_depth(args: argparse.Namespace) -> None:
     _update_manifest(f"depth_{args.set.replace('-', '_')}", depth.build(args.set))
 
 
+def cmd_eraimages(args: argparse.Namespace) -> None:
+    from rpr.sources import eraimages
+
+    _update_manifest(f"era_images_{args.area}", eraimages.build(args.area, limit=args.limit, rebuild=args.rebuild))
+
+
 def cmd_site(args: argparse.Namespace) -> None:
     from rpr.sources import site
 
@@ -189,6 +195,12 @@ def main(argv: list[str] | None = None) -> int:
     p = sub.add_parser("depth", help="AI depth maps for a set of photos (needs onnxruntime, numpy, Pillow)")
     p.add_argument("--set", choices=["notre-dame"], default="notre-dame")
     p.set_defaults(func=cmd_depth)
+
+    p = sub.add_parser("eraimages", help="full-size images of an area's photos of 1900-1929, into pipeline/cache/era1920/ (needs [vision])")
+    add_area(p)
+    p.add_argument("--limit", type=int, default=None, help="fetch at most this many new images")
+    p.add_argument("--rebuild", action="store_true", help="fetch existing images again")
+    p.set_defaults(func=cmd_eraimages)
 
     p = sub.add_parser("site", help="the Seine, bridges and landmark details of a model area (IGN BD TOPO, needs shapely)")
     add_area(p)
