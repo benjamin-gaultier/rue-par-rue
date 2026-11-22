@@ -28,6 +28,21 @@ export interface PhotoProps {
   heading_confidence?: number
   fov?: number
   confidence: number
+  /**
+   * The full camera, flat as `camera_*`, present only when it was solved
+   * (see `cameraOf` and Camera in pipeline/rpr/photo.py). Not used by the app yet.
+   */
+  camera_lon?: number
+  camera_lat?: number
+  camera_height?: number
+  camera_bearing?: number
+  camera_pitch?: number
+  camera_roll?: number
+  camera_hfov?: number
+  camera_method?: 'matched' | 'manual'
+  camera_confidence?: number
+  camera_reprojection_error?: number
+  camera_points?: number
   /** JSON string of source-specific details (see pipeline/rpr/photo.py). */
   extra?: string
 }
@@ -42,6 +57,46 @@ export interface PhotoFeature {
 export interface PhotoCollection {
   type: 'FeatureCollection'
   features: PhotoFeature[]
+}
+
+/**
+ * Where the camera stood and how it looked: enough to lay the photo on a wall.
+ * Stricter than `heading`, which is a bearing alone. Solved by hand against the
+ * 3D model (`manual`) or by matching posed pictures (`matched`), never estimated.
+ */
+export interface Camera {
+  lon: number
+  lat: number
+  /** Metres above the ground where the camera stood. */
+  height: number
+  /** Compass bearing of the optical axis, degrees, 0 = north, clockwise. */
+  bearing: number
+  /** Degrees above the horizon; negative looks down. */
+  pitch: number
+  /** Degrees the picture is turned clockwise about the optical axis. */
+  roll: number
+  /** Horizontal field of view of the whole picture, degrees. */
+  hfov: number
+  method: 'matched' | 'manual'
+  confidence: number
+  /** Mean distance between clicked and reprojected points, as a share of the picture's width. */
+  reprojectionError?: number
+  /** How many point pairs it was solved from. */
+  points?: number
+}
+
+/** The photo's full camera, or null when any part of it is missing. */
+export function cameraOf(p: PhotoProps): Camera | null {
+  const { camera_lon: lon, camera_lat: lat, camera_height: height, camera_bearing: bearing } = p
+  const { camera_pitch: pitch, camera_roll: roll, camera_hfov: hfov, camera_method: method, camera_confidence: confidence } = p
+  const numbers = [lon, lat, height, bearing, pitch, roll, hfov, confidence]
+  if (!numbers.every((v) => typeof v === 'number' && Number.isFinite(v))) return null
+  if (method !== 'matched' && method !== 'manual') return null
+  return {
+    lon: lon!, lat: lat!, height: height!, bearing: bearing!, pitch: pitch!, roll: roll!, hfov: hfov!, method, confidence: confidence!,
+    reprojectionError: p.camera_reprojection_error,
+    points: p.camera_points
+  }
 }
 
 /** Photos within this many years of the selected year are shown. */

@@ -3,7 +3,7 @@ stream: era1920
 priority: 2
 status: open
 added: 2026-11-21
-needs: [era1920-pose-by-hand]
+needs: [era1920-pose-by-hand, era1920-image-borders]
 ---
 # Lay the posed photos on the walls of one street
 

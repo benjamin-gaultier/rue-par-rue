@@ -1,7 +1,8 @@
 ---
 stream: era1920
 priority: 1
-status: open
+status: done
+done: 2026-11-22, PR #33. Photos can carry a full camera (flat `camera_*` properties, 0 have one); `rpr eraimages` fetched 844 full-size images of 1900–1929 around the Cité (526 Albert-Kahn at 800 px, 318 Paris Musées at about 2,160 px), 317 MB.
 added: 2026-11-21
 needs: []
 ---

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { dateLabel, histogram, positionLabel, inWindow, type PhotoFeature, type PhotoProps, yearFilter } from '../src/photos'
+import { cameraOf, dateLabel, histogram, positionLabel, inWindow, type PhotoFeature, type PhotoProps, yearFilter } from '../src/photos'
 
 const props = (p: Partial<PhotoProps>): PhotoProps => ({
   id: 'x:1', source: 'kahn', source_id: '1', title: 't', license: 'CC0', media: 'photo', pose: 'recorded', confidence: 0.8, ...p
@@ -41,4 +41,23 @@ it('names the geocoded street in the position label', () => {
   const p = props({ pose: 'geocoded', extra: JSON.stringify({ geocoded_street: "Rue d'Arras 75005 Paris" }) })
   expect(positionLabel(p)).toBe("Approximate: on Rue d'Arras, the street named in the caption")
   expect(positionLabel(props({ pose: 'recorded' }))).toBe('Camera position recorded by the archive')
+})
+
+describe('full camera', () => {
+  const camera = {
+    camera_lon: 2.3466, camera_lat: 48.8524, camera_height: 1.5, camera_bearing: 40, camera_pitch: 8, camera_roll: -1,
+    camera_hfov: 52, camera_method: 'manual' as const, camera_confidence: 0.9, camera_reprojection_error: 0.012, camera_points: 6
+  }
+
+  it('reads the flat camera properties', () => {
+    expect(cameraOf(props(camera))).toEqual({
+      lon: 2.3466, lat: 48.8524, height: 1.5, bearing: 40, pitch: 8, roll: -1, hfov: 52, method: 'manual', confidence: 0.9,
+      reprojectionError: 0.012, points: 6
+    })
+  })
+
+  it('is null for a photo with a heading only, or with part of a camera', () => {
+    expect(cameraOf(props({ heading: 40, heading_method: 'recorded', fov: 50 }))).toBeNull()
+    expect(cameraOf(props({ ...camera, camera_pitch: undefined }))).toBeNull()
+  })
 })
