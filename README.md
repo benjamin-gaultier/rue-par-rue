@@ -284,6 +284,7 @@ python -m rpr monuments     # churches, hôtels, palaces, fountains and cemeteri
 python -m rpr parismusees   # Paris Musées photos, needs PARISMUSEES_TOKEN (--offline: place the saved works again)
 python -m rpr headings      # facade bearings for photos placed at a house number (then parismusees --offline, index)
 python -m rpr index         # rebuild photos.geojson + manifest.json
+python -m rpr eraimages --area cite   # full-size images of the area's photos of 1900–1929, into pipeline/cache/era1920/ (needs [vision])
 pytest -q
 ```
 
@@ -345,6 +346,10 @@ For Paris Musées, create a free token at <https://apicollections.parismusees.pa
    - say on each building's card whether a wall is a photo, generated from photos, or drawn by rule.
 
    The work is in `agents/backlog/era1920-*.md`.
+
+   Done so far:
+   - **The camera record.** A photo can carry a full camera in `photos.geojson`, as flat `camera_*` properties: where it stood, its height above the ground, bearing, pitch, roll, horizontal field of view, how it was solved (`manual` or `matched`), a confidence and, when it was solved from points, the reprojection error. It is separate from the heading, which is a bearing alone and may be worked out from a street outline: a camera is solved or absent. `manifest.json` counts the photos that have one (`photos.cameras`): 0 today, 0 of them in 1900–1929.
+   - **Full-size images.** `python -m rpr eraimages --area cite` (needs `pip install -e ".[vision]"`) fetches the largest image each archive serves without an account for the photos around the Cité dated within three years inside 1900–1929: 844 images, 317 MB, in `pipeline/cache/era1920/` (not committed). The 526 Albert-Kahn autochromes cleared for reuse come at 800 px on the long side, saved as served; 34 not cleared are never downloaded. The 318 Paris Musées prints come from each work's IIIF manifest at about 2,160 px (871 to 2,950), and 77 of them are cut out of their mount. The index beside the images keeps each photo's licence and credit. Known limits: the Albert-Kahn files show the plate's dark edge and the museum's logo in the bottom-left corner, and some Paris Musées scans keep a thin strip of card; both must be masked before a photo becomes a wall (`agents/backlog/era1920-image-borders.md`).
 
 ## Licences
 
