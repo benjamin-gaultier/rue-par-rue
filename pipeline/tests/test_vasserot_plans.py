@@ -166,3 +166,56 @@ def test_a_fit_at_the_wrong_scale_is_refused():
     assert vp.scale_holds(vp.fitted_scale(120, 30.0), vp.sheet_scale("7.4 cm / 30 m"))
     # No paper size in the index: nothing to check against.
     assert vp.scale_holds(vp.fitted_scale(351, None), 200)
+
+
+def _ground(sheet, angle=0.0):
+    """A sheet outline (pixels, y down) as it lies on the ground: 0.05 m per pixel, turned, moved."""
+    return translate(rotate(scale(vp.to_math(sheet), 0.05, 0.05, origin=(0, 0)), angle, origin=(0, 0)), 652100, 6862300)
+
+
+def test_turn_between_measures_walls_against_the_parcels_sides():
+    plot = Polygon([(0, 0), (20, 0), (20, 12), (0, 12)])
+    assert vp.turn_between(plot, plot) == 0
+    assert abs(vp.turn_between(rotate(plot, 10, origin="centroid"), plot) - 10) < 0.2
+    # Walls are compared with the side they run along, so a square turned 45° is 45° off, not 0.
+    square = Polygon([(0, 0), (15, 0), (15, 15), (0, 15)])
+    assert abs(vp.turn_between(rotate(square, 45, origin="centroid"), square) - 45) < 0.2
+    # Steps in a wall shorter than a room are not sides.
+    stepped = Polygon([(0, 0), (20, 0), (20, 12), (11, 12), (11, 12.4), (10, 12.4), (10, 12), (0, 12)])
+    assert vp.turn_between(stepped, plot) == 0
+    # Nothing long enough to compare.
+    assert vp.turn_between(Polygon([(0, 0), (1, 0), (1, 1), (0, 1)]), plot) is None
+
+
+def test_straighten_keeps_a_fit_whose_walls_follow_the_parcel():
+    sheet = Polygon([(0, 0), (300, 0), (300, 120), (120, 120), (120, 400), (0, 400)])
+    ground = _ground(sheet, 37)
+    fit = vp.register(sheet, ground)
+    kept = vp.straighten(sheet, ground, fit)
+    assert kept.angle == fit.angle and kept.turned_back == 0
+    assert kept.turn < 1
+
+
+def test_straighten_turns_back_a_fit_that_overlaps_best_askew():
+    # A fit handed over 11° off a parcel it matches is turned back onto it.
+    sheet = Polygon([(0, 0), (400, 0), (400, 300), (0, 300)])
+    ground = _ground(sheet)
+    askew = vp.Fit(scale=0.05, angle=11.0, dx=0, dy=0, iou=0.8)
+    back = vp.straighten(sheet, ground, askew)
+    assert back is not None
+    assert abs(back.turned_back + 11) <= 3 and back.turn <= vp.GOOD_TURN
+    assert back.iou > 0.9
+    placed = vp.place(vp.to_math(sheet), back)
+    assert placed.symmetric_difference(ground).area / ground.area < 0.15
+
+
+def test_straighten_rejects_a_drawing_that_only_fits_askew():
+    # A rectangle fits a square of the same area best along its diagonal, as
+    # rue des Marmousets n°17 did: turned straight, it no longer overlaps enough.
+    sheet = Polygon([(0, 0), (480, 0), (480, 300), (0, 300)])
+    side = math.sqrt(480 * 300) * 0.05
+    ground = Polygon([(0, 0), (side, 0), (side, side), (0, side)])
+    fit = vp.register(sheet, ground)
+    assert fit.iou < vp.MIN_IOU or vp.straighten(sheet, ground, fit) is None
+    turned = vp.Fit(scale=0.05, angle=30.0, dx=0, dy=0, iou=0.73)
+    assert vp.straighten(sheet, ground, turned) is None

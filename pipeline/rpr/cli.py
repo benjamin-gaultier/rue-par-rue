@@ -13,11 +13,11 @@ from rpr.photo import build_index, write_source
 
 def _update_manifest(key: str, value: dict) -> None:
     path = paths.DATA_DIR / "manifest.json"
-    manifest = json.loads(path.read_text()) if path.exists() else {}
+    manifest = json.loads(path.read_text(encoding="utf-8")) if path.exists() else {}
     value = {**value, "updated_at": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")}
     manifest[key] = value
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps(manifest, ensure_ascii=False, indent=2) + "\n")
+    path.write_text(json.dumps(manifest, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
 
 
 def cmd_verniquet(args: argparse.Namespace) -> None:

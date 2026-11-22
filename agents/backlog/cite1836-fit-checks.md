@@ -1,7 +1,8 @@
 ---
 stream: cite1836
 priority: 2
-status: open
+status: done
+done: 2026-11-22, PR #31 — the walls of each fit are compared with the parcel's sides: of 114 fits, 13 are turned back onto their parcel (by 2° to 13°) and 7 that only fit askew are rejected (114 → 107 traced, median IoU 0.84 → 0.85); follow-ups in cite1836-known-scale-fit and cite1836-ink-read-in-part
 added: 2026-11-21
 needs: []
 ---

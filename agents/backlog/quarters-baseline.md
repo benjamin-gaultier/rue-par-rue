@@ -1,7 +1,8 @@
 ---
 stream: quarters
 priority: 2
-status: open
+status: done
+done: 2026-11-22, PR #29, `tools/baseline/` measures an area (sizes.py, measure.mjs, `rpr.measure()` behind `?debug`); the Cité's numbers are in the README: 3,157 detailed buildings, 6.25 MB of data (0.91 MB gzipped), 74 MB of GPU buffers (not 20), first 3D frame 12 to 15 s, 2 to 6 ms a frame on this PC
 added: 2026-11-21
 needs: []
 ---

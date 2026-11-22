@@ -114,10 +114,60 @@ What is estimated, not sourced:
 
 #### Performance
 
-The detailed island has 3,463 buildings across all years (167,000 wall and roof triangles, against 95,000 for the old 600 m area). To keep it usable on phones:
+The detailed island has 3,157 buildings across all years: 3,025 from the model and 132 houses on the bridges. To keep it usable on phones:
 
-- Identical vertices are merged behind an index, normals are stored as bytes and years as 16-bit integers (`web/src/meshpack.ts`): GPU buffers come to about 20 MB, less than the old area's 23 MB.
-- Tree crowns have three levels of detail by distance (180, 80 and 20 faces, within 160 m, 450 m and beyond), refilled when the camera moves 30 m: about 318,000 triangles are drawn in a view over the island (308,000 before, with less than half the trees).
+- Identical vertices are merged behind an index, normals are stored as bytes and years as 16-bit integers (`web/src/meshpack.ts`).
+- Tree crowns have three levels of detail by distance (180, 80 and 20 faces, within 160 m, 450 m and beyond), refilled when the camera moves 30 m.
+
+##### Baseline: the Cité alone
+
+Every new quarter is measured against these numbers. They were taken on 2026-11-22 with `tools/baseline/` ([how](tools/baseline/README.md)) on one PC: AMD Ryzen 7 5700X, NVIDIA GeForce RTX 3070, Windows 11, headless Chrome 157 on ANGLE Direct3D 11, the built app served from the same PC, an empty browser profile for each run.
+
+| Year | Detailed buildings, all years | Standing that year | Trees | GPU buffers MB |
+| --- | ---: | ---: | ---: | ---: |
+| 1836 | 3,157 | 2,749 | 2,493 | 74.3 |
+| 2026 | 3,157 | 907 | 2,493 | 74.3 |
+
+The model file holds 8,487 buildings for the whole box, 3,025 of them in the detailed area. The year is a shader uniform, so the GPU holds every year at once: the buffers are the same at 1836 and today. They come to 74 MB, not the "about 20 MB" this page gave before the facade details, the landmarks, the streets and the vehicles were added:
+
+| GPU buffers by material | MB |
+| --- | ---: |
+| trees, streets, street furniture and vehicles (materials without a name) | 19.6 |
+| details | 17.7 |
+| roofs | 16.4 |
+| facades | 10.9 |
+| landmarks | 7.2 |
+| walls, all families | 2.5 |
+| lawns, ground and water | 0.2 |
+
+Download, from `python -I tools/baseline/sizes.py`:
+
+| File | MB | MB gzipped |
+| --- | ---: | ---: |
+| cite-1836.geojson | 4.80 | 0.51 |
+| streets-cite.json | 0.44 | 0.17 |
+| vasserot-traced-cite.geojson | 0.38 | 0.08 |
+| vehicles-cite.json | 0.35 | 0.08 |
+| greenery-cite.json | 0.20 | 0.06 |
+| site-cite.geojson | 0.03 | 0.01 |
+| institutions-cite.geojson | 0.02 | 0.00 |
+| landmarks-cite.json | 0.02 | 0.00 |
+| All data files (8) | 6.25 | 0.91 |
+| thumbs/ (1,068 images and their index) | 7.62 | |
+| depth/ (93 files) | 1.43 | |
+
+Time, from `node tools/baseline/measure.mjs`. "Draw" is one frame drawn and finished by the GPU, over a full turn of the camera. The phone-sized viewport is 375 × 812 at 3 device pixels per pixel (the map takes 375 × 675 of it), on this PC's graphics card, not on a phone.
+
+| Viewport | Year | First 3D frame s | Draw ms above the island, median / 95th | Draw ms in the street, median / 95th | Triangles above / in the street |
+| --- | --- | ---: | ---: | ---: | ---: |
+| 1920 × 1080 | 1836 | 12.8 | 3.5 / 4.6 | 3.0 / 5.5 | 623,000 / 726,000 |
+| 1920 × 1080 | 2026 | 14.2 | 5.5 / 8.8 | 3.5 / 9.3 | 671,000 / 777,000 |
+| phone-sized | 1836 | 13.1 | 2.6 / 6.5 | 1.8 / 3.0 | 655,000 / 726,000 |
+| phone-sized | 2026 | 12.4 | 1.9 / 4.8 | 2.3 / 4.1 | 723,000 / 777,000 |
+
+- The first 3D frame took 12 to 15 s over three runs, with no network time in it. Compiling the shaders is a large part (8.6 s with FXC alone, below).
+- Draw times move by a millisecond or two from run to run. Frames were painted every 20 ms in every run, the refresh interval of this PC's screen: none was late. The detailed layer makes 33 or 34 draw calls.
+- No real phone has been measured yet.
 
 On Windows, Chrome compiles every shader with Direct3D's FXC compiler before the first 3D frame. `python -I tools/fxc/check.py` (on a Windows PC, see [tools/fxc/README.md](tools/fxc/README.md)) compiles all 19 fragment shaders the app draws the same way, on a 1 MB stack, and fails when one takes more than 5 seconds. On 2026-11-21 (AMD Ryzen 7 5700X, d3dcompiler_47 10.0.26100.9711) they took 8.6 s in all, with no stack overflow:
 
@@ -240,9 +290,9 @@ The depth is relative and estimated from a single image. It gives parallax, not 
 
 1. Each sheet is matched to its parcel through the ALPAGE 1836 address points (street, number, quarter). The plans' index tells homonyms apart with a qualifier the points lack ("Sainte-Anne-en-la-Cité", "Harlay-au-Palais"), which is dropped, and spellings are compared loosely (Deux-Ermites, Deux-Hermites). A sheet for two houses ("n°6 et 8") is fitted to both parcels together. The place Dauphine's address points carry no street name: a point takes the name of a street still called the same today (and named by 1836, per the City's record) when it lies within 2 m of that street's outline, from the City of Paris street outlines (ODbL). The index corrects the number of 85 Cité sheets in brackets ("n°22 [en fait : 20]"). The number written on the sheet is the cadastre's and the correction is a later numbering: of the 29 such sheets that fit a parcel, 25 fit the written number's, and 3 of the 4 that fit only the corrected number's land on a parcel another traced sheet already holds. So the written number is used and the correction dropped. The index also notes a house's other address ("et 3 rue des Deux-Ermites"): a sheet whose own street or number the cadastre lacks, as on the streets opened or renumbered after it was drawn (rue de Constantine, rue de la Cité), is tried at that address. Each footprint records how it was matched (`match`).
 2. The drawing is segmented in Lab colour, relative to the sheet's own paper: the pink wash marks built rooms, white areas closed by boundary lines are courtyards. Sheets that colour only the walls are flagged `walls_only`. Some sheets have no wash at all: the walls are drawn in ink. When the pink found is missing, runs into the sheet's margin (a strip of the scanner's background) or is a small fragment inside the ink drawing (its box covers under 15% of the drawing's), the sheet is read from its thick ink walls, closed over door gaps, and the walled area is the building (`drawing: ink walls`, `walls_only`).
-3. The drawing is registered onto the parcel polygon (scale from areas, rotation searched to 0.25°, scored by IoU). Fits below 0.72 are rejected. Because the scale comes from the areas, a reading that caught only part of a drawing can still fit: an ink reading is rejected when the fitted sheet's long side would cover more than 100 m (73 of the 77 sheets traced from their wash cover 37–92 m). Each footprint records that length (`sheet_m`). Every fit is also checked against the sheet's own scale: the sheets are drawn at 1:200 (8,400 of the 11,200 scale bars in the index are within a tenth of "15 cm / 30 m"; a sheet with another bar is held to its own), and the index gives each sheet's paper size, so the ground a fitted sheet covers gives the scale the fit implies (`scale`). A fit is kept when that scale is 0.7 to 1.5 times the sheet's: 87 of the 93 sheets traced before this check came out at 1:152 to 1:284 (median 1:209, since the scans keep a margin around the paper), the other six at 1:119, 1:328 and 1:440 to 1:949.
+3. The drawing is registered onto the parcel polygon (scale from areas, rotation searched to 0.25°, scored by IoU). Fits below 0.72 are rejected. Because the scale comes from the areas, a reading that caught only part of a drawing can still fit: an ink reading is rejected when the fitted sheet's long side would cover more than 100 m (73 of the 77 sheets traced from their wash cover 37–92 m). Each footprint records that length (`sheet_m`). Every fit is also checked against the sheet's own scale: the sheets are drawn at 1:200 (8,400 of the 11,200 scale bars in the index are within a tenth of "15 cm / 30 m"; a sheet with another bar is held to its own), and the index gives each sheet's paper size, so the ground a fitted sheet covers gives the scale the fit implies (`scale`). A fit is kept when that scale is 0.7 to 1.5 times the sheet's: 87 of the 93 sheets traced before this check came out at 1:152 to 1:284 (median 1:209, since the scans keep a margin around the paper), the other six at 1:119, 1:328 and 1:440 to 1:949. Last, the walls are checked against the parcel's sides, because the best overlap is not always the right way round: a near-square drawing overlaps a near-square parcel almost as well when turned. Each side of the fitted outline that runs straight for 2.5 m is compared with the parcel side nearest to it, and the median angle between them, weighted by length, is the fit's `turn`. Of the 114 fits that passed the checks above, half were turned under 2.7° and 94 were turned 6° or less; the 20 beyond all sat visibly askew. Such a fit is turned back, up to 20° either way, to the best overlap whose walls are within 3° of the parcel's sides, or failing that to the least turned (`turned_back` records by how much). It is rejected when the overlap falls under 0.72 before the walls come within 6°: the drawing and the parcel disagree.
 
-On the Cité: 255 sheets with a street number, 114 traced (median IoU 0.84; 22 of them from their ink walls, 25 with a corrected number, 2 through a second address), 95 rejected for a poor fit (15 of them at the wrong scale), 46 without an address match. 88 of the demolished buildings in the 3D model stand on a traced footprint (the others' parcels are covered by a surviving building). Of the 95 poor fits, 46 come from the sheets with a corrected number or a second address and are not sorted yet; 6 were traced before the scale check (among them rue du Haut-Moulin n°3, which sat 45° off its parcel). The 43 others, sorted by eye: 17 sheets and parcels genuinely disagree (the sheet draws part of the parcel, or the parcel was divided differently); 7 leave out a yard open on one side, so their outline is smaller than the parcel; 5 are washed only in part (other rooms in brown or grey); 14 are ink drawings whose walls are too faint, hatched or broken to read, or read only in part (see `cite1836-*` items in the backlog). The 46 without a match: 24 sheets on streets opened or renumbered after the cadastre was drawn (rue d'Arcole 11, rue de Constantine 9, rue de la Cité 4), whose index gives no second address, so their numbers still need a concordance with the old ones; 8 in the cour de la Sainte-Chapelle, whose address points all fall on the single parcel of the Palais; and 14 whose number has no point in the cadastre. Traced buildings are shown in terracotta, with a link to the original sheet. Output: `web/public/data/3d/vasserot-traced-cite.geojson`.
+On the Cité: 255 sheets with a street number, 107 traced (median IoU 0.85, median turn 2.6°; 22 of them from their ink walls, 22 with a corrected number, 2 through a second address, 13 turned back by 2° to 13°), 102 rejected for a poor fit (15 of them at the wrong scale, 7 turned), 46 without an address match. 84 of the demolished buildings in the 3D model stand on a traced footprint (the others' parcels are covered by a surviving building). Of the 102 poor fits, 46 come from the sheets with a corrected number or a second address and are not sorted yet; 6 were traced before the scale check (among them rue du Haut-Moulin n°3, which sat 45° off its parcel); 7 were traced before the check on the walls (rue des Marmousets n°17, a long rectangle that overlapped its squarish parcel best 31° off; rue Cocatrix n°16, 22° off; rue Saint-Landry n°4, rue du Milieu-des-Ursins n°1, rue Chanoinesse n°6 and n°22, place Dauphine n°14). The 43 others, sorted by eye: 17 sheets and parcels genuinely disagree (the sheet draws part of the parcel, or the parcel was divided differently); 7 leave out a yard open on one side, so their outline is smaller than the parcel; 5 are washed only in part (other rooms in brown or grey); 14 are ink drawings whose walls are too faint, hatched or broken to read, or read only in part (see `cite1836-*` items in the backlog). The 46 without a match: 24 sheets on streets opened or renumbered after the cadastre was drawn (rue d'Arcole 11, rue de Constantine 9, rue de la Cité 4), whose index gives no second address, so their numbers still need a concordance with the old ones; 8 in the cour de la Sainte-Chapelle, whose address points all fall on the single parcel of the Palais; and 14 whose number has no point in the cadastre. Traced buildings are shown in terracotta, with a link to the original sheet. Output: `web/public/data/3d/vasserot-traced-cite.geojson`.
 
 Next: a concordance of old and new house numbers for the streets renumbered after 1836, the Vasserot block atlas for full coverage, roof shapes, and facade textures from the archive photographs.
 
@@ -252,6 +302,7 @@ Next: a concordance of old and new house numbers for the streets renumbered afte
 web/        Vite + TypeScript + MapLibre GL app (static, no backend)
   public/data/   generated data the app reads (committed)
 pipeline/   Python package `rpr` that harvests and normalises sources
+tools/      checks run by hand: shader compile times (fxc/), what an area costs (baseline/)
 .github/    CI, a manual harvest workflow, GitHub Pages deploy
 ```
 
