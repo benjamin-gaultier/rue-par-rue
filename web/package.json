@@ -8,7 +8,8 @@
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview",
     "test": "vitest run",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "smoke": "node ../tools/smoke/smoke.mjs"
   },
   "dependencies": {
     "@allmaps/annotation": "1.0.0-beta.38",

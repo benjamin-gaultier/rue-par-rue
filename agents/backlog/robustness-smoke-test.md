@@ -1,7 +1,8 @@
 ---
 stream: robustness
 priority: 2
-status: open
+status: done
+done: 2026-11-22, PR #32, `npm run smoke` opens the built site in headless Chrome at 1836 and today in about 15 s and fails on a console error, a missing file, a failed module or shader, or the fallback message; first 3D frames 14 s on this PC's GPU, 4 to 7 s in software
 added: 2026-11-20
 needs: []
 ---
