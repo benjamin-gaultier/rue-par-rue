@@ -1,7 +1,8 @@
 ---
 stream: photos
 priority: 1
-status: open
+status: done
+done: 2026-11-22, PR #30 — a caption that ends on another town after a comma is not placed: 15 photos of Rouen, Beauvais, Compiègne, Houdan and Vanves leave the map (10,032 → 10,017 photos), no other placement changes
 added: 2026-11-21
 needs: []
 ---
