@@ -141,7 +141,7 @@ PLACE_TYPES = {
     "parvis", "esplanade", "galerie", "carrefour", "rond-point",
 }
 # Words that make a caption's last piece a street or a corner, not a town ("Bd Jourdan", "Coin Rue de Seine").
-_WAY_WORDS = {w.rstrip("\.") for w in STREET_TYPES.split("|")} | {"coin", "angle", "encoignure", "croisement", "poterne"}
+_WAY_WORDS = {w.rstrip("\\.") for w in STREET_TYPES.split("|")} | {"coin", "angle", "encoignure", "croisement", "poterne"}
 _MONTHS = "janvier|février|fevrier|mars|avril|mai|juin|juillet|août|aout|septembre|octobre|novembre|décembre|decembre"
 _PARTICLE = r"(?:(?i:de la|de l['’]|des|du|de|d['’]|aux|au|à)\s*)?"
 # Where a street name ends: punctuation, a sentence ("Rue Lepic. Montmartre"),
