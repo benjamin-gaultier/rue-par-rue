@@ -66,21 +66,23 @@
     "area": "Île de la Cité",
     "standing": 1606,
     "later": 813,
-    "reconstructed": 6068,
-    "traced": 88,
+    "reconstructed": 6073,
+    "traced": 84,
     "license": "Vasserot parcels: ODbL (ALPAGE). APUR buildings: ODbL.",
-    "updated_at": "2026-11-21T13:17:15Z"
+    "updated_at": "2026-11-22T13:14:31Z"
   },
   "traced_cite": {
     "area": "cite",
     "no parcel match": 46,
     "no drawing found": 0,
-    "poor fit": 95,
-    "traced": 114,
+    "poor fit": 102,
+    "traced": 107,
     "image missing": 0,
     "wrong scale": 15,
+    "turned": 7,
+    "turned back": 13,
     "file": "3d/vasserot-traced-cite.geojson",
-    "updated_at": "2026-11-21T13:15:44Z"
+    "updated_at": "2026-11-22T13:13:01Z"
   },
   "thumbs_cite": {
     "area": "cite",
