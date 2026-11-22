@@ -18,6 +18,9 @@ import { fileURLToPath } from 'node:url'
 import { parseArgs } from 'node:util'
 import { classify, parseYears, serve, viewProblems } from './lib.mjs'
 
+// Output piped to a command that stops reading (head) must not crash the run before the browser is closed.
+process.stdout.on('error', () => {})
+
 const HERE = dirname(fileURLToPath(import.meta.url))
 const ROOT = resolve(HERE, '..', '..')
 

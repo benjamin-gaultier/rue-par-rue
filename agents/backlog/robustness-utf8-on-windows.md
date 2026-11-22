@@ -1,6 +1,6 @@
 ---
 stream: robustness
-priority: 3
+priority: 2
 status: open
 added: 2026-11-20
 needs: []
@@ -13,3 +13,6 @@ Done when: every `open()`, `read_text()` and `write_text()` in `pipeline/rpr` gi
 
 Notes:
 - PR #17 ran the pipeline with `PYTHONUTF8=1` as a workaround. `rpr/cli.py` `_update_manifest` and `rpr/sources/model3d.py` are the files seen to break.
+- Reported three times by other runs (2026-11-20, 2026-11-21 in PR #25, 2026-11-22), so raised to priority 2. Also seen in `rpr/photo.py` (`write_source`, `build_index`): `python -m rpr kahn` wrote `kahn.geojson` in cp1252 and could not read it back.
+- Find them with `grep -rn "read_text()\|write_text(\|open(" pipeline/rpr | grep -v encoding`. CI runs on Linux and does not see the problem, so the test must look at the source, not at the output.
+- Also done when: `python -m rpr index` gives the same bytes with and without `PYTHONUTF8=1`.

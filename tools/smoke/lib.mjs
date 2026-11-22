@@ -4,7 +4,7 @@ import { createServer } from 'node:http'
 import { extname, join, normalize, resolve, sep } from 'node:path'
 
 /** Console warnings that mean part of the 3D view is missing. Other warnings are let through. */
-export const BAD_WARNINGS = [/City module .* (unavailable|failed)/, /did not compile/, /Detailed 3D area unavailable/, /WebGL.*context.*lost/i]
+export const BAD_WARNINGS = [/City module .*(unavailable|failed)/, /did not compile/, /Detailed 3D area unavailable/, /WebGL.*context.*lost/i]
 
 /** The hosts named in a message, lower case. */
 export function hostsIn(text) {

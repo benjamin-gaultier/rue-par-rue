@@ -135,6 +135,8 @@ On Windows, Chrome compiles every shader with Direct3D's FXC compiler before the
 
 The wall shader with every family in one program, as it was before it was split, takes 4.72 s and 6,236 slots; the app no longer draws it.
 
+`npm run smoke` (in `web/`, after `npm run build`) opens the built site in headless Chrome, shows the island in 3D at 1836 and today, and prints the time from opening the page to the first frames of the detailed island. On 2026-11-22, on the same PC, from a loopback server with an empty browser cache: 13.5 to 14.5 s on the GPU through Direct3D (`--gl gpu`, three runs), most of it the shader compiles above, and 4.3 to 7.1 s with software WebGL, which does not use FXC.
+
 #### Streets through time
 
 `python -m rpr streets --area cite` (needs shapely) writes `web/public/data/3d/streets-cite.json` (about 415 kB) for the whole Cité area, and `web/src/streets.ts` draws it. There are two street networks:
@@ -261,7 +263,10 @@ npm ci          # .npmrc sets legacy-peer-deps (works around an npm bug with vit
 npm run dev     # http://localhost:5173
 npm test        # unit tests
 npm run build   # static site in web/dist
+npm run smoke   # opens the built site in headless Chrome and fails if the 3D view does not draw
 ```
+
+`npm run smoke` is the browser check the unit tests cannot do: see [tools/smoke/README.md](tools/smoke/README.md).
 
 ## Run the pipeline
 
