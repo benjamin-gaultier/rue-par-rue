@@ -36,6 +36,10 @@
   },
   "photos": {
     "count": 10017,
+    "cameras": {
+      "count": 0,
+      "era_1900_1929": 0
+    },
     "sources": [
       {
         "key": "kahn",
@@ -182,5 +186,28 @@
     "names": 6104,
     "file": "pipeline/cache/paris-monuments.json",
     "updated_at": "2026-11-20T23:36:49Z"
+  },
+  "era_images_cite": {
+    "area": "cite",
+    "era": [
+      1900,
+      1929
+    ],
+    "selected": 844,
+    "not_cleared": 34,
+    "failed": 0,
+    "count": 844,
+    "by_source": {
+      "kahn": 526,
+      "parismusees": 318
+    },
+    "by_size": {
+      "iiif manifest image": 318,
+      "open data file": 526
+    },
+    "cut_from_mount": 77,
+    "median_long_side": 800,
+    "bytes": 316934032,
+    "updated_at": "2026-11-22T13:31:43Z"
   }
 }
