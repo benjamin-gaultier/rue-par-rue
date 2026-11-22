@@ -35,7 +35,7 @@ import {
 import * as S from './cityshaders'
 import { addBridgeHistory, type BridgeProps } from './bridges'
 import { packMesh } from './meshpack'
-import { FIRST_FRAME_MARK, sceneBuffers } from './measure'
+import { FIRST_FRAME_MARK, sceneBuffers, type SceneBuffers } from './measure'
 import { signAtlas } from './signs'
 import type { ModelProps } from './model3d'
 import type { AreaFiles } from './areas'
@@ -623,7 +623,7 @@ export class City3D implements CustomLayerInterface {
   }
 
   /** What the layer holds on the GPU, and what its last frame drew (measure.ts). */
-  stats(): { bytes: number; meshes: number; buffers: number; textures: number; triangles: number; calls: number } {
+  stats(): SceneBuffers & { textures: number; triangles: number; calls: number } {
     const info = this.renderer?.info
     return { ...sceneBuffers(this.scene), textures: info?.memory.textures ?? 0, triangles: info?.render.triangles ?? 0, calls: info?.render.calls ?? 0 }
   }

@@ -21,12 +21,12 @@ describe('sceneBuffers', () => {
 
   it('adds up vertex and index buffers of the meshes', () => {
     const mesh = { isMesh: true, geometry: { index: attr(600), attributes: { position: attr(1200), normal: attr(300) } } }
-    expect(sceneBuffers(scene([mesh, { isMesh: false }]))).toEqual({ bytes: 2100, meshes: 1, buffers: 3 })
+    expect(sceneBuffers(scene([mesh, { isMesh: false }]))).toEqual({ bytes: 2100, meshes: 1, buffers: 3, parts: [['unnamed', 2100]] })
   })
   it('counts a buffer shared by two geometries once', () => {
     const shape = attr(1000)
-    const a = { isMesh: true, geometry: { index: null, attributes: { position: shape, a_tree: attr(40) } } }
-    const b = { isMesh: true, geometry: { index: null, attributes: { position: shape, a_tree: attr(40) } } }
-    expect(sceneBuffers(scene([a, b]))).toEqual({ bytes: 1080, meshes: 2, buffers: 3 })
+    const a = { isMesh: true, material: { name: 'crowns' }, geometry: { index: null, attributes: { position: shape, a_tree: attr(40) } } }
+    const b = { isMesh: true, material: { name: 'trunks' }, geometry: { index: null, attributes: { position: shape, a_tree: attr(40) } } }
+    expect(sceneBuffers(scene([a, b]))).toEqual({ bytes: 1080, meshes: 2, buffers: 3, parts: [['crowns', 1040], ['trunks', 40]] })
   })
 })

@@ -37,25 +37,40 @@ interface AttributeLike {
 interface ObjectLike {
   isMesh?: boolean
   geometry?: { index: AttributeLike | null; attributes: Record<string, AttributeLike> }
+  material?: { name?: string } | { name?: string }[]
+}
+
+export interface SceneBuffers {
+  bytes: number
+  meshes: number
+  buffers: number
+  /** Bytes by material name, largest first. A shared buffer goes to the first mesh that uses it. */
+  parts: [string, number][]
 }
 
 /**
  * Bytes of vertex and index buffers under a three.js scene. A buffer shared
  * by several geometries (the tree shapes) is on the GPU once, so it counts once.
  */
-export function sceneBuffers(root: { traverse(visit: (o: object) => void): void }): { bytes: number; meshes: number; buffers: number } {
+export function sceneBuffers(root: { traverse(visit: (o: object) => void): void }): SceneBuffers {
   const seen = new Set<AttributeLike>()
+  const parts = new Map<string, number>()
   let meshes = 0
+  let bytes = 0
   root.traverse((object) => {
     const o = object as ObjectLike
     if (!o.isMesh || !o.geometry) return
     meshes++
-    if (o.geometry.index) seen.add(o.geometry.index)
-    for (const a of Object.values(o.geometry.attributes)) seen.add(a)
+    const material = Array.isArray(o.material) ? o.material[0] : o.material
+    const name = material?.name || 'unnamed'
+    for (const a of [o.geometry.index, ...Object.values(o.geometry.attributes)]) {
+      if (!a || seen.has(a)) continue
+      seen.add(a)
+      bytes += a.array.byteLength
+      parts.set(name, (parts.get(name) ?? 0) + a.array.byteLength)
+    }
   })
-  let bytes = 0
-  for (const a of seen) bytes += a.array.byteLength
-  return { bytes, meshes, buffers: seen.size }
+  return { bytes, meshes, buffers: seen.size, parts: [...parts].sort((a, b) => b[1] - a[1]) }
 }
 
 export interface PathResult {
@@ -79,6 +94,8 @@ export interface Measurement {
   trees: number
   /** Vertex and index buffers of the detailed city, in MB (1 MB = 1,000,000 bytes). */
   bufferMB: number
+  /** The same by material name, largest first, in MB. */
+  bufferParts: [string, number][]
   meshes: number
   textures: number
   /** Milliseconds from the start of the page load to the first frame with the detailed city, when the page was opened in 3D. */
@@ -153,6 +170,7 @@ export async function measure(map: MapLibreMap, city: City3D, area: Area, year: 
     buildings: { all: city.count, standing: city.standing(year) },
     trees: city.trees,
     bufferMB: Math.round(held.bytes / 1e4) / 100,
+    bufferParts: held.parts.map(([name, bytes]): [string, number] => [name, Math.round(bytes / 1e4) / 100]),
     meshes: held.meshes,
     textures: held.textures,
     firstFrameMs: first ? Math.round(first.startTime) : null,
