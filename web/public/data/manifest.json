@@ -73,7 +73,7 @@
     "reconstructed": 6073,
     "traced": 84,
     "license": "Vasserot parcels: ODbL (ALPAGE). APUR buildings: ODbL.",
-    "updated_at": "2026-11-22T13:14:31Z"
+    "updated_at": "2026-11-22T14:27:58Z"
   },
   "traced_cite": {
     "area": "cite",
@@ -115,8 +115,8 @@
     "area": "cite",
     "file": "3d/greenery-cite.json",
     "gardens": 26,
-    "trees": 2493,
-    "updated_at": "2026-11-18T11:38:32Z"
+    "trees": 2491,
+    "updated_at": "2026-11-22T14:28:43Z"
   },
   "institutions_cite": {
     "area": "cite",
@@ -127,15 +127,15 @@
   "streets_cite": {
     "area": "cite",
     "file": "3d/streets-cite.json",
-    "bytes": 442312,
+    "bytes": 442333,
     "gutter runs": 471,
     "lantern": 399,
     "potence": 361,
     "candelabra": 1383,
     "old pavements": 264,
-    "column": 55,
-    "kerb_stone": 417,
-    "plaque": 1367,
+    "column": 58,
+    "kerb_stone": 415,
+    "plaque": 1363,
     "modern pavements": 1188,
     "crossings": 415,
     "main road areas": 19,
@@ -144,10 +144,10 @@
     "wall_lamp": 774,
     "wallace": 8,
     "kiosk": 20,
-    "bollard": 9551,
-    "vespasienne": 14,
+    "bollard": 9558,
+    "vespasienne": 12,
     "bench": 332,
-    "updated_at": "2026-11-18T11:45:47Z"
+    "updated_at": "2026-11-22T14:29:49Z"
   },
   "landmarks_cite": {
     "area": "cite",
@@ -159,10 +159,10 @@
   "vehicles_cite": {
     "area": "cite",
     "file": "3d/vehicles-cite.json",
-    "parked": 7300,
-    "moving": 561,
-    "bytes": 353948,
-    "updated_at": "2026-11-18T12:03:18Z"
+    "parked": 7301,
+    "moving": 572,
+    "bytes": 354487,
+    "updated_at": "2026-11-22T14:30:30Z"
   },
   "streetnames": {
     "former_names": 8113,
