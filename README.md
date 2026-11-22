@@ -114,10 +114,60 @@ What is estimated, not sourced:
 
 #### Performance
 
-The detailed island has 3,463 buildings across all years (167,000 wall and roof triangles, against 95,000 for the old 600 m area). To keep it usable on phones:
+The detailed island has 3,157 buildings across all years: 3,025 from the model and 132 houses on the bridges. To keep it usable on phones:
 
-- Identical vertices are merged behind an index, normals are stored as bytes and years as 16-bit integers (`web/src/meshpack.ts`): GPU buffers come to about 20 MB, less than the old area's 23 MB.
-- Tree crowns have three levels of detail by distance (180, 80 and 20 faces, within 160 m, 450 m and beyond), refilled when the camera moves 30 m: about 318,000 triangles are drawn in a view over the island (308,000 before, with less than half the trees).
+- Identical vertices are merged behind an index, normals are stored as bytes and years as 16-bit integers (`web/src/meshpack.ts`).
+- Tree crowns have three levels of detail by distance (180, 80 and 20 faces, within 160 m, 450 m and beyond), refilled when the camera moves 30 m.
+
+##### Baseline: the Cité alone
+
+Every new quarter is measured against these numbers. They were taken on 2026-11-22 with `tools/baseline/` ([how](tools/baseline/README.md)) on one PC: AMD Ryzen 7 5700X, NVIDIA GeForce RTX 3070, Windows 11, headless Chrome 157 on ANGLE Direct3D 11, the built app served from the same PC, an empty browser profile for each run.
+
+| Year | Detailed buildings, all years | Standing that year | Trees | GPU buffers MB |
+| --- | ---: | ---: | ---: | ---: |
+| 1836 | 3,157 | 2,749 | 2,493 | 74.3 |
+| 2026 | 3,157 | 907 | 2,493 | 74.3 |
+
+The model file holds 8,487 buildings for the whole box, 3,025 of them in the detailed area. The year is a shader uniform, so the GPU holds every year at once: the buffers are the same at 1836 and today. They come to 74 MB, not the "about 20 MB" this page gave before the facade details, the landmarks, the streets and the vehicles were added:
+
+| GPU buffers by material | MB |
+| --- | ---: |
+| trees, streets, street furniture and vehicles (materials without a name) | 19.6 |
+| details | 17.7 |
+| roofs | 16.4 |
+| facades | 10.9 |
+| landmarks | 7.2 |
+| walls, all families | 2.5 |
+| lawns, ground and water | 0.2 |
+
+Download, from `python -I tools/baseline/sizes.py`:
+
+| File | MB | MB gzipped |
+| --- | ---: | ---: |
+| cite-1836.geojson | 4.80 | 0.51 |
+| streets-cite.json | 0.44 | 0.17 |
+| vasserot-traced-cite.geojson | 0.38 | 0.08 |
+| vehicles-cite.json | 0.35 | 0.08 |
+| greenery-cite.json | 0.20 | 0.06 |
+| site-cite.geojson | 0.03 | 0.01 |
+| institutions-cite.geojson | 0.02 | 0.00 |
+| landmarks-cite.json | 0.02 | 0.00 |
+| All data files (8) | 6.25 | 0.91 |
+| thumbs/ (1,068 images and their index) | 7.62 | |
+| depth/ (93 files) | 1.43 | |
+
+Time, from `node tools/baseline/measure.mjs`. "Draw" is one frame drawn and finished by the GPU, over a full turn of the camera. The phone-sized viewport is 375 × 812 at 3 device pixels per pixel (the map takes 375 × 675 of it), on this PC's graphics card, not on a phone.
+
+| Viewport | Year | First 3D frame s | Draw ms above the island, median / 95th | Draw ms in the street, median / 95th | Triangles above / in the street |
+| --- | --- | ---: | ---: | ---: | ---: |
+| 1920 × 1080 | 1836 | 12.8 | 3.5 / 4.6 | 3.0 / 5.5 | 623,000 / 726,000 |
+| 1920 × 1080 | 2026 | 14.2 | 5.5 / 8.8 | 3.5 / 9.3 | 671,000 / 777,000 |
+| phone-sized | 1836 | 13.1 | 2.6 / 6.5 | 1.8 / 3.0 | 655,000 / 726,000 |
+| phone-sized | 2026 | 12.4 | 1.9 / 4.8 | 2.3 / 4.1 | 723,000 / 777,000 |
+
+- The first 3D frame took 12 to 15 s over three runs, with no network time in it. Compiling the shaders is a large part (8.6 s with FXC alone, below).
+- Draw times move by a millisecond or two from run to run. Frames were painted every 20 ms in every run, the refresh interval of this PC's screen: none was late. The detailed layer makes 33 or 34 draw calls.
+- No real phone has been measured yet.
 
 On Windows, Chrome compiles every shader with Direct3D's FXC compiler before the first 3D frame. `python -I tools/fxc/check.py` (on a Windows PC, see [tools/fxc/README.md](tools/fxc/README.md)) compiles all 19 fragment shaders the app draws the same way, on a 1 MB stack, and fails when one takes more than 5 seconds. On 2026-11-21 (AMD Ryzen 7 5700X, d3dcompiler_47 10.0.26100.9711) they took 8.6 s in all, with no stack overflow:
 
@@ -134,6 +184,8 @@ On Windows, Chrome compiles every shader with Direct3D's FXC compiler before the
 | the 11 others | 1–6 each | 0.35 in all | 21–361 each |
 
 The wall shader with every family in one program, as it was before it was split, takes 4.72 s and 6,236 slots; the app no longer draws it.
+
+`npm run smoke` (in `web/`, after `npm run build`) opens the built site in headless Chrome, shows the island in 3D at 1836 and today, and prints the time from opening the page to the first frames of the detailed island. On 2026-11-22, on the same PC, from a loopback server with an empty browser cache: 13.5 to 14.5 s on the GPU through Direct3D (`--gl gpu`, three runs), most of it the shader compiles above, and 4.3 to 7.1 s with software WebGL, which does not use FXC.
 
 #### Streets through time
 
@@ -250,6 +302,7 @@ Next: a concordance of old and new house numbers for the streets renumbered afte
 web/        Vite + TypeScript + MapLibre GL app (static, no backend)
   public/data/   generated data the app reads (committed)
 pipeline/   Python package `rpr` that harvests and normalises sources
+tools/      checks run by hand: shader compile times (fxc/), what an area costs (baseline/)
 .github/    CI, a manual harvest workflow, GitHub Pages deploy
 ```
 
@@ -261,7 +314,10 @@ npm ci          # .npmrc sets legacy-peer-deps (works around an npm bug with vit
 npm run dev     # http://localhost:5173
 npm test        # unit tests
 npm run build   # static site in web/dist
+npm run smoke   # opens the built site in headless Chrome and fails if the 3D view does not draw
 ```
+
+`npm run smoke` is the browser check the unit tests cannot do: see [tools/smoke/README.md](tools/smoke/README.md).
 
 ## Run the pipeline
 
@@ -293,7 +349,7 @@ Paris Musées records carry no coordinates, so `rpr/geocode.py` reads the captio
 7. when none of these is in the caption's arrondissements: today's street or place of exactly that name (score 0.9 or more) in a neighbouring arrondissement ("5 rue du Mail, 1er arrondissement": the rue du Mail is in the 2nd), flagged with `caption_arrondissement` and its confidence multiplied by 0.6. Not when a street of that name is recorded in the caption's own arrondissement and gone since (the rue Larrey of the 6th): that is a different street.
 8. when no street of the caption can be found, or it names none: the building it names ("Nef de l'église Saint-Julien-le-Pauvre", "Hôtel Lambert", "Palais du Louvre / cour Carrée", "Fontaine Médicis"), from a gazetteer of 5,330 landmarks: 860 protected buildings of the Mérimée list that have a proper name (of 1,894 in Paris), under every name their title gives ("Hôtel de Gournay ou de Mortemart, dit aussi d'Aguesseau"), and 4,470 named churches, schools, theatres, museums, ministries, hospitals and cemeteries of IGN BD TOPO (`python -m rpr monuments`, `pipeline/cache/paris-monuments.json`). A Mérimée point and a BD TOPO outline of one name within 300 m are one building, placed between them. The name must mean one building in the caption's arrondissement (several Saint-Pierre churches, several hôtels of one family) and that building must stand in the photo's year; one the caption calls "ancien" must be 50 years older than the photo (Marville's "ancien Hôtel-Dieu" is not today's). Without an arrondissement, the name must mean one building in all Paris, and a hôtel is never placed (a family often had several, some demolished and missing from the gazetteer), nor a name the caption carries on ("Hôtel-Dieu de Montlhéry"), nor a caption that ends on another town ("église Saint-Laurent, Rouen"). A name right after a kind of way or "vers" is a street's or the view's ("rue de l'Abbaye", "vue vers le Panthéon"), and one the caption qualifies is another building ("Petit Hôtel de Villars", "Hôtel de Montmorency [petit]"). Plain descriptions ("Fontaine publique", "Boulangerie"), street furniture found everywhere (Wallace fountains, Morris columns), statues and names too short to be told apart ("Saint-Marc") are left out; a site wider than 1 km (the Bois de Boulogne) is not placed. Over the full works dump this places 579 more photos (5,114 → 5,693 of 6,725): 554 of the 1,295 captions that named no street, and 25 whose street could not be found. In a hand-checked sample of 86, one per building, 82 stand within about 100 m of the building in OpenStreetMap or at the Mérimée record the caption means, and 2 are a different building of the same name (the duc du Maine's hôtel is not the duchesse's Hôtel Biron).
 
-Two streets of the caption ("Rue X, vue prise de la rue Y", "à l'angle de") place the photo at their corner: where their 1836 address points come within 30 m, else where today's street outlines meet. A caption that names only a quarter ("île de la Cité") lands at its centre. Nothing is placed on a street that cannot be found. `confidence` follows precision, and `extra.precision` / `extra.method` say which rule placed the photo; the photo card states it ("At 13 Quai d'Anjou, the address in the caption"):
+Two streets of the caption ("Rue X, vue prise de la rue Y", "à l'angle de") place the photo at their corner: where their 1836 address points come within 30 m, else where today's street outlines meet. A caption that names only a quarter ("île de la Cité") lands at its centre. Nothing is placed on a street that cannot be found. A caption that ends on another town after a comma and gives no arrondissement ("Maison rue Saint-Romain, Rouen", "Ancienne rue Fabert, Vanves.") is not placed at all, whatever Paris street has the same name: over the full works dump this takes 15 photos of Rouen, Beauvais, Compiègne, Houdan and Vanves off the map (5,723 → 5,708 captions placed of 6,725) and changes no other placement. The last piece counts as a town only if it starts with a capital, holds no word for a street or a corner, and is not Paris, one of its villages or quarters, a place or a landmark. `confidence` follows precision, and `extra.precision` / `extra.method` say which rule placed the photo; the photo card states it ("At 13 Quai d'Anjou, the address in the caption"):
 
 | Match | Confidence |
 | --- | --- |
@@ -311,7 +367,7 @@ A place ranks below the streets of the same caption, so "Port du Louvre, vers le
 
 A name that could mean several places (a former name used in two arrondissements, a homonym still in use elsewhere in the photo's year) is placed on the likeliest one, flagged `ambiguous` and its confidence multiplied by 0.6; part of a renamed street, or a demolished street more than 300 m long, by 0.8; a street the caption misspells, by 0.9. Lookups are cached in `pipeline/cache/geocode.json`; `python -m rpr streetnames` builds the historical tables in `pipeline/cache/` (`former-street-names.json`, `vasserot-1836.json`, `street-junctions.json`), `python -m rpr places` the gazetteer of places and `python -m rpr monuments` that of landmarks. The harvest saves the raw works to `pipeline/cache/parismusees-works.json.gz`, so `python -m rpr parismusees --offline` places them again without a token when the matching improves.
 
-A photo placed at a house number also gets a heading, the compass bearing the camera faced: towards the building, square to its facade, from the street in front of it (method `facade`, heading confidence 0.5). The facade is the edge of today's street outline nearest the address point; address points sit about a metre outside that edge. No heading is given when the caption says the view was taken from elsewhere or shows a courtyard, a park, a staircase or an interior, or when the address is an 1836 one. `python -m rpr headings` saves the bearings by address point in `pipeline/cache/facade-bearings.json`, so `parismusees --offline` needs no download. 1,705 of the 10,032 photos have a heading. In a hand check of 20, all looked at the right side of the street; many photographers stood at an angle to the facade, so a heading can be up to about 60° off. The photo card says which way the camera faced, the then-and-now viewer looks that way, and the 3D frames stand along the heading, turning at most 60° towards the walker.
+A photo placed at a house number also gets a heading, the compass bearing the camera faced: towards the building, square to its facade, from the street in front of it (method `facade`, heading confidence 0.5). The facade is the edge of today's street outline nearest the address point; address points sit about a metre outside that edge. No heading is given when the caption says the view was taken from elsewhere or shows a courtyard, a park, a staircase or an interior, or when the address is an 1836 one. `python -m rpr headings` saves the bearings by address point in `pipeline/cache/facade-bearings.json`, so `parismusees --offline` needs no download. 1,705 of the 10,017 photos have a heading. In a hand check of 20, all looked at the right side of the street; many photographers stood at an angle to the facade, so a heading can be up to about 60° off. The photo card says which way the camera faced, the then-and-now viewer looks that way, and the 3D frames stand along the heading, turning at most 60° towards the walker.
 
 Every photo source is normalised into one schema (`pipeline/rpr/photo.py`): position, date range, image links, licence, credit, and how the camera position was obtained (`recorded`, `geocoded`, `matched`, `manual`, `estimated`) with a confidence score. Records outside Paris, with impossible dates or without an image are rejected and counted in `manifest.json`.
 

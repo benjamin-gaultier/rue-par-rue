@@ -35,6 +35,7 @@ import {
 import * as S from './cityshaders'
 import { addBridgeHistory, type BridgeProps } from './bridges'
 import { packMesh } from './meshpack'
+import { FIRST_FRAME_MARK, sceneBuffers, type SceneBuffers } from './measure'
 import { signAtlas } from './signs'
 import type { ModelProps } from './model3d'
 import type { AreaFiles } from './areas'
@@ -312,6 +313,8 @@ export class City3D implements CustomLayerInterface {
   /** Number of detailed buildings and trees, for the legend and tests. */
   count = 0
   trees = 0
+  /** Frames of the detailed city drawn without error so far, for the smoke test (tools/smoke). */
+  frames = 0
   private extras: THREE.Mesh[] = []
   private treeLod?: (camera: THREE.Vector3) => void
   private blockers: ((p: Pt, year: number) => boolean)[] = []
@@ -588,6 +591,10 @@ export class City3D implements CustomLayerInterface {
       this.treeLod?.(this.uniforms.u_camera.value)
       this.renderer.resetState()
       this.renderer.render(this.scene, this.camera)
+      if (!this.drawn) {
+        this.drawn = true
+        performance.mark(FIRST_FRAME_MARK)
+      }
       if (this.fallbacks.size) {
         const plain = this.plainWalls!
         this.scene.traverse((o) => {
@@ -602,12 +609,26 @@ export class City3D implements CustomLayerInterface {
       return
     }
     if (this.broken) return
+    this.frames++
     if (this.steps.length) {
       const t = performance.now() / 1000
       let more = false
       for (const step of this.steps) more = step(t) || more
       if (more) this.map?.triggerRepaint()
     }
+  }
+
+  private drawn = false
+
+  /** Detailed buildings standing in `year`, as drawn. */
+  standing(year: number): number {
+    return this.specs.filter((s) => aliveIn(s.life, year)).length
+  }
+
+  /** What the layer holds on the GPU, and what its last frame drew (measure.ts). */
+  stats(): SceneBuffers & { textures: number; triangles: number; calls: number } {
+    const info = this.renderer?.info
+    return { ...sceneBuffers(this.scene), textures: info?.memory.textures ?? 0, triangles: info?.render.triangles ?? 0, calls: info?.render.calls ?? 0 }
   }
 
   /** The building under a screen point, if a detailed one is visible there. */

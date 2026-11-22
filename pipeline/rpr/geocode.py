@@ -140,6 +140,8 @@ PLACE_TYPES = {
     "place", "square", "pont", "porte", "port", "jardin", "marché", "marche", "cour", "cloître", "cloitre",
     "parvis", "esplanade", "galerie", "carrefour", "rond-point",
 }
+# Words that make a caption's last piece a street or a corner, not a town ("Bd Jourdan", "Coin Rue de Seine").
+_WAY_WORDS = {w.rstrip("\\.") for w in STREET_TYPES.split("|")} | {"coin", "angle", "encoignure", "croisement", "poterne"}
 _MONTHS = "janvier|février|fevrier|mars|avril|mai|juin|juillet|août|aout|septembre|octobre|novembre|décembre|decembre"
 _PARTICLE = r"(?:(?i:de la|de l['’]|des|du|de|d['’]|aux|au|à)\s*)?"
 # Where a street name ends: punctuation, a sentence ("Rue Lepic. Montmartre"),
@@ -791,21 +793,50 @@ class Geocoder:
 
     def _other_town(self, pieces: list[str]) -> bool:
         """The caption's last words name a place that is neither Paris nor one of its quarters."""
+        return self._last_place(pieces) is not None
+
+    def _last_place(self, pieces: list[str]) -> str | None:
+        """The caption's last words, if they read as a place name that is neither Paris nor one of its quarters."""
         words = [p.strip(" .'\"«»") for p in pieces]
         words = [p for p in words if re.search(r"[^\W\d_]{3,}", p) and not re.fullmatch(r"[IVXL]+(?:e|ème)?", p)]
         if not words:
-            return False
+            return None
         last = words[-1]
         parts = re.split(r"[\s'’-]+", last)
         if not all(w[:1].isupper() or w.lower() in _TOWN_LINKS for w in parts if w) or re.search(r"\d", last):
-            return False
+            return None
         key = re.sub(r"^(?:la|le|les) ", "", last.lower())
-        return not (
+        if (
             key in {"paris"} | PARIS_VILLAGES
             or (self.history and self.history.quarter(last))
             or (self.places and self.places.find(last))
             or (self.monuments and self.monuments.mentions(last))
-        )
+        ):
+            return None
+        return last
+
+    def _town(self, caption: str, parsed: ParsedCaption) -> str | None:
+        """The other town a caption ends on ("Maison rue Saint-Romain, Rouen"), or None.
+
+        Narrower than `_other_town`, which also takes a caption's last street for
+        a town ("…, Rue Saint-Dominique."): the name must close the caption after
+        a comma, as towns do (not "… - Disparu" or "… - Hôtel de Flesselles. 1898"),
+        start with a capital, hold no word for a street or a corner, and be no part
+        of a street the caption names.
+        """
+        if parsed.arrondissements:
+            return None
+        pieces = [q for p in _PIECES.split(caption) for q in _BRACKETS.split(p) if q.strip()]
+        last = self._last_place(pieces)
+        if not last or not last[:1].isupper():
+            return None
+        if not re.search(r",\s*" + re.escape(last) + r"[\s.»\"']*$", caption):
+            return None
+        if any(w.lower().rstrip(".") in _WAY_WORDS for w in re.split(r"[\s'’]+", last)):
+            return None
+        if any(last.lower() in s.lower() for s in parsed.streets):
+            return None
+        return last
 
     def _elsewhere(self, name: str, role: str, number: str | None, arrondissements: list[int]) -> Match | None:
         """Today's street or place of exactly that name in a neighbouring arrondissement (a slip in the caption)."""
@@ -846,6 +877,10 @@ class Geocoder:
 
     def place(self, caption: str, year: int | None = None) -> Match | None:
         parsed = parse_caption(caption)
+        # A caption that ends on another town ("Maison rue Saint-Romain, Rouen") is not in Paris,
+        # whatever Paris street carries the same name.
+        if self._town(caption, parsed):
+            return None
         found: list[Match] = []
         # A caption that ends on another town ("Rue des Cuvettes, Beauvais") is not respelt into a Paris street.
         respell = bool(parsed.arrondissements) or not self._other_town(

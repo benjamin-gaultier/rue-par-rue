@@ -495,8 +495,15 @@ map.on('moveend', () => {
   writeHash()
   if (model.active) refreshFrames()
 })
-if (new URLSearchParams(location.search).has('debug'))
-  Object.assign(window, { rpr: { map, basemaps, state, setPhotos, select, openCompare, setYear, startWalk, city: () => city, walker } })
+if (new URLSearchParams(location.search).has('debug')) {
+  /** What the area costs, for the README's baseline (measure.ts, tools/baseline/README.md). */
+  const measure = async (options?: import('./measure').MeasureOptions) => {
+    await ensureCity()
+    if (!city) throw new Error('The detailed area did not load')
+    return (await import('./measure')).measure(map, city, AREA, state.year, startWalk, options)
+  }
+  Object.assign(window, { rpr: { map, basemaps, state, setPhotos, select, openCompare, setYear, startWalk, city: () => city, walker, measure } })
+}
 
 window.addEventListener('hashchange', () => {
   const next = parseHash(location.hash)

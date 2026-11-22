@@ -1,7 +1,8 @@
 ---
 stream: robustness
 priority: 3
-status: open
+status: done
+done: 2026-11-22, duplicate, folded into robustness-utf8-on-windows (still open)
 added: 2026-11-21
 needs: []
 ---
