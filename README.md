@@ -114,10 +114,60 @@ What is estimated, not sourced:
 
 #### Performance
 
-The detailed island has 3,463 buildings across all years (167,000 wall and roof triangles, against 95,000 for the old 600 m area). To keep it usable on phones:
+The detailed island has 3,157 buildings across all years: 3,025 from the model and 132 houses on the bridges. To keep it usable on phones:
 
-- Identical vertices are merged behind an index, normals are stored as bytes and years as 16-bit integers (`web/src/meshpack.ts`): GPU buffers come to about 20 MB, less than the old area's 23 MB.
-- Tree crowns have three levels of detail by distance (180, 80 and 20 faces, within 160 m, 450 m and beyond), refilled when the camera moves 30 m: about 318,000 triangles are drawn in a view over the island (308,000 before, with less than half the trees).
+- Identical vertices are merged behind an index, normals are stored as bytes and years as 16-bit integers (`web/src/meshpack.ts`).
+- Tree crowns have three levels of detail by distance (180, 80 and 20 faces, within 160 m, 450 m and beyond), refilled when the camera moves 30 m.
+
+##### Baseline: the Cité alone
+
+Every new quarter is measured against these numbers. They were taken on 2026-11-22 with `tools/baseline/` ([how](tools/baseline/README.md)) on one PC: AMD Ryzen 7 5700X, NVIDIA GeForce RTX 3070, Windows 11, headless Chrome 157 on ANGLE Direct3D 11, the built app served from the same PC, an empty browser profile for each run.
+
+| Year | Detailed buildings, all years | Standing that year | Trees | GPU buffers MB |
+| --- | ---: | ---: | ---: | ---: |
+| 1836 | 3,157 | 2,749 | 2,493 | 74.3 |
+| 2026 | 3,157 | 907 | 2,493 | 74.3 |
+
+The model file holds 8,487 buildings for the whole box, 3,025 of them in the detailed area. The year is a shader uniform, so the GPU holds every year at once: the buffers are the same at 1836 and today. They come to 74 MB, not the "about 20 MB" this page gave before the facade details, the landmarks, the streets and the vehicles were added:
+
+| GPU buffers by material | MB |
+| --- | ---: |
+| trees, streets, street furniture and vehicles (materials without a name) | 19.6 |
+| details | 17.7 |
+| roofs | 16.4 |
+| facades | 10.9 |
+| landmarks | 7.2 |
+| walls, all families | 2.5 |
+| lawns, ground and water | 0.2 |
+
+Download, from `python -I tools/baseline/sizes.py`:
+
+| File | MB | MB gzipped |
+| --- | ---: | ---: |
+| cite-1836.geojson | 4.80 | 0.51 |
+| streets-cite.json | 0.44 | 0.17 |
+| vasserot-traced-cite.geojson | 0.38 | 0.08 |
+| vehicles-cite.json | 0.35 | 0.08 |
+| greenery-cite.json | 0.20 | 0.06 |
+| site-cite.geojson | 0.03 | 0.01 |
+| institutions-cite.geojson | 0.02 | 0.00 |
+| landmarks-cite.json | 0.02 | 0.00 |
+| All data files (8) | 6.25 | 0.91 |
+| thumbs/ (1,068 images and their index) | 7.62 | |
+| depth/ (93 files) | 1.43 | |
+
+Time, from `node tools/baseline/measure.mjs`. "Draw" is one frame drawn and finished by the GPU, over a full turn of the camera. The phone-sized viewport is 375 × 812 at 3 device pixels per pixel (the map takes 375 × 675 of it), on this PC's graphics card, not on a phone.
+
+| Viewport | Year | First 3D frame s | Draw ms above the island, median / 95th | Draw ms in the street, median / 95th | Triangles above / in the street |
+| --- | --- | ---: | ---: | ---: | ---: |
+| 1920 × 1080 | 1836 | 12.8 | 3.5 / 4.6 | 3.0 / 5.5 | 623,000 / 726,000 |
+| 1920 × 1080 | 2026 | 14.2 | 5.5 / 8.8 | 3.5 / 9.3 | 671,000 / 777,000 |
+| phone-sized | 1836 | 13.1 | 2.6 / 6.5 | 1.8 / 3.0 | 655,000 / 726,000 |
+| phone-sized | 2026 | 12.4 | 1.9 / 4.8 | 2.3 / 4.1 | 723,000 / 777,000 |
+
+- The first 3D frame took 12 to 15 s over three runs, with no network time in it. Compiling the shaders is a large part (8.6 s with FXC alone, below).
+- Draw times move by a millisecond or two from run to run. Frames were painted every 20 ms in every run, the refresh interval of this PC's screen: none was late. The detailed layer makes 33 or 34 draw calls.
+- No real phone has been measured yet.
 
 On Windows, Chrome compiles every shader with Direct3D's FXC compiler before the first 3D frame. `python -I tools/fxc/check.py` (on a Windows PC, see [tools/fxc/README.md](tools/fxc/README.md)) compiles all 19 fragment shaders the app draws the same way, on a 1 MB stack, and fails when one takes more than 5 seconds. On 2026-11-21 (AMD Ryzen 7 5700X, d3dcompiler_47 10.0.26100.9711) they took 8.6 s in all, with no stack overflow:
 
@@ -252,6 +302,7 @@ Next: a concordance of old and new house numbers for the streets renumbered afte
 web/        Vite + TypeScript + MapLibre GL app (static, no backend)
   public/data/   generated data the app reads (committed)
 pipeline/   Python package `rpr` that harvests and normalises sources
+tools/      checks run by hand: shader compile times (fxc/), what an area costs (baseline/)
 .github/    CI, a manual harvest workflow, GitHub Pages deploy
 ```
 
