@@ -31,6 +31,15 @@ describe('building popup text', () => {
     expect(d.lines[2]).toContain('fit 83%')
     expect(d.link?.href).toContain('archives-nationales')
   })
+  it('says when a demolished house came down and how the year is known', () => {
+    const base = { kind: 'reconstructed', height: 15, period: 'standing in 1836, since demolished', source: 'Vasserot' } as const
+    const dated = describeBuilding({ ...base, until: 1866, until_basis: 'dated', until_note: 'New Hôtel-Dieu (source).' })
+    expect(dated.lines[0]).toBe('Standing in 1836, demolished in 1866')
+    expect(dated.lines.at(-1)).toBe('New Hôtel-Dieu (source).')
+    expect(describeBuilding({ ...base, until: 1866, until_basis: 'reasoned', until_note: 'Photo.' }).lines[0]).toContain('shown until 1865: a year reasoned')
+    const unknown = describeBuilding({ ...base, until: 1860, until_basis: 'default' })
+    expect(unknown.lines[0]).toBe('Standing in 1836, demolished since: no source gives the year')
+  })
   it('reports measured heights for surviving buildings', () => {
     const d = describeBuilding({ kind: 'standing', height: 66.7, height_max: 70.3, period: 'before 1800', source: 'APUR' })
     expect(d.lines[0]).toBe('Built before 1800, still standing')

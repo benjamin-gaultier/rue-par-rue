@@ -29,6 +29,7 @@ from typing import Any, Callable, Iterable
 
 from rpr import net, paths
 from rpr.areas import area_file, manifest_file
+from rpr.sources import clearances
 from rpr.sources.model3d import AREAS
 
 APUR_EQUIPMENT = "https://carto2.apur.org/apur/rest/services/OPENDATA/EQUIPEMENT_EMPRISE/MapServer/0/query"
@@ -121,9 +122,9 @@ DAUPHINE_PAVILIONS = ["apur:750072187", "apur:750050997"]
 # was demolished in 1874 to open the view of Duc's new front (Wikipedia: the
 # houses had burned in the Commune's fighting of 1871). These are the Vasserot
 # parcels of that block, read off the cadastre between the place and the
-# rue de Harlay; the model otherwise drops every demolished house in 1860.
-DAUPHINE_EAST_SIDE = [f"PA34{n}" for n in range(11, 28)]
-DAUPHINE_EAST_UNTIL = 1874
+# rue de Harlay; rpr.sources.clearances keeps the list and dates them in the model too.
+DAUPHINE_EAST_SIDE = clearances.DAUPHINE_EAST_SIDE
+DAUPHINE_EAST_UNTIL = clearances.DAUPHINE_EAST_UNTIL
 
 # Notre-Dame: the high vessel (nave, transept, choir) and the aisles around it.
 NOTRE_DAME_NAVE = "apur:750117318"

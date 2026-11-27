@@ -37,7 +37,7 @@ import { addBridgeHistory, type BridgeProps } from './bridges'
 import { packMesh } from './meshpack'
 import { FIRST_FRAME_MARK, sceneBuffers, type SceneBuffers } from './measure'
 import { signAtlas } from './signs'
-import type { ModelProps } from './model3d'
+import { UNDATED_UNTIL, type ModelProps } from './model3d'
 import type { AreaFiles } from './areas'
 
 interface Greenery {
@@ -155,7 +155,7 @@ export function seedOf(id: string): number {
 /** Years a building stands, as the shader reads them: [from, until, gapFrom, gapUntil]. */
 export function lifeOf(p: Pick<CityProps, 'kind' | 'from' | 'until'>): [number, number, number, number] {
   if (p.kind === 'standing') return [-OPEN, OPEN, 0, 0]
-  if (p.kind === 'reconstructed') return [p.from ?? -OPEN, p.until ?? 1860, 0, 0]
+  if (p.kind === 'reconstructed') return [p.from ?? -OPEN, p.until ?? UNDATED_UNTIL, 0, 0]
   return [p.from ?? 1851, OPEN, 0, 0]
 }
 

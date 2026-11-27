@@ -74,7 +74,7 @@
     "traced": 84,
     "atlas": 2234,
     "license": "Vasserot parcels and block atlas buildings: ODbL (ALPAGE). APUR buildings: ODbL.",
-    "updated_at": "2026-11-27T10:55:48Z"
+    "updated_at": "2026-11-27T12:50:51Z"
   },
   "traced_cite": {
     "area": "cite",
@@ -117,7 +117,7 @@
     "file": "3d/greenery-cite.json",
     "gardens": 26,
     "trees": 2518,
-    "updated_at": "2026-11-27T10:58:01Z"
+    "updated_at": "2026-11-27T12:50:55Z"
   },
   "institutions_cite": {
     "area": "cite",
@@ -155,15 +155,15 @@
     "file": "3d/landmarks-cite.json",
     "buildings": 52,
     "parts": 15,
-    "updated_at": "2026-11-27T10:57:59Z"
+    "updated_at": "2026-11-27T12:50:58Z"
   },
   "vehicles_cite": {
     "area": "cite",
     "file": "3d/vehicles-cite.json",
-    "parked": 7307,
-    "moving": 572,
-    "bytes": 354731,
-    "updated_at": "2026-11-27T11:00:08Z"
+    "parked": 7308,
+    "moving": 571,
+    "bytes": 355456,
+    "updated_at": "2026-11-27T12:51:24Z"
   },
   "streetnames": {
     "former_names": 8113,
