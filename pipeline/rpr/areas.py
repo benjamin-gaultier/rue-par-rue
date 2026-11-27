@@ -1,7 +1,7 @@
 """The areas modelled in 3D: one entry each, and nothing else to edit.
 
 Every 3D command (`model3d`, `trace`, `thumbs`, `site`, `institutions`,
-`greenery`, `streets`, `landmarks`, `vehicles`) takes `--area` with the keys of
+`greenery`, `streets`, `landmarks`, `vehicles`, `directories`) takes `--area` with the keys of
 `AREAS`, and names its file with `area_file`. The app has the same table in
 web/src/areas.ts; tests/test_areas.py checks that the two agree.
 
@@ -45,6 +45,7 @@ FILES = {
     "streets": "streets-{area}.json",
     "landmarks": "landmarks-{area}.json",
     "vehicles": "vehicles-{area}.json",
+    "directories": "directories-{area}.json",
 }
 
 

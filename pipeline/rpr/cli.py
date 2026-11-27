@@ -105,6 +105,14 @@ def cmd_greenery(args: argparse.Namespace) -> None:
     _update_manifest(f"greenery_{args.area}", greenery.build(args.area))
 
 
+def cmd_directories(args: argparse.Namespace) -> None:
+    from rpr.sources import directories
+
+    if args.fetch or not directories.cache_file(args.area).exists():
+        directories.fetch(args.area)
+    _update_manifest(f"directories_{args.area}", directories.build(args.area))
+
+
 def cmd_streets(args: argparse.Namespace) -> None:
     from rpr.sources import streets
 
@@ -213,6 +221,11 @@ def main(argv: list[str] | None = None) -> int:
     p = sub.add_parser("greenery", help="gardens and trees of a model area (Paris tree register, APUR; needs shapely)")
     add_area(p)
     p.set_defaults(func=cmd_greenery)
+
+    p = sub.add_parser("directories", help="names and trades at each address of a model area in 1835-1837 (SoDUCo trade directories; needs [geo])")
+    add_area(p)
+    p.add_argument("--fetch", action="store_true", help="read the directories from Nakala again (about 8 MB)")
+    p.set_defaults(func=cmd_directories)
 
     p = sub.add_parser("streets", help="streets and street furniture of a model area through time (Vasserot, plan de voirie; needs shapely)")
     add_area(p)

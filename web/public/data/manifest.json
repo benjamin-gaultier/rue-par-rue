@@ -210,5 +210,19 @@
     "median_long_side": 800,
     "bytes": 316934032,
     "updated_at": "2026-11-22T13:31:43Z"
+  },
+  "directories_cite": {
+    "file": "3d/directories-cite.json",
+    "entries": 10336,
+    "listings": 4766,
+    "shops": 1211,
+    "buildings": 1789,
+    "placed_by": {
+      "vasserot": 5911,
+      "jacoubet": 681
+    },
+    "model": "cite-1836.geojson",
+    "source": "SoDUCo, Annuaires historiques parisiens 1798-1914 (Nakala, Licence Ouverte / Etalab 2.0), from Bottin's Almanach du commerce (BnF Gallica)",
+    "updated_at": "2026-11-27T13:04:24Z"
   }
 }
