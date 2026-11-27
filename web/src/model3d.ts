@@ -60,6 +60,27 @@ export interface ModelProps {
   iou?: number
   /** History of an institution (Hôtel-Dieu, archbishop's palace…), or the first popup line for buildings not standing in 1836, such as houses on bridges. */
   note?: string
+  /** First year a demolished building is gone. */
+  until?: number
+  /** How that year is known: from a source, reasoned from one, or the model's default (pipeline rpr/sources/clearances.py). */
+  until_basis?: 'dated' | 'reasoned' | 'default'
+  /** The works that took the building down and the source of the year. */
+  until_note?: string
+}
+
+/**
+ * Last year a demolished house stands when the data gives none. The pipeline
+ * writes a year on every house; this default (DEFAULT_UNTIL in
+ * rpr/sources/clearances.py) is not a date from a source.
+ */
+export const UNDATED_UNTIL = 1860
+
+function demolishedLine(p: ModelProps): string {
+  if (p.until === undefined || p.until_basis === undefined) return 'Standing in 1836, demolished since'
+  if (p.until_basis === 'dated') return `Standing in 1836, demolished in ${p.until}`
+  if (p.until_basis === 'reasoned') return `Standing in 1836, shown until ${p.until - 1}: a year reasoned from the sources`
+  // No year here: the 3D view keeps some of these houses longer (landmarks.ts).
+  return 'Standing in 1836, demolished since: no source gives the year'
 }
 
 /** Plain-language lines for the building popup. */
@@ -69,7 +90,7 @@ export function describeBuilding(p: ModelProps): { title: string; lines: string[
   const lines: string[] = []
   if (p.note) lines.push(p.note)
   else if (p.kind === 'standing') lines.push(`Built ${p.period}${p.built ? ` (${p.built})` : ''}, still standing`)
-  else if (p.kind === 'reconstructed') lines.push('Standing in 1836, demolished since')
+  else if (p.kind === 'reconstructed') lines.push(demolishedLine(p))
   else lines.push(`Built ${p.period}`)
   lines.push(
     p.kind === 'reconstructed'
@@ -78,6 +99,7 @@ export function describeBuilding(p: ModelProps): { title: string; lines: string[
   )
   if (p.note) lines.push(p.note)
   lines.push(p.source + (p.traced && p.iou ? ` · fit ${Math.round(p.iou * 100)}%` : ''))
+  if (p.kind === 'reconstructed' && p.until_note) lines.push(p.until_note)
   const link = p.plan_url ? { href: p.plan_url, text: 'Vasserot’s plan at the Archives nationales' } : undefined
   return { title, lines, link }
 }

@@ -13,7 +13,8 @@ Two kinds of buildings go into the model:
   footprint traced from the house's own sheet (rpr trace) is finer and comes
   first. Where the atlas says nothing, the whole parcel is used, with a ring
   around a courtyard on the big ones. Heights are estimated, so these are
-  labelled as a reconstruction.
+  labelled as a reconstruction. The year each house came down comes from the
+  works that removed it (rpr.sources.clearances).
 
 Output: web/public/data/3d/<area>-1836.geojson
 """
@@ -68,7 +69,9 @@ APUR_PERIODS = {
 STANDING_IN_1836 = {1, 2}
 # First year each APUR period class can appear on the 3D time slider.
 PERIOD_FROM = {1: 1700, 2: 1801, 3: 1851, 5: 1915, 6: 1940, 7: 1968, 8: 1976, 9: 1982, 10: 1990, 11: 2000, 12: 2008}
-# Most of the medieval Cité was cleared in the 1860s.
+# Most of the medieval Cité was cleared in the 1860s. Streets, vehicles and
+# greenery still switch from the old to the modern network in this year; each
+# house has its own year from rpr.sources.clearances.
 DEMOLISHED_BY = 1860
 # A tall, compact building is a tower: flat top, landmark style.
 TOWER_M = 40.0
@@ -297,6 +300,30 @@ def fetch_apur(bbox: tuple[float, float, float, float]) -> list[dict]:
     return feats
 
 
+def make_dater(reader, fields: list[str], bbox, from_vasserot, to_l93, today: list, log: Callable[[str], Any]):
+    """The year each house of the Cité came down (rpr.sources.clearances)."""
+    from shapely.geometry import shape
+    from shapely.ops import transform
+
+    from rpr.sources import clearances
+
+    parcels = {}
+    for sr in reader.iterShapeRecords():
+        rec = dict(zip(fields, sr.record))
+        if rec.get("QUARTIER") not in clearances.CITE_QUARTERS or sr.shape.shapeType == 0 or not sr.shape.points:
+            continue
+        g = transform(to_l93, transform(from_vasserot, shape(sr.shape.__geo_interface__)))
+        key = str(rec.get("ID_ALPAGE") or rec.get("IDENTIF") or sr.record.oid)
+        parcels[key] = g if g.is_valid else g.buffer(0)
+    return clearances.Dater(parcels, clearances.load_facilities(bbox, to_l93, log), clearances.load_addresses(bbox, to_l93), today)
+
+
+def clearance_summary(counts: dict[str, int]) -> list[dict]:
+    from rpr.sources import clearances
+
+    return clearances.summary(counts)
+
+
 def build(area: str, log: Callable[[str], Any] = print) -> dict:
     # Imported here so the rest of the pipeline keeps working without these extras.
     import shapefile
@@ -376,6 +403,7 @@ def build(area: str, log: Callable[[str], Any] = print) -> dict:
     from shapely.strtree import STRtree
 
     atlas_built, atlas_yards = load_atlas(paths.REPO_ROOT / "pipeline" / "cache" / "vasserot", bbox, to_l93, log)
+    dater = make_dater(reader, fields, bbox, from_vasserot, to_l93, survivor_shapes + later_shapes, log)
     built_tree, yard_tree = STRtree(atlas_built), STRtree(atlas_yards)
     used_atlas = 0
     # Institutions traced from Verniquet's atlas replace the house lots of their parcels.
@@ -442,9 +470,11 @@ def build(area: str, log: Callable[[str], Any] = print) -> dict:
         # A big parcel held several houses: split it into house-sized lots,
         # each with its own height, so streets do not read as one long wall.
         pieces = [footprint] if trace is not None else split_houses(footprint)
+        last = 0  # the year the parcel's last house came down
         for n, piece in enumerate(pieces):
             geom = transform(from_l93, piece)
             house = key if len(pieces) == 1 else f"{key}:{n}"
+            life = dater.date(key, piece, rec.get("QUARTIER"))
             reconstructed.append(
               {
                   "type": "Feature",
@@ -452,7 +482,7 @@ def build(area: str, log: Callable[[str], Any] = print) -> dict:
                       "kind": "reconstructed",
                       "height": estimated_height(house),
                       "period": "standing in 1836, since demolished",
-                      "until": DEMOLISHED_BY,
+                      **life,
                       "source": (
                           "Footprint traced from Vasserot's plan of the building; height estimated"
                           if trace is not None
@@ -476,7 +506,9 @@ def build(area: str, log: Callable[[str], Any] = print) -> dict:
                   "geometry": mapping(geom),
               }
             )
-        reconstructed_shapes.append((footprint, DEMOLISHED_BY))
+            last = max(last, life["until"])
+        # A later building on the parcel appears only once its last house is gone.
+        reconstructed_shapes.append((footprint, last))
     for f in institutions:
         p = f["properties"]
         metric = transform(to_l93, shape(f["geometry"])).buffer(-INSET_M, join_style="mitre", mitre_limit=3.0)
@@ -524,6 +556,9 @@ def build(area: str, log: Callable[[str], Any] = print) -> dict:
                 old, until = reconstructed_shapes[i]
                 if f["properties"]["from"] < until and g.intersection(old).area / g.area > 0.2:
                     f["properties"]["from"] = until
+    log(f"model3d: years of demolition: {dict(sorted(dater.counts.items()))}")
+    for (works, photo), n in sorted(dater.conflicts.items()):
+        log(f"model3d: {n} houses that {works} removes earlier lie on a street {photo} shows; the works' date is kept")
     log(
         f"model3d: {len(reconstructed)} demolished buildings reconstructed "
         f"({used_traced} parcels with a traced footprint, {used_atlas} on the block atlas's built part); skipped {skipped}"
@@ -544,7 +579,8 @@ def build(area: str, log: Callable[[str], Any] = print) -> dict:
             "traced": used_traced,
             "atlas": used_atlas,
             "focus": cfg.get("focus"),
-            "notes": "Reconstructed buildings stand on the built part of their parcel as Vasserot's block atlas draws it (a traced sheet first, the whole parcel where the atlas says nothing), have estimated heights, and disappear in 1860. Later buildings appear from their APUR construction period.",
+            "notes": "Reconstructed buildings stand on the built part of their parcel as Vasserot's block atlas draws it (a traced sheet first, the whole parcel where the atlas says nothing) and have estimated heights. On the Cité each disappears in the year of the works that removed it (until, with until_basis and until_note; see clearances); elsewhere, and where no source dates a house, in 1860 (until_basis: default). Later buildings appear from their APUR construction period.",
+            "clearances": clearance_summary(dater.counts),
         },
         "features": features,
     }
