@@ -14,6 +14,7 @@ pipeline/cache/vehicles/
 pipeline/cache/places/
 pipeline/cache/monuments/
 pipeline/cache/era1920/
+pipeline/cache/directories/
 
 # Claude Code: personal settings and session worktrees
 .claude/settings.local.json
