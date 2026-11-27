@@ -20,6 +20,8 @@ export interface AreaFiles {
   landmarks: string
   /** Period vehicles and boats (python -m rpr vehicles). */
   vehicles: string
+  /** Names and trades at each 1836 address, from the directories of 1835 and 1837 (python -m rpr directories). */
+  directories: string
 }
 
 export interface Area {
@@ -55,7 +57,8 @@ export const AREAS = {
       greenery: `${DIR}greenery-cite.json`,
       streets: `${DIR}streets-cite.json`,
       landmarks: `${DIR}landmarks-cite.json`,
-      vehicles: `${DIR}vehicles-cite.json`
+      vehicles: `${DIR}vehicles-cite.json`,
+      directories: `${DIR}directories-cite.json`
     }
   }
 } satisfies Record<string, Area>

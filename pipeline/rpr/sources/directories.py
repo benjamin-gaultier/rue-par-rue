@@ -40,7 +40,7 @@ from pathlib import Path
 from typing import Any, Callable
 
 from rpr import paths
-from rpr.areas import AREAS, area_file, file_name
+from rpr.areas import AREAS, area_file, file_name, manifest_file
 
 DOI = "10.34847/nkl.98eem49t"
 # directories-ListNoms.zip (CSV per year), sha1 as listed by the Nakala API.
@@ -214,8 +214,10 @@ def entry_of(r: dict) -> tuple[dict | None, str]:
         return None, "no name"
     # The name and the number must be on one line of the entry: OCR blocks
     # sometimes hold several entries, and the parts may come from different ones.
-    name, num = fold(names[0]), re.compile(rf"\b{re.escape(fold(r['address.number']))}\b")
-    line = next((fold(ln) for ln in r["text_ocr"].splitlines() if name in fold(ln) and num.search(fold(ln))), None)
+    name = fold(names[0])
+    who = re.compile(rf"\b{re.escape(name)}\b")
+    num = re.compile(rf"\b{re.escape(fold(r['address.number']))}\b")
+    line = next((fold(ln) for ln in r["text_ocr"].splitlines() if who.search(fold(ln)) and num.search(fold(ln))), None)
     if not name or line is None:
         return None, "name and address not on one line"
     acts = [re.sub(r"\s+", " ", a).strip(" ,.;:") for a in mentions(r["act"])]
@@ -275,6 +277,24 @@ def address_point(streets: dict, entry: dict) -> tuple[tuple[float, float], str,
     return entry["at"], display_street(entry["street"]), "jacoubet"
 
 
+def same_listing(listings: dict[tuple, dict], e: dict, address: str) -> dict:
+    """The listing of this person at this address, made if new.
+
+    The same person printed in both years is one listing, even when the
+    activity is abbreviated differently ("greffier C" and "greffier C. de
+    cass"): the longer wording is kept. Different activities stay apart.
+    """
+    act = fold(e["act"])
+    for (name, addr, known), listing in listings.items():
+        if name == fold(e["name"]) and addr == address and (known.startswith(act) or act.startswith(known)):
+            if len(e["act"]) > len(listing["act"]):
+                listing["act"] = e["act"]
+            return listing
+    return listings.setdefault(
+        (fold(e["name"]), address, act), {"name": e["name"], "act": e["act"], "address": address, "years": [], "page": e["page"]}
+    )
+
+
 def build(area: str, log: Callable[[str], Any] = print) -> dict:
     from pyproj import Transformer
     from shapely.geometry import Point, shape
@@ -311,10 +331,7 @@ def build(area: str, log: Callable[[str], Any] = print) -> dict:
             else:
                 i = min(near, key=lambda k: (0 if shapes[k].contains(pt) else 1, shapes[k].distance(pt)))
                 address = f"{e['number']} {street_name}"
-                key = (fold(e["name"]), fold(e["act"]), address)
-                listing = buildings.setdefault(ids[i], {}).setdefault(
-                    key, {"name": e["name"], "act": e["act"], "address": address, "years": [], "page": e["page"]}
-                )
+                listing = same_listing(buildings.setdefault(ids[i], {}), e, address)
                 if placed != "vasserot":
                     listing["placed"] = placed
                 if e["year"] not in listing["years"]:
@@ -338,14 +355,14 @@ def build(area: str, log: Callable[[str], Any] = print) -> dict:
         "years": list(YEARS),
         "buildings": out_buildings,
     }
-    path = paths.DATA_DIR / "3d" / f"directories-{area}.json"
+    path = area_file(area, "directories")
     path.write_text(json.dumps(data, ensure_ascii=False, separators=(",", ":")) + "\n", encoding="utf-8")
     for k, v in sorted(why.items(), key=lambda kv: -kv[1]):
         log(f"directories: {v:6d} {k}")
     log(f"directories: house placed by {placed_by}")
     log(f"directories: {listings} listings ({shops} with a shop trade) in {len(out_buildings)} buildings -> {path.name}")
     return {
-        "file": f"3d/directories-{area}.json",
+        "file": manifest_file(area, "directories"),
         "entries": len(rows),
         "listings": listings,
         "shops": shops,

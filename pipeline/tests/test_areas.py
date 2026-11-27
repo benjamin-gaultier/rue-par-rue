@@ -8,10 +8,10 @@ import pytest
 from rpr import areas, cli, paths
 from rpr.sources import model3d, site, vasserot_plans
 
-AREA_COMMANDS = ["model3d", "trace", "thumbs", "site", "institutions", "greenery", "streets", "landmarks", "vehicles"]
+AREA_COMMANDS = ["model3d", "trace", "thumbs", "site", "institutions", "greenery", "streets", "landmarks", "vehicles", "directories"]
 APP_TABLE = paths.REPO_ROOT / "web" / "src" / "areas.ts"
 # The files the app loads; `traced` and `institutions` only feed `model3d`.
-APP_KINDS = ["model", "site", "greenery", "streets", "landmarks", "vehicles"]
+APP_KINDS = ["model", "site", "greenery", "streets", "landmarks", "vehicles", "directories"]
 
 
 def test_every_area_has_a_box_and_a_name():
@@ -36,6 +36,7 @@ def test_file_names_are_those_committed_for_the_cite():
         "streets": "streets-cite.json",
         "landmarks": "landmarks-cite.json",
         "vehicles": "vehicles-cite.json",
+        "directories": "directories-cite.json",
     }
     assert areas.area_file("cite", "site") == paths.DATA_DIR / "3d" / "site-cite.geojson"
     assert areas.manifest_file("cite", "model") == "3d/cite-1836.geojson"

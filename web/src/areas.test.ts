@@ -45,7 +45,8 @@ describe('the table of 3D areas', () => {
       greenery: 'data/3d/greenery-cite.json',
       streets: 'data/3d/streets-cite.json',
       landmarks: 'data/3d/landmarks-cite.json',
-      vehicles: 'data/3d/vehicles-cite.json'
+      vehicles: 'data/3d/vehicles-cite.json',
+      directories: 'data/3d/directories-cite.json'
     })
   })
 

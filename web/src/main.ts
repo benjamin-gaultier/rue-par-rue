@@ -10,6 +10,7 @@ import {
 } from 'maplibre-gl'
 import { BASEMAPS, basemapForYear, YEAR_MAX } from './timeline'
 import { describeBuilding, Model3D, MODEL_COLORS, MODEL_LABELS, type ModelProps } from './model3d'
+import { describeListings, loadDirectories } from './directories'
 import { AREA, areaCenter, inArea } from './areas'
 import type { PhotoFrames } from './frames3d'
 import type { City3D } from './city3d'
@@ -445,6 +446,38 @@ function showBuilding(p: ModelProps, at: [number, number]) {
     box.append(a)
   }
   buildingPopup.setLngLat(at).setDOMContent(box).addTo(map)
+  // Who lived or kept shop there, once the directories have loaded.
+  const id = (p as { id?: string }).id
+  void loadDirectories(BASE + AREA.files.directories).then((dirs) => {
+    const card = dirs && describeListings(dirs, id)
+    if (!card || !box.isConnected) return
+    const section = document.createElement('div')
+    section.className = 'building-listings'
+    const h4 = document.createElement('p')
+    h4.className = 'building-listings-title'
+    h4.textContent = card.heading
+    const ul = document.createElement('ul')
+    for (const row of card.rows) {
+      const li = document.createElement('li')
+      const a = document.createElement('a')
+      a.href = row.href
+      a.target = '_blank'
+      a.rel = 'noopener'
+      a.textContent = row.text
+      li.append(a)
+      ul.append(li)
+    }
+    if (card.more) {
+      const li = document.createElement('li')
+      li.textContent = `and ${card.more} more`
+      ul.append(li)
+    }
+    const credit = document.createElement('p')
+    credit.className = 'building-listings-credit'
+    credit.textContent = card.credit
+    section.append(h4, ul, credit)
+    box.append(section)
+  })
 }
 $('#exit-3d').addEventListener('click', exit3D)
 

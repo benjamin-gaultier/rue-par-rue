@@ -1,7 +1,8 @@
 ---
 stream: cite1836
 priority: 3
-status: open
+status: done
+done: 2026-11-27, PR #37 — first slice: the SoDUCo directories of 1835 and 1837 (Etalab 2.0) matched to the 1836 buildings, 4,766 listings in 1,789 buildings (811 in 322 on the island), shown on the building card with a link to each page; lettering them on the fronts is cite1836-shop-fascias, the entries left out are cite1836-directory-gaps
 added: 2026-11-20
 needs: []
 ---
