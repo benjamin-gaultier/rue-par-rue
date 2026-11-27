@@ -22,7 +22,7 @@ export const MODEL_COLORS = {
 export const MODEL_LABELS: Record<keyof typeof MODEL_COLORS, string> = {
   standing: 'Standing in 1836, still standing',
   traced: 'Demolished, footprint traced from Vasserot’s plan',
-  reconstructed: 'Demolished, parcel outline (estimated)',
+  reconstructed: 'Demolished, built part of its parcel (Vasserot’s block atlas)',
   later: 'Built later',
   undated: 'Undated'
 }
@@ -52,6 +52,8 @@ export interface ModelProps {
   built?: number
   source: string
   traced?: boolean
+  /** The footprint is the built part of the parcel in Vasserot's block atlas. */
+  atlas?: boolean
   address?: string
   name?: string
   plan_url?: string

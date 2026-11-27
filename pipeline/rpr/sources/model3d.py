@@ -6,10 +6,14 @@ Two kinds of buildings go into the model:
   publishes every Paris building with its construction period and median
   height, measured from aerial surveys. Periods "before 1800" and "1801-1850"
   give us real footprints and real heights.
-* Buildings that have since disappeared. No 1836 building footprints exist,
-  so we extrude the Vasserot cadastre parcels (1810-1836) that no surviving
-  building covers. Courtyards are not separated from buildings and heights are
-  estimated, so these are labelled as a reconstruction.
+* Buildings that have since disappeared. We extrude the Vasserot cadastre
+  parcels (1810-1836) that no surviving building covers. Vasserot's block
+  atlas colours the built part of each parcel apart from its yards; ALPAGE
+  vectorised it (layer BATI), and a house stands on that built part. A
+  footprint traced from the house's own sheet (rpr trace) is finer and comes
+  first. Where the atlas says nothing, the whole parcel is used, with a ring
+  around a courtyard on the big ones. Heights are estimated, so these are
+  labelled as a reconstruction.
 
 Output: web/public/data/3d/<area>-1836.geojson
 """
@@ -36,6 +40,15 @@ VASSEROT_DRUID = "qr091wq2775"
 VASSEROT_STEM = "Vasserots_parcelles2_v"
 VASSEROT_EPSG = 27561  # NTF (Paris) / Lambert Nord France, as in the .prj
 STACKS = "https://stacks.stanford.edu/file/druid:{druid}/{name}"
+# The block atlas as vectors: one polygon per built or open part of a parcel.
+ATLAS_DRUID = "kk239hv5615"
+ATLAS_STEM = "BATI"
+ATLAS_BUILT = 1  # field BATI: 1 built, 2 yard or garden, 3 not sorted (the Palais)
+ATLAS_YARD = 2
+# The atlas speaks for a parcel when its built and open parts cover this share of it.
+ATLAS_COVERAGE = 0.9
+# Built scraps smaller than this are drawing slivers, not buildings.
+ATLAS_MIN_PART_M2 = 4.0
 
 APUR_QUERY = "https://carto2.apur.org/apur/rest/services/OPENDATA/EMPRISE_BATIE_PARIS/MapServer/0/query"
 APUR_PERIODS = {
@@ -185,6 +198,64 @@ def split_houses(footprint, size: float = HOUSE_M, min_area: float = 8.0) -> lis
     return out or [footprint]
 
 
+def atlas_footprint(parcel, built: list, yards: list):
+    """The built part of a metric parcel as the block atlas draws it.
+
+    `built` and `yards` are the atlas polygons near the parcel. Returns None
+    when the atlas does not cover the parcel (the caller falls back on the
+    parcel itself), and an empty geometry when it shows the parcel as all yard.
+    """
+    from shapely.geometry import MultiPolygon, Polygon
+    from shapely.ops import unary_union
+
+    inside = unary_union([b for b in built if b.intersects(parcel)]).intersection(parcel)
+    open_part = unary_union([y for y in yards if y.intersects(parcel)]).intersection(parcel)
+    if not parcel.area or (inside.area + open_part.area) / parcel.area < ATLAS_COVERAGE:
+        return None
+    parts = [
+        p
+        for p in getattr(inside, "geoms", [inside])
+        if isinstance(p, Polygon) and p.area >= ATLAS_MIN_PART_M2
+    ]
+    return MultiPolygon(parts) if len(parts) != 1 else parts[0]
+
+
+def load_atlas(cache: Path, bbox, to_metric, log: Callable[[str], Any]) -> tuple[list, list]:
+    """Built and open polygons of the block atlas that touch the bbox, in metres."""
+    import shapefile
+    from pyproj import Transformer
+    from shapely.geometry import shape
+    from shapely.ops import transform
+
+    cache.mkdir(parents=True, exist_ok=True)
+    for ext in ("shp", "shx", "dbf", "prj"):
+        dest = cache / f"{ATLAS_STEM}.{ext}"
+        if not dest.exists():
+            size = net.download(STACKS.format(druid=ATLAS_DRUID, name=dest.name), dest, timeout=300)
+            log(f"model3d: downloaded {dest.name} ({size / 1e6:.1f} MB)")
+    to_wgs = Transformer.from_crs(VASSEROT_EPSG, 4326, always_xy=True).transform
+    x0, y0, x1, y1 = bbox
+    reader = shapefile.Reader(str(cache / f"{ATLAS_STEM}.shp"), encoding="latin-1")
+    kind_at = [f[0] for f in reader.fields[1:]].index("BATI")
+    built, yards = [], []
+    for sr in reader.iterShapeRecords():
+        if sr.shape.shapeType == 0 or not sr.shape.points:
+            continue
+        kind = int(sr.record[kind_at] or 0)
+        if kind not in (ATLAS_BUILT, ATLAS_YARD):
+            continue
+        bx0, by0, bx1, by1 = sr.shape.bbox
+        lon0, lat0 = to_wgs(bx0, by0)
+        lon1, lat1 = to_wgs(bx1, by1)
+        if lon1 < x0 or lon0 > x1 or lat1 < y0 or lat0 > y1:
+            continue
+        geom = transform(to_metric, transform(to_wgs, shape(sr.shape.__geo_interface__)))
+        if not geom.is_valid:
+            geom = geom.buffer(0)
+        (built if kind == ATLAS_BUILT else yards).append(geom)
+    return built, yards
+
+
 def load_institutions(area: str) -> tuple[list[dict], set[str]]:
     """Traced institutions (python -m rpr institutions) and the parcels they replace."""
     from rpr.sources.institutions import INSTITUTIONS
@@ -301,7 +372,12 @@ def build(area: str, log: Callable[[str], Any] = print) -> dict:
     reader = shapefile.Reader(str(shp), encoding="latin-1")
     fields = [f[0] for f in reader.fields[1:]]
     reconstructed_shapes: list = []  # (metric footprint, last year standing)
-    reconstructed, skipped = [], {"covered by a surviving building": 0, "too small": 0, "open space": 0, "institution": 0}
+    reconstructed, skipped = [], {"covered by a surviving building": 0, "too small": 0, "open space": 0, "institution": 0, "all yard in the block atlas": 0}
+    from shapely.strtree import STRtree
+
+    atlas_built, atlas_yards = load_atlas(paths.REPO_ROOT / "pipeline" / "cache" / "vasserot", bbox, to_l93, log)
+    built_tree, yard_tree = STRtree(atlas_built), STRtree(atlas_yards)
+    used_atlas = 0
     # Institutions traced from Verniquet's atlas replace the house lots of their parcels.
     institutions, institution_parcels = load_institutions(area)
     traced = load_traced(area, to_l93)
@@ -338,9 +414,20 @@ def build(area: str, log: Callable[[str], Any] = print) -> dict:
         trace = traced.get(key)
         footprint = metric.buffer(-INSET_M, join_style="mitre", mitre_limit=3.0)
         ring = False
+        from_atlas = None
+        if trace is None:
+            from_atlas = atlas_footprint(
+                metric, [atlas_built[i] for i in built_tree.query(metric)], [atlas_yards[i] for i in yard_tree.query(metric)]
+            )
         if trace is not None:
             footprint = trace["geometry"].intersection(footprint)
             used_traced += 1
+        elif from_atlas is not None:
+            footprint = from_atlas.intersection(footprint)
+            if footprint.area < ATLAS_MIN_PART_M2:
+                skipped["all yard in the block atlas"] += 1
+                continue
+            used_atlas += 1
         elif metric.area > RING_ABOVE_M2:
             inner = metric.buffer(-RING_DEPTH_M, join_style="mitre", mitre_limit=3.0)
             if not inner.is_empty and inner.area > 0.15 * metric.area:
@@ -369,6 +456,8 @@ def build(area: str, log: Callable[[str], Any] = print) -> dict:
                       "source": (
                           "Footprint traced from Vasserot's plan of the building; height estimated"
                           if trace is not None
+                          else "Built part of the parcel in Vasserot's block atlas (1810–1836); height estimated"
+                          if from_atlas is not None
                           else "Vasserot cadastre parcel (1810–1836); height estimated"
                       ),
                       "id": f"vasserot:{house}",
@@ -376,6 +465,7 @@ def build(area: str, log: Callable[[str], Any] = print) -> dict:
                       "name": fix_text(rec.get("NOM_CODE2")) or None,
                       "ring": ring,
                       "traced": trace is not None,
+                      "atlas": from_atlas is not None,
                       # Pre-Haussmann houses: pitched roofs, mostly tile.
                       "roof": "gable",
                       "roof_material": "tile",
@@ -434,7 +524,10 @@ def build(area: str, log: Callable[[str], Any] = print) -> dict:
                 old, until = reconstructed_shapes[i]
                 if f["properties"]["from"] < until and g.intersection(old).area / g.area > 0.2:
                     f["properties"]["from"] = until
-    log(f"model3d: {len(reconstructed)} demolished buildings reconstructed ({used_traced} with traced footprints); skipped {skipped}")
+    log(
+        f"model3d: {len(reconstructed)} demolished buildings reconstructed "
+        f"({used_traced} parcels with a traced footprint, {used_atlas} on the block atlas's built part); skipped {skipped}"
+    )
 
     features = survivors + later + reconstructed
     out = area_file(area, "model")
@@ -449,8 +542,9 @@ def build(area: str, log: Callable[[str], Any] = print) -> dict:
             "later": len(later),
             "reconstructed": len(reconstructed),
             "traced": used_traced,
+            "atlas": used_atlas,
             "focus": cfg.get("focus"),
-            "notes": "Reconstructed buildings use whole parcels (courtyards included), estimated heights, and disappear in 1860. Later buildings appear from their APUR construction period.",
+            "notes": "Reconstructed buildings stand on the built part of their parcel as Vasserot's block atlas draws it (a traced sheet first, the whole parcel where the atlas says nothing), have estimated heights, and disappear in 1860. Later buildings appear from their APUR construction period.",
         },
         "features": features,
     }
@@ -468,5 +562,6 @@ def build(area: str, log: Callable[[str], Any] = print) -> dict:
         "later": len(later),
         "reconstructed": len(reconstructed),
         "traced": used_traced,
-        "license": "Vasserot parcels: ODbL (ALPAGE). APUR buildings: ODbL.",
+        "atlas": used_atlas,
+        "license": "Vasserot parcels and block atlas buildings: ODbL (ALPAGE). APUR buildings: ODbL.",
     }
