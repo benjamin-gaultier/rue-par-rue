@@ -52,7 +52,7 @@ describe('full camera', () => {
   it('reads the flat camera properties', () => {
     expect(cameraOf(props(camera))).toEqual({
       lon: 2.3466, lat: 48.8524, height: 1.5, bearing: 40, pitch: 8, roll: -1, hfov: 52, method: 'manual', confidence: 0.9,
-      reprojectionError: 0.012, points: 6
+      reprojectionError: 0.012, points: 6, crop: [0, 0, 1, 1], shift: 0
     })
   })
 

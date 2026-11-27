@@ -13,3 +13,5 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 DATA_DIR = Path(os.environ.get("RPR_DATA_DIR", REPO_ROOT / "web" / "public" / "data"))
 PHOTOS_DIR = DATA_DIR / "photos"
 VASSEROT_DIR = DATA_DIR / "vasserot"
+# Cameras placed by hand: a source file, edited by people, read by `rpr index`.
+POSES_FILE = Path(os.environ.get("RPR_POSES_FILE", REPO_ROOT / "pipeline" / "poses" / "manual.json"))

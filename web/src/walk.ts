@@ -24,6 +24,18 @@ export function offset([lon, lat]: [number, number], heading: number, metres: nu
   return [lon + (Math.sin(r) * metres) / (111320 * Math.cos((lat * Math.PI) / 180)), lat + (Math.cos(r) * metres) / 110574]
 }
 
+export interface WalkView {
+  pos: [number, number]
+  /** Compass bearing, degrees. */
+  heading: number
+  /** Degrees above the horizon. */
+  lookUp: number
+  /** Metres above the street. */
+  height: number
+  /** Degrees about the line of sight. */
+  roll: number
+}
+
 type Ring = [number, number][]
 interface Obstacle {
   bbox: [number, number, number, number]
@@ -109,6 +121,12 @@ export class Walker {
   extraBlock?: (p: [number, number]) => boolean
   /** Buildings whose blocking extraBlock takes over (the detailed layer, with its own dates). */
   skipIds?: Set<string>
+  /** Called after every move or turn, with where the walker stands and faces. */
+  onMove?: (pos: [number, number], heading: number) => void
+  /** While held, keys and drags do nothing: something else places the camera (the stand-in view). */
+  held = false
+  private eye = EYE_HEIGHT
+  private roll = 0
 
   constructor(
     private map: MapLibreMap,
@@ -126,7 +144,10 @@ export class Walker {
       }
     }
     this.active = true
+    this.held = false
     this.heading = heading
+    this.eye = EYE_HEIGHT
+    this.roll = 0
     this.pos = this.freeSpotNear(at)
     const m = this.map
     m.dragPan.disable()
@@ -160,6 +181,7 @@ export class Walker {
   stop() {
     if (!this.active) return
     this.active = false
+    this.held = false
     cancelAnimationFrame(this.raf)
     this.clearKeys()
     window.removeEventListener('keydown', this.onKeyDown)
@@ -200,6 +222,37 @@ export class Walker {
     else this.keys.delete(key)
   }
 
+  /** Where the walker stands and looks: position, heading, degrees above the horizon, eye height, roll. */
+  get view(): WalkView {
+    return { pos: this.pos, heading: this.heading, lookUp: this.lookUp, height: this.eye, roll: this.roll }
+  }
+
+  /**
+   * Stand anywhere and look any way, walls or not: a photographer may have
+   * stood at a window. Height and roll go back to the walk's when walking resumes.
+   */
+  lookFrom(v: WalkView) {
+    if (!this.active) return
+    this.pos = v.pos
+    this.heading = ((v.heading % 360) + 360) % 360
+    this.lookUp = v.lookUp
+    this.eye = v.height
+    this.roll = v.roll
+    this.place()
+  }
+
+  /** Back to walking from wherever lookFrom left the camera: eye height, no roll, out of any wall. */
+  resume() {
+    if (!this.active) return
+    this.held = false
+    this.clearKeys()
+    this.eye = EYE_HEIGHT
+    this.roll = 0
+    this.lookUp = Math.max(LOOK_RANGE[0], Math.min(LOOK_RANGE[1], this.lookUp))
+    this.pos = this.freeSpotNear(this.pos)
+    this.place()
+  }
+
   private isBlocked(p: [number, number]): boolean {
     return blocked(p, this.year(), this.obstacles, this.skipIds) || (this.extraBlock?.(p) ?? false)
   }
@@ -216,15 +269,20 @@ export class Walker {
 
   private place() {
     const ahead = offset(this.pos, this.heading, LOOK_AHEAD)
-    const aimAltitude = EYE_HEIGHT + LOOK_AHEAD * Math.tan((this.lookUp * Math.PI) / 180)
-    const camera = this.map.calculateCameraOptionsFromTo(LngLat.convert(this.pos), EYE_HEIGHT, LngLat.convert(ahead), aimAltitude)
-    this.map.jumpTo(camera)
+    const aimAltitude = this.eye + LOOK_AHEAD * Math.tan((this.lookUp * Math.PI) / 180)
+    const camera = this.map.calculateCameraOptionsFromTo(LngLat.convert(this.pos), this.eye, LngLat.convert(ahead), aimAltitude)
+    this.map.jumpTo({ ...camera, roll: this.roll })
+    this.onMove?.(this.pos, this.heading)
   }
 
   private tick = (now: number) => {
     if (!this.active) return
     const dt = Math.min(0.1, (now - this.last) / 1000)
     this.last = now
+    if (this.held) {
+      this.raf = requestAnimationFrame(this.tick)
+      return
+    }
     const k = this.keys
     let turn = 0
     let forward = 0
@@ -264,7 +322,7 @@ export class Walker {
   private clearKeys = () => this.keys.clear()
 
   private onPointerDown = (e: PointerEvent) => {
-    if (this.drag) return // a second finger: keep following the first
+    if (this.drag || this.held) return // a second finger: keep following the first
     this.drag = { x: e.clientX, y: e.clientY, heading: this.heading, lookUp: this.lookUp, id: e.pointerId }
     try {
       this.map.getCanvas().setPointerCapture(e.pointerId)

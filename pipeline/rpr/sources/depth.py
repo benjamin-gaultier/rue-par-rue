@@ -93,6 +93,12 @@ def crop_mount(img):
     The card is the colour along the scan's border; the print is the largest
     region that differs from it. Returns the image unchanged if nothing stands out.
     """
+    box = mount_box(img)
+    return img.crop(box) if box else img
+
+
+def mount_box(img) -> tuple[int, int, int, int] | None:
+    """The print's box (left, top, right, bottom) in pixels, or None (see crop_mount)."""
     import cv2
     import numpy as np
 
@@ -106,13 +112,13 @@ def crop_mount(img):
     mask = cv2.morphologyEx(mask, cv2.MORPH_CLOSE, np.ones((15, 15), np.uint8))
     n, _, stats, _ = cv2.connectedComponentsWithStats(mask, 8)
     if n <= 1:
-        return img
+        return None
     k = 1 + int(np.argmax(stats[1:, cv2.CC_STAT_AREA]))
     x, y, bw, bh = (int(v) for v in stats[k, :4])
     if bw * bh < 0.08 * w * h or bw * bh > 0.97 * w * h:
-        return img  # nothing that looks like a print on a card
+        return None  # nothing that looks like a print on a card
     inset = max(2, int(0.01 * min(bw, bh)))
-    return img.crop((x + inset, y + inset, x + bw - inset, y + bh - inset))
+    return (x + inset, y + inset, x + bw - inset, y + bh - inset)
 
 
 def build(name: str = "notre-dame", log: Callable[[str], Any] = print) -> dict:

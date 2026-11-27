@@ -59,6 +59,20 @@ def test_index_counts_full_cameras(tmp_path):
     photos_dir, data_dir = tmp_path / "photos", tmp_path
     photos = [make(), make(source_id="2", camera=camera()), make(source_id="3", year=1865, camera=camera(method="matched"))]
     write_source(INFO, photos, out_dir=photos_dir)
-    manifest = build_index(photos_dir=photos_dir, data_dir=data_dir)
+    manifest = build_index(photos_dir=photos_dir, data_dir=data_dir, poses_file=tmp_path / "none.json")
     assert manifest["photos"]["count"] == 3
-    assert manifest["photos"]["cameras"] == {"count": 2, "era_1900_1929": 1}
+    assert manifest["photos"]["cameras"] == {"count": 2, "era_1900_1929": 1, "placed_by_hand": 0}
+
+
+def test_crop_is_written_as_text_and_read_back():
+    props = make(camera=camera(crop=(0.1, 0.2, 0.9, 0.8))).to_feature()["properties"]
+    assert props["camera_crop"] == "0.1000,0.2000,0.9000,0.8000"
+    assert camera_of(props).crop == (0.1, 0.2, 0.9, 0.8)
+
+
+def test_crop_must_be_a_rectangle_inside_the_image():
+    bad = "camera crop is not a rectangle inside the image"
+    assert make(camera=camera(crop=(0.0, 0.0, 1.0, 1.0))).problems() == []
+    assert make(camera=camera(crop=(0.5, 0.2, 0.4, 0.8))).problems() == [bad]  # x1 before x0
+    assert make(camera=camera(crop=(0.0, 0.0, 1.2, 1.0))).problems() == [bad]  # outside
+    assert make(camera=camera(crop=(0.0, 0.0, 0.1, 0.1))).problems() == [bad]  # 1% of the image

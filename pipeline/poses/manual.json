@@ -1,0 +1,79 @@
+{
+  "about": "Cameras placed by hand against the 3D model, one per photo. Edited by people; `python -m rpr index` writes them into web/public/data/photos.geojson. See pipeline/rpr/cameras.py for the fields. `crop` is the picture inside the photo's `image` (shares of its width and height); `shift` is the rising front, as a share of the picture's height. A pose lined up by eye has no `points` and a confidence of 0.5 at most.",
+  "poses": [
+    {
+      "id": "parismusees:320002473",
+      "camera": {
+        "lon": 2.349548,
+        "lat": 48.853575,
+        "height": 1.6,
+        "bearing": 6.5,
+        "pitch": 0.0,
+        "roll": 0.0,
+        "hfov": 52.0,
+        "shift": 0.22
+      },
+      "crop": [0.2178, 0.2296, 0.7885, 0.6111],
+      "confidence": 0.3,
+      "by": "Claude (AI assistant), by eye",
+      "date": "2026-11-27",
+      "how": "Lined up in the stand-in view against the houses on the east side of the street, which still stand, and the kerb. When it was posed, the model of 1865 had no houses on the west side, so only one side could be matched."
+    },
+    {
+      "id": "parismusees:320002478",
+      "camera": {
+        "lon": 2.3488,
+        "lat": 48.85378,
+        "height": 1.6,
+        "bearing": 298.0,
+        "pitch": 0.0,
+        "roll": 0.0,
+        "hfov": 52.0,
+        "shift": 0.25
+      },
+      "crop": [0.2146, 0.2176, 0.7879, 0.65],
+      "confidence": 0.3,
+      "by": "Claude (AI assistant), by eye",
+      "date": "2026-11-27",
+      "how": "Lined up in the stand-in view against the corner and arched windows of the foundling hospital on the left. When it was posed, the houses on the right were not in the model of 1865, so only the hospital could be matched."
+    },
+    {
+      "id": "parismusees:320002496",
+      "camera": {
+        "lon": 2.348605,
+        "lat": 48.853599,
+        "height": 1.6,
+        "bearing": 97.0,
+        "pitch": 0.0,
+        "roll": 0.0,
+        "hfov": 52.0,
+        "shift": 0.22
+      },
+      "crop": [0.1889, 0.2204, 0.8001, 0.6611],
+      "confidence": 0.5,
+      "by": "Claude (AI assistant), by eye",
+      "date": "2026-11-27",
+      "how": "Lined up in the stand-in view against the north tower and north portal of the cathedral and the row of houses on the left, as the model draws them in 1859 from Vasserot's block atlas."
+    },
+    {
+      "id": "kahn:A 13 559",
+      "camera": {
+        "lon": 2.347635,
+        "lat": 48.852656,
+        "height": 1.6,
+        "bearing": 73.75,
+        "pitch": 0.0,
+        "roll": 0.0,
+        "hfov": 56.9,
+        "shift": 0.236
+      },
+      "crop": [0.034, 0.029, 0.9625, 0.9747],
+      "points": 6,
+      "reprojection_error": 0.0061,
+      "confidence": 0.5,
+      "by": "Claude (AI assistant)",
+      "date": "2026-11-27",
+      "how": "Worked out from where six things fall in the autochrome: the outer corners and tops of the two towers (69 m) and the spire and its tip (96 m), placed from the cathedral's APUR footprint. Average error 4.5 pixels in a picture 743 wide. Checked in the stand-in view."
+    }
+  ]
+}

@@ -30,7 +30,8 @@ export interface PhotoProps {
   confidence: number
   /**
    * The full camera, flat as `camera_*`, present only when it was solved
-   * (see `cameraOf` and Camera in pipeline/rpr/photo.py). Not used by the app yet.
+   * (see `cameraOf` and Camera in pipeline/rpr/photo.py). The stand-in view
+   * (standin.ts) puts the 3D camera there.
    */
   camera_lon?: number
   camera_lat?: number
@@ -43,6 +44,10 @@ export interface PhotoProps {
   camera_confidence?: number
   camera_reprojection_error?: number
   camera_points?: number
+  /** 'x0,y0,x1,y1': the rectangle of `image` that is the picture, as shares of its width and height. */
+  camera_crop?: string
+  /** The rising front, as a share of the picture's height (see Camera.shift). */
+  camera_shift?: number
   /** JSON string of source-specific details (see pipeline/rpr/photo.py). */
   extra?: string
 }
@@ -83,6 +88,22 @@ export interface Camera {
   reprojectionError?: number
   /** How many point pairs it was solved from. */
   points?: number
+  /** The rectangle of the photo's `image` that is the picture [x0, y0, x1, y1], shares of its size; the field of view refers to it. */
+  crop: [number, number, number, number]
+  /**
+   * The rising front: how far the lens was raised, as a share of the picture's
+   * height. It keeps walls upright and puts the horizon below the middle of
+   * the picture (0.2: a fifth of its height below). 0 for most cameras.
+   */
+  shift: number
+}
+
+/** '0.1,0.2,0.9,0.8' as a rectangle; the whole image when absent or malformed. */
+export function parseCrop(s: string | undefined): [number, number, number, number] {
+  const v = (s ?? '').split(',').map(Number)
+  if (v.length === 4 && v.every(Number.isFinite) && v[0] >= 0 && v[1] >= 0 && v[0] < v[2] && v[1] < v[3] && v[2] <= 1 && v[3] <= 1)
+    return [v[0], v[1], v[2], v[3]]
+  return [0, 0, 1, 1]
 }
 
 /** The photo's full camera, or null when any part of it is missing. */
@@ -95,8 +116,20 @@ export function cameraOf(p: PhotoProps): Camera | null {
   return {
     lon: lon!, lat: lat!, height: height!, bearing: bearing!, pitch: pitch!, roll: roll!, hfov: hfov!, method, confidence: confidence!,
     reprojectionError: p.camera_reprojection_error,
-    points: p.camera_points
+    points: p.camera_points,
+    crop: parseCrop(p.camera_crop),
+    shift: Number.isFinite(p.camera_shift) ? p.camera_shift! : 0
   }
+}
+
+/** How the camera was found, in a sentence for the app. */
+export function cameraLabel(c: Camera, year?: number): string {
+  const model = year ? `the 3D model of ${year}` : 'the 3D model'
+  if (c.method === 'manual' && c.points)
+    return `Camera placed by hand against ${model}, from ${c.points} matching points (average error ${((c.reprojectionError ?? 0) * 100).toFixed(1)}% of the picture's width).`
+  if (c.method === 'manual')
+    return `Camera placed by hand against ${model}: approximate, to a metre or two and a degree or two.`
+  return 'Camera matched against posed pictures of the same place.'
 }
 
 /** Photos within this many years of the selected year are shown. */

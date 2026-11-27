@@ -56,9 +56,19 @@ class Camera:
     # and where the camera puts it, as a share of the picture's width (0.01 = 1%).
     reprojection_error: float | None = None
     points: int | None = None  # how many point pairs it was solved from
+    # The rectangle of the photo's `image` that is the picture itself, as shares
+    # of the image's width and height (x0, y0, x1, y1): the print without its
+    # card, the plate without its edge. The field of view refers to this
+    # rectangle. None: the whole image.
+    crop: tuple[float, float, float, float] | None = None
+    # The rising front: how far the lens was raised, as a share of the picture's
+    # height. View cameras of the period raised the lens to take in tall fronts
+    # without tilting, which keeps walls upright and puts the horizon below the
+    # middle of the picture: at 0.2, a fifth of the picture's height below it.
+    shift: float = 0.0
 
     def problems(self) -> list[str]:
-        values = (self.lon, self.lat, self.height, self.bearing, self.pitch, self.roll, self.hfov, self.confidence)
+        values = (self.lon, self.lat, self.height, self.bearing, self.pitch, self.roll, self.hfov, self.confidence, self.shift)
         if not all(isinstance(v, (int, float)) and math.isfinite(v) for v in values):
             return ["camera has a non-finite value"]
         out = []
@@ -83,6 +93,10 @@ class Camera:
             out.append("camera reprojection error below 0")
         if self.points is not None and self.points < 4:
             out.append("camera solved from fewer than 4 points")
+        if self.crop is not None and not crop_ok(self.crop):
+            out.append("camera crop is not a rectangle inside the image")
+        if not -0.5 <= self.shift <= 0.5:
+            out.append("camera shift outside -0.5..0.5")
         return out
 
     def to_props(self) -> dict:
@@ -90,7 +104,27 @@ class Camera:
         props = {f"camera_{k}": v for k, v in asdict(self).items() if v is not None}
         for key in ("camera_lon", "camera_lat"):
             props[key] = round(props[key], 7)
+        if self.crop is not None:
+            props["camera_crop"] = ",".join(f"{v:.4f}" for v in self.crop)
+        if not self.shift:
+            del props["camera_shift"]  # most cameras have none
         return props
+
+
+def crop_ok(crop) -> bool:
+    """Four shares x0 < x1, y0 < y1 inside 0..1, covering at least 5% of the image."""
+    if len(crop) != 4 or not all(isinstance(v, (int, float)) and math.isfinite(v) for v in crop):
+        return False
+    x0, y0, x1, y1 = crop
+    return 0.0 <= x0 < x1 <= 1.0 and 0.0 <= y0 < y1 <= 1.0 and (x1 - x0) * (y1 - y0) >= 0.05
+
+
+def parse_crop(text: str | None) -> tuple[float, float, float, float] | None:
+    """'0.1,0.2,0.9,0.8' -> (0.1, 0.2, 0.9, 0.8); None when absent."""
+    if not text:
+        return None
+    x0, y0, x1, y1 = (float(v) for v in text.split(","))
+    return (x0, y0, x1, y1)
 
 
 CAMERA_FIELDS = ("lon", "lat", "height", "bearing", "pitch", "roll", "hfov", "method", "confidence")
@@ -104,6 +138,8 @@ def camera_of(props: dict) -> Camera | None:
         **{k: props[f"camera_{k}"] for k in CAMERA_FIELDS},
         reprojection_error=props.get("camera_reprojection_error"),
         points=props.get("camera_points"),
+        crop=parse_crop(props.get("camera_crop")),
+        shift=props.get("camera_shift", 0.0),
     )
 
 
@@ -235,30 +271,33 @@ def write_source(info: SourceInfo, photos: Iterable[Photo], out_dir: Path | None
         "harvested_at": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
     }
     collection = {"type": "FeatureCollection", "metadata": summary, "features": kept}
-    (out_dir / f"{info.key}.geojson").write_text(json.dumps(collection, ensure_ascii=False, separators=(",", ":")))
+    (out_dir / f"{info.key}.geojson").write_text(json.dumps(collection, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
     return summary
 
 
-def build_index(photos_dir: Path | None = None, data_dir: Path | None = None) -> dict:
-    """Merge every per-source file into photos.geojson and write manifest.json."""
+def build_index(photos_dir: Path | None = None, data_dir: Path | None = None, poses_file: Path | None = None) -> dict:
+    """Merge every per-source file into photos.geojson, add the cameras placed
+    by hand (`pipeline/poses/manual.json`, see rpr.cameras), and write manifest.json."""
+    from rpr.cameras import apply_poses, load_poses
+
     photos_dir = photos_dir or paths.PHOTOS_DIR
     data_dir = data_dir or paths.DATA_DIR
     features, sources = [], []
     for f in sorted(photos_dir.glob("*.geojson")):
-        coll = json.loads(f.read_text())
+        coll = json.loads(f.read_text(encoding="utf-8"))
         features.extend(coll["features"])
         sources.append(coll.get("metadata", {"key": f.stem}))
+    poses = apply_poses(features, load_poses(poses_file or paths.POSES_FILE))
     merged = {"type": "FeatureCollection", "features": features}
     data_dir.mkdir(parents=True, exist_ok=True)
-    (data_dir / "photos.geojson").write_text(json.dumps(merged, ensure_ascii=False, separators=(",", ":")))
+    (data_dir / "photos.geojson").write_text(json.dumps(merged, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
     manifest_path = data_dir / "manifest.json"
-    manifest = json.loads(manifest_path.read_text()) if manifest_path.exists() else {}
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8")) if manifest_path.exists() else {}
     posed = [f["properties"] for f in features if camera_of(f["properties"]) is not None]
-    manifest["photos"] = {
-        "count": len(features),
-        # Photos with a full camera (position, height, bearing, pitch, roll, field of view).
-        "cameras": {"count": len(posed), "era_1900_1929": sum(1 for p in posed if in_era(p))},
-        "sources": sources,
-    }
-    manifest_path.write_text(json.dumps(manifest, ensure_ascii=False, indent=2) + "\n")
+    # Photos with a full camera (position, height, bearing, pitch, roll, field of view).
+    cameras = {"count": len(posed), "era_1900_1929": sum(1 for p in posed if in_era(p)), "placed_by_hand": poses["applied"]}
+    if poses["missing"]:
+        cameras["missing"] = poses["missing"]  # posed photos no source has any more
+    manifest["photos"] = {"count": len(features), "cameras": cameras, "sources": sources}
+    manifest_path.write_text(json.dumps(manifest, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     return manifest

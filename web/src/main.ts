@@ -17,7 +17,9 @@ import type { City3D } from './city3d'
 import type { DepthIndex } from './depth'
 import { Walker } from './walk'
 import { clampYear, formatHash, parseHash, type ViewState } from './state'
-import { histogram, inWindow, loadPhotos, type PhotoCollection, type PhotoFeature, type PhotoProps } from './photos'
+import { type Camera, cameraOf, dateLabel, histogram, inWindow, loadPhotos, type PhotoCollection, type PhotoFeature, type PhotoProps } from './photos'
+import { PeriodLayer, periodLabel, periodLook } from './periodlook'
+import { nearestPosed, openStandIn, type StandIn } from './standin'
 import { picturesOf, type TodayPicture } from './panoramax'
 import { formatAlignment, lookTarget, parseAlignment } from './alignment'
 import type { ThenNow } from './thennow'
@@ -58,6 +60,9 @@ const model = new Model3D(map, BASE, 'selection-cone', AREA)
 let ready = false // set once the load handler has added sources and layers
 let photos: PhotoFeature[] = []
 const byId = new Map<string, PhotoFeature>()
+/** Photos with a full camera: the ones you can stand in (standin.ts). */
+let posed: { f: PhotoFeature; camera: Camera }[] = []
+const DEBUG = new URLSearchParams(location.search).has('debug')
 
 /* ----------------------------------------------------------------- URL hash */
 
@@ -97,7 +102,8 @@ function setYear(y: number) {
     model.setYear(year)
     city?.setYear(year)
     refreshFrames()
-    walker.ensureFree()
+    if (!standingIn) walker.ensureFree()
+    updatePeriod()
     styleCadastre(map, year, controls.cadastre)
     filterPhotos(map, year, controls.allYears)
   }
@@ -126,10 +132,13 @@ function stopPlaying() {
 
 const panelRoot = $('#panel')
 let depthIndex: DepthIndex = {}
-const panel = buildPanel(panelRoot, () => select(undefined), (pic) => openCompare(pic), {
-  has: (id) => id in depthIndex,
-  open: (p) => void openDepth(p)
-})
+const panel = buildPanel(
+  panelRoot,
+  () => select(undefined),
+  (pic) => openCompare(pic),
+  { has: (id) => id in depthIndex, open: (p) => void openDepth(p) },
+  { has: (p) => cameraOf(p) !== null, open: (p) => void standIn(p.id) }
+)
 
 /** Photos with an AI depth map open as 3D photos (depth.ts, loaded on demand). */
 async function openDepth(p: PhotoProps) {
@@ -181,6 +190,10 @@ function setPhotos(data: PhotoCollection) {
   photos = data.features
   byId.clear()
   for (const f of photos) byId.set(f.properties.id, f)
+  posed = photos.flatMap((f) => {
+    const camera = cameraOf(f.properties)
+    return camera ? [{ f, camera }] : []
+  })
   ;(map.getSource('photos') as GeoJSONSource | undefined)?.setData(data as unknown as GeoJSON.FeatureCollection)
   timebar.setHistogram(histogram(photos, 1780, YEAR_MAX, 5), 5)
   updatePhotoStatus()
@@ -337,7 +350,8 @@ function ensureCity(): Promise<void> {
 
 function refreshFrames() {
   if (!frames || !framesModule) return
-  if (!model.active || !controls.photos) return frames.setGroups([])
+  // Standing in a photo, its own frame would hang in front of the camera.
+  if (!model.active || !controls.photos || standingIn) return frames.setGroups([])
   const groups = framesModule.groupPhotos(photos, state.year, controls.allYears, AREA.bounds, undefined, (f) => f.properties.id in depthIndex)
   const c = map.getCenter()
   frames.setGroups(framesModule.nearestGroups(groups, [c.lng, c.lat], 120))
@@ -381,7 +395,7 @@ function exit3D() {
 const walker = new Walker(map, BASE + AREA.files.model, () => state.year)
 const walkUi = $('#walk-ui')
 
-async function startWalk() {
+async function startWalk(at?: [number, number], heading?: number) {
   if (!model.active) enter3D(false)
   await ensureCity() // so the river blocks the way from the first step
   const c = map.getCenter()
@@ -391,22 +405,96 @@ async function startWalk() {
   const [tx, ty] = AREA.camera.to
   const atTarget = Math.hypot((c.lng - tx) * 73300, (c.lat - ty) * 111200) < 40
   const here = inside && !atTarget
-  await walker.start(here ? [c.lng, c.lat] : AREA.walk.start, here ? map.getBearing() : AREA.walk.bearing)
+  if (at) await walker.start(at, heading ?? 0)
+  else await walker.start(here ? [c.lng, c.lat] : AREA.walk.start, here ? map.getBearing() : AREA.walk.bearing)
   basemaps.setDimmed(true)
   walkUi.hidden = false
   banner3d.classList.add('is-walking')
   document.body.classList.add('is-walking-mode')
   refreshFrames()
+  updatePeriod()
+  updateNearby()
 }
 
 function stopWalk(rise = true) {
   if (!walker.active) return
+  standing?.dispose()
   walker.stop()
   basemaps.setDimmed(false)
   walkUi.hidden = true
   banner3d.classList.remove('is-walking')
   document.body.classList.remove('is-walking-mode')
+  updatePeriod()
   if (rise) map.easeTo({ zoom: 18, pitch: 62, duration: 900 })
+}
+
+/* The period look while walking (periodlook.ts): a display effect. */
+const period = new PeriodLayer(map.getCanvas(), map.getCanvasContainer())
+const lookBtn = $('#walk-look') as HTMLButtonElement
+const lookNote = $('#walk-look-note')
+let periodOn = true
+
+function updatePeriod() {
+  const look = walker.active && periodOn ? periodLook(state.year) : null
+  period.set(look)
+  lookBtn.setAttribute('aria-pressed', String(periodOn))
+  lookNote.textContent = look ? periodLabel(look) : periodOn ? 'Today’s colours: no tint after 2000' : ''
+}
+lookBtn.addEventListener('click', () => {
+  periodOn = !periodOn
+  updatePeriod()
+})
+
+/* Standing in a photograph (standin.ts). */
+let standing: StandIn | undefined
+let standingIn = false
+const nearBtn = $('#walk-photo') as HTMLButtonElement
+let nearId: string | undefined
+
+/** Offer the posed photo taken near where the walker stands. */
+function updateNearby(pos?: [number, number]) {
+  const here = pos ?? walker.view.pos
+  const near = walker.active && !standingIn ? nearestPosed(posed, here, 40) : undefined
+  nearBtn.hidden = !near
+  if (!near || near.f.properties.id === nearId) return
+  nearId = near.f.properties.id
+  const p = near.f.properties
+  nearBtn.replaceChildren(
+    Object.assign(document.createElement('span'), { textContent: 'Step into the photograph' }),
+    Object.assign(document.createElement('small'), { textContent: [p.creator, dateLabel(p)].filter(Boolean).join(', ') + ' · ' + p.title })
+  )
+}
+walker.onMove = (pos) => updateNearby(pos)
+nearBtn.addEventListener('click', () => nearId && void standIn(nearId))
+
+async function standIn(id: string) {
+  const f = byId.get(id)
+  const camera = f ? cameraOf(f.properties) : null
+  if (!f || !camera || standingIn) return
+  standingIn = true
+  select(undefined)
+  stopPlaying()
+  if (f.properties.year !== undefined && f.properties.year !== state.year) setYear(f.properties.year)
+  if (!walker.active) await startWalk([camera.lon, camera.lat], camera.bearing)
+  document.body.classList.add('is-standing-in')
+  refreshFrames()
+  updateNearby()
+  standing = openStandIn($('#standin'), {
+    map,
+    walker,
+    photo: f.properties,
+    camera,
+    year: state.year,
+    adjust: DEBUG,
+    onClose: () => {
+      standing = undefined
+      standingIn = false
+      document.body.classList.remove('is-standing-in')
+      refreshFrames()
+      nearId = undefined
+      updateNearby()
+    }
+  })
 }
 
 $('#walk-3d').addEventListener('click', () => void startWalk())
@@ -528,14 +616,16 @@ map.on('moveend', () => {
   writeHash()
   if (model.active) refreshFrames()
 })
-if (new URLSearchParams(location.search).has('debug')) {
+if (DEBUG) {
   /** What the area costs, for the README's baseline (measure.ts, tools/baseline/README.md). */
   const measure = async (options?: import('./measure').MeasureOptions) => {
     await ensureCity()
     if (!city) throw new Error('The detailed area did not load')
     return (await import('./measure')).measure(map, city, AREA, state.year, startWalk, options)
   }
-  Object.assign(window, { rpr: { map, basemaps, state, setPhotos, select, openCompare, setYear, startWalk, city: () => city, walker, measure } })
+  Object.assign(window, {
+    rpr: { map, basemaps, state, setPhotos, select, openCompare, setYear, startWalk, city: () => city, walker, measure, standIn, standing: () => standing, period }
+  })
 }
 
 window.addEventListener('hashchange', () => {
@@ -545,6 +635,7 @@ window.addEventListener('hashchange', () => {
 })
 window.addEventListener('keydown', (e) => {
   if (e.target instanceof HTMLInputElement && e.target.type !== 'range') return
+  if (standingIn) return // the stand-in view has its own keys
   if (e.key === 'Escape' && walker.active && !state.photo) return stopWalk()
   if (e.key === 'Escape' && state.photo && !compare) select(undefined)
 })
