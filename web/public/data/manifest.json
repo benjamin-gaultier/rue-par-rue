@@ -70,10 +70,11 @@
     "area": "Île de la Cité",
     "standing": 1606,
     "later": 813,
-    "reconstructed": 6073,
+    "reconstructed": 5287,
     "traced": 84,
-    "license": "Vasserot parcels: ODbL (ALPAGE). APUR buildings: ODbL.",
-    "updated_at": "2026-11-22T14:27:58Z"
+    "atlas": 2234,
+    "license": "Vasserot parcels and block atlas buildings: ODbL (ALPAGE). APUR buildings: ODbL.",
+    "updated_at": "2026-11-27T10:55:48Z"
   },
   "traced_cite": {
     "area": "cite",
@@ -115,8 +116,8 @@
     "area": "cite",
     "file": "3d/greenery-cite.json",
     "gardens": 26,
-    "trees": 2491,
-    "updated_at": "2026-11-22T14:28:43Z"
+    "trees": 2518,
+    "updated_at": "2026-11-27T10:58:01Z"
   },
   "institutions_cite": {
     "area": "cite",
@@ -127,15 +128,15 @@
   "streets_cite": {
     "area": "cite",
     "file": "3d/streets-cite.json",
-    "bytes": 442333,
-    "gutter runs": 471,
-    "lantern": 399,
-    "potence": 361,
-    "candelabra": 1383,
+    "bytes": 441270,
+    "gutter runs": 470,
+    "lantern": 400,
+    "potence": 363,
+    "candelabra": 1385,
     "old pavements": 264,
     "column": 58,
-    "kerb_stone": 415,
-    "plaque": 1363,
+    "kerb_stone": 381,
+    "plaque": 1295,
     "modern pavements": 1188,
     "crossings": 415,
     "main road areas": 19,
@@ -147,22 +148,22 @@
     "bollard": 9558,
     "vespasienne": 12,
     "bench": 332,
-    "updated_at": "2026-11-22T14:29:49Z"
+    "updated_at": "2026-11-27T10:59:22Z"
   },
   "landmarks_cite": {
     "area": "cite",
     "file": "3d/landmarks-cite.json",
     "buildings": 52,
     "parts": 15,
-    "updated_at": "2026-11-18T11:58:17Z"
+    "updated_at": "2026-11-27T10:57:59Z"
   },
   "vehicles_cite": {
     "area": "cite",
     "file": "3d/vehicles-cite.json",
-    "parked": 7301,
+    "parked": 7307,
     "moving": 572,
-    "bytes": 354487,
-    "updated_at": "2026-11-22T14:30:30Z"
+    "bytes": 354731,
+    "updated_at": "2026-11-27T11:00:08Z"
   },
   "streetnames": {
     "former_names": 8113,

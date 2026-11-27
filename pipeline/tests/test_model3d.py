@@ -50,3 +50,41 @@ def test_courtyard_parcels_split_into_lots_around_the_court():
     lots = model3d.split_houses(ring)
     assert len(lots) >= 6
     assert not any(lot.intersects(geometry.box(10, 10, 20, 20)) for lot in lots)
+
+
+def test_atlas_gives_the_built_part_of_a_parcel():
+    import pytest
+
+    geometry = pytest.importorskip("shapely.geometry")
+    parcel = geometry.box(0, 0, 10, 20)
+    house, yard = geometry.box(0, 0, 10, 12), geometry.box(0, 12, 10, 20)
+    # A neighbour's house touches the parcel's side: it adds nothing.
+    neighbour = geometry.box(10, 0, 20, 20)
+    built = model3d.atlas_footprint(parcel, [house, neighbour], [yard])
+    assert built.equals(house)
+
+
+def test_atlas_keeps_two_buildings_and_drops_slivers():
+    import pytest
+
+    geometry = pytest.importorskip("shapely.geometry")
+    parcel = geometry.box(0, 0, 10, 30)
+    front, back = geometry.box(0, 0, 10, 10), geometry.box(0, 20, 10, 30)
+    yard = geometry.box(0, 10, 10, 20).difference(geometry.box(4, 14, 5, 15))
+    sliver = geometry.box(4, 14, 5, 15)  # 1 m2 of wash inside the yard
+    built = model3d.atlas_footprint(parcel, [front, back, sliver], [yard])
+    assert built.geom_type == "MultiPolygon" and len(built.geoms) == 2
+    assert built.area == front.area + back.area
+
+
+def test_atlas_says_nothing_or_all_yard():
+    import pytest
+
+    geometry = pytest.importorskip("shapely.geometry")
+    parcel = geometry.box(0, 0, 10, 20)
+    # Half the parcel is not drawn in the atlas: fall back on the parcel.
+    assert model3d.atlas_footprint(parcel, [geometry.box(0, 0, 10, 10)], []) is None
+    assert model3d.atlas_footprint(parcel, [], []) is None
+    # Drawn as a yard all over: covered, and nothing built.
+    all_yard = model3d.atlas_footprint(parcel, [], [parcel])
+    assert all_yard is not None and all_yard.is_empty

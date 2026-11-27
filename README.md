@@ -39,7 +39,7 @@ Choose **Île de la Cité in 3D** to fly over the island in 1836, then drag the 
 | Shown as | Source | Years shown |
 | --- | --- | --- |
 | Cream: standing in 1836 and still standing | APUR building footprints dated before 1851, with their measured median heights (Notre-Dame's towers come out at about 70 m) | always |
-| Ochre: standing in 1836, demolished since | Vasserot cadastre parcels, cut back where a surviving building stands. No 1836 building footprints exist, so parcels over 400 m² become a 9 m-deep ring around a courtyard, parcels over 160 m² are split into lots of about 9 m (one house each, each with its own height), open spaces (parvis, squares, markets) are left out, and heights are estimated at 12–19 m | until 1860 |
+| Ochre: standing in 1836, demolished since | Vasserot cadastre parcels, cut back where a surviving building stands. Each house stands on the built part of its parcel, as Vasserot's block atlas colours it apart from the yards (ALPAGE's buildings layer): 2,234 of the 2,426 demolished parcels; 84 more have a footprint traced from the house's own sheet, and 52 that the atlas shows as all yard are left empty. The Palais de Justice and 55 other parcels the atlas does not sort keep the old rule: the whole parcel, or a 9 m-deep ring around a courtyard over 400 m². Footprints over 160 m² are split into lots of about 9 m (one house each, each with its own height; the split is a rule, not a source), open spaces (parvis, squares, markets) are left out, and heights are estimated at 12–19 m. The building card says which source a footprint has | until 1860 |
 | Grey: built later | APUR footprints and heights, appearing from their construction period | from that period |
 
 It is a massing model to judge scale and density, labelled as a reconstruction in the app. Drag past 1860 to see Haussmann clear the island, and click any building for its sources.
@@ -144,7 +144,7 @@ Download, from `python -I tools/baseline/sizes.py`:
 
 | File | MB | MB gzipped |
 | --- | ---: | ---: |
-| cite-1836.geojson | 4.80 | 0.51 |
+| cite-1836.geojson | 4.77 | 0.54 |
 | streets-cite.json | 0.44 | 0.17 |
 | vasserot-traced-cite.geojson | 0.36 | 0.08 |
 | vehicles-cite.json | 0.35 | 0.08 |

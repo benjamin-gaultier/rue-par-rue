@@ -28,6 +28,18 @@
 | Named landmarks for captions: churches, hôtels, palaces, museums, fountains, cemeteries | Ministère de la Culture, base Mérimée (protected buildings), POP export on data.gouv.fr (dataset `5af120e5b595087cfabcde81`, `merimee.csv`); IGN BD TOPO via the Géoplateforme WFS (`BDTOPO_V3:zone_d_activite_ou_d_interet`, natures other than those `rpr places` takes, and `BDTOPO_V3:cimetiere`) | Licence Ouverte / Etalab 2.0 (both) | "Ministère de la Culture, base Mérimée", "IGN BD TOPO" | `rpr monuments` keeps each building's names, kind, centre, spread, arrondissements and first century of construction (5,330 landmarks under 6,104 names), written to `pipeline/cache/paris-monuments.json`; raw downloads are cached in `pipeline/cache/monuments/` (not committed). Used by `rpr/geocode.py` for captions that name a building but no street that can be found. The City of Paris open data was checked: it has no gazetteer of named buildings. |
 | Street-level photos today | Panoramax (IGN and OpenStreetMap France instances) | CC BY-SA 4.0 or Etalab 2.0, per photo | "Panoramax contributors" plus the photo's licence | Queried in the browser by place (`place_position`). |
 
+## The Vasserot block atlas
+
+Checked on 2026-11-27 (backlog item `cite1836-block-atlas`).
+
+**The source.** Vasserot's cadastre draws Paris block by block (1810–1836): 912 block plans in 24 bound volumes, kept at the Archives nationales (F/31/73-96). Each plan colours the built part of every parcel apart from its yards and gardens. The house sheets that `rpr trace` reads are a different series, one sheet per house.
+
+**How it is published.** The ALPAGE project georeferenced the block plans and vectorised them. Its layer `BATI` ("Vasserot Buildings", A. Bethe, 2015) holds 40,356 polygons, each marked built (`BATI` = 1), open (2: yards, gardens, and squares such as the place Dauphine) or not sorted (3: 199 polygons, among them the Palais de Justice). Stanford Libraries host it as [kk239hv5615](https://purl.stanford.edu/kk239hv5615) under the ODbL 1.0, like the parcels, with the credit "Arch. nat. F31 73-96, Arch. Paris, © ALPAGE: A. Bethe, 2015". The scans of the block plans themselves were not looked for: the vectors are enough, and their licence is clear.
+
+**Coverage.** The layer covers central Paris (2.298–2.384° E, 48.841–48.883° N). In the Cité and Palais de Justice quarters it sorts 609 of the 611 parcels into built and open; the two it leaves are in the Palais de Justice quarter, the Palais itself among them. Over the whole model area it speaks for 2,286 of the 2,342 parcels of demolished houses that have no traced sheet. On the Cité's built parcels, a median 89% of the parcel is built.
+
+**How it compares with the house sheets.** On the 107 parcels with a traced sheet, the sheet's footprint and the atlas's built part overlap with a median IoU of 0.71. The atlas is coarser: it often colours a whole small parcel as built where the sheet shows a light well or a small yard. So a traced sheet comes first, and the atlas is used for the rest.
+
 ## Albert-Kahn licences
 
 Checked on 2026-11-21 for the 1900–1929 wall textures (backlog item `era1920-kahn-licence`).

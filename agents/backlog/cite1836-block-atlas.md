@@ -1,7 +1,8 @@
 ---
 stream: cite1836
 priority: 3
-status: open
+status: done
+done: 2026-11-27, PR #35 — the atlas is published as vectors by ALPAGE (layer BATI, ODbL); each demolished house now stands on the built part of its parcel: 2,234 of 2,426 parcels (0 before), 84 more from a traced sheet, 56 still on the parcel rule; follow-ups in cite1836-atlas-house-lots and cite1836-atlas-unsorted
 added: 2026-11-20
 needs: [cite1836-address-matching]
 ---
