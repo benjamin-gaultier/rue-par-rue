@@ -1,0 +1,6 @@
+{
+  "about": "Settings for `python -m rpr scenes`, set by hand, one entry per photo id. `covers`: boxes of the picture the photo must not paint onto the model (shares of the picture's width and height: left, top, right, bottom), such as a museum's label printed on the plate. See pipeline/rpr/sources/scenes.py.",
+  "photos": {
+    "kahn:A 13 559": {"covers": [[0.0, 0.87, 0.13, 1.0]], "why": "the museum's label, bottom left"}
+  }
+}

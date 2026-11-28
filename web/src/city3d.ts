@@ -39,6 +39,8 @@ import { FIRST_FRAME_MARK, sceneBuffers, type SceneBuffers } from './measure'
 import { signAtlas } from './signs'
 import { UNDATED_UNTIL, type ModelProps } from './model3d'
 import type { AreaFiles } from './areas'
+import { PhotoProjector, type PhotoScene } from './photoscene'
+import type { Camera } from './photos'
 
 interface Greenery {
   gardens: { features: { geometry: Geometry; properties: { name: string; from: number; until?: number; dated: boolean; note: string } }[] }
@@ -322,6 +324,8 @@ export class City3D implements CustomLayerInterface {
   private steps: ((seconds: number) => boolean)[] = []
   /** Modules that failed to load, by name (shown in the console only). */
   failed: string[] = []
+  /** A posed photograph painted onto the model (photoscene.ts), made on first use. */
+  private projector?: PhotoProjector
 
   constructor(center: [number, number]) {
     this.origin = MercatorCoordinate.fromLngLat(center, 0)
@@ -565,11 +569,59 @@ export class City3D implements CustomLayerInterface {
       ;(mesh.material as THREE.Material).dispose()
     }
     this.uniforms.u_signs.value.dispose()
+    this.projector?.dispose()
   }
 
   setYear(year: number) {
     this.uniforms.u_year.value = year
+    if (this.projector) this.projector.needsDepth = true // what hides what changes with the year
     this.map?.triggerRepaint()
+  }
+
+  /**
+   * Paint a posed photograph onto the model from its camera, or stop. Resolves
+   * once its pictures are loaded; the first frame after draws its depth map.
+   */
+  async setPhoto(p: Omit<PhotoScene, 'at'> | undefined): Promise<void> {
+    if (!p && !this.projector?.scene) return
+    if (!this.projector) {
+      this.projector = new PhotoProjector(this.uniforms.u_year)
+      this.scene.updateMatrixWorld(true)
+      this.projector.setMeshes([...this.pickables.map((q) => q.mesh), ...this.extras])
+    }
+    const at = p ? this.project([p.camera.lon, p.camera.lat]) : undefined
+    await this.projector.set(p && at ? { ...p, at } : undefined, () => this.map?.triggerRepaint())
+    this.map?.triggerRepaint()
+  }
+
+  /** Move the painting camera (adjust mode). */
+  setPhotoCamera(camera: Camera) {
+    this.projector?.setCamera(camera)
+    this.map?.triggerRepaint()
+  }
+
+  /** Fade the painted photograph (1 = full, 0 = the model alone). */
+  setPhotoOpacity(v: number) {
+    if (!this.projector) return
+    this.projector.opacity = v
+    this.map?.triggerRepaint()
+  }
+
+  /** The photo painted on the model, if any, and how many meshes take it. */
+  get painted(): { id: string; meshes: number; ready: boolean } | undefined {
+    const p = this.projector
+    return p?.scene ? { id: p.scene.id, meshes: p.meshCount, ready: p.ready } : undefined
+  }
+
+  /** Draw the photo's depth map into its own target, then put back the map's framebuffer. */
+  private depthPass(renderer: THREE.WebGLRenderer, projector: PhotoProjector) {
+    const gl = renderer.getContext()
+    const fb = gl.getParameter(gl.FRAMEBUFFER_BINDING) as WebGLFramebuffer | null
+    const vp = gl.getParameter(gl.VIEWPORT) as Int32Array
+    projector.depthPass(renderer)
+    gl.bindFramebuffer(gl.FRAMEBUFFER, fb)
+    gl.viewport(vp[0], vp[1], vp[2], vp[3])
+    renderer.resetState()
   }
 
   setVisible(v: boolean) {
@@ -590,7 +642,10 @@ export class City3D implements CustomLayerInterface {
     try {
       this.treeLod?.(this.uniforms.u_camera.value)
       this.renderer.resetState()
+      const projector = this.projector
+      if (projector?.scene && projector.needsDepth) this.depthPass(this.renderer, projector)
       this.renderer.render(this.scene, this.camera)
+      if (projector?.active) this.renderer.render(projector.paintScene, this.camera)
       if (!this.drawn) {
         this.drawn = true
         performance.mark(FIRST_FRAME_MARK)

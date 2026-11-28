@@ -12,6 +12,7 @@ window.__harness = (async () => {
   const SS = await import(`${vite}/src/streetshaders.ts?t=${t}`)
   const VS = await import(`${vite}/src/vehicleshaders.ts?t=${t}`)
   const LS = await import(`${vite}/src/landmarkshaders.ts?t=${t}`)
+  const PS = await import(`${vite}/src/photoscene.ts?t=${t}`)
   const variant = S.shaderVariant || ((src) => src)
   const walls = (fam) => variant(S.wallFragment, fam)
   const progs = [
@@ -34,7 +35,9 @@ window.__harness = (async () => {
     ['decal', SS.decalVertex, SS.decalFragment],
     ['furniture', SS.furnitureVertex, SS.furnitureFragment],
     ['vehicle', VS.vehicleVertex, VS.vehicleFragment],
-    ['vehicleShadow', VS.shadowVertex, VS.shadowFragment]
+    ['vehicleShadow', VS.shadowVertex, VS.shadowFragment],
+    ['photo-depth', PS.depthVertex, PS.depthFragment],
+    ['photo-paint', PS.paintVertex, PS.paintFragment]
   ]
   const canvas = document.createElement('canvas')
   const renderer = new THREE.WebGLRenderer({ canvas })

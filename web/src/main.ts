@@ -19,7 +19,7 @@ import { Walker } from './walk'
 import { clampYear, formatHash, parseHash, type ViewState } from './state'
 import { type Camera, cameraOf, dateLabel, histogram, inWindow, loadPhotos, type PhotoCollection, type PhotoFeature, type PhotoProps } from './photos'
 import { PeriodLayer, periodLabel, periodLook } from './periodlook'
-import { nearestPosed, openStandIn, type StandIn } from './standin'
+import { loadSceneIndex, nearestPosed, openStandIn, sceneFor, type SceneIndex, type StandIn } from './standin'
 import { picturesOf, type TodayPicture } from './panoramax'
 import { formatAlignment, lookTarget, parseAlignment } from './alignment'
 import type { ThenNow } from './thennow'
@@ -101,6 +101,7 @@ function setYear(y: number) {
     void basemaps.show(basemap)
     model.setYear(year)
     city?.setYear(year)
+    if (painted && painted.year !== year) unpaint() // a photograph belongs to its own year
     refreshFrames()
     if (!standingIn) walker.ensureFree()
     updatePeriod()
@@ -419,6 +420,7 @@ async function startWalk(at?: [number, number], heading?: number) {
 function stopWalk(rise = true) {
   if (!walker.active) return
   standing?.dispose()
+  unpaint()
   walker.stop()
   basemaps.setDimmed(false)
   walkUi.hidden = true
@@ -451,6 +453,18 @@ let standingIn = false
 const nearBtn = $('#walk-photo') as HTMLButtonElement
 let nearId: string | undefined
 
+/* A photograph painted on the model (photoscene.ts), from standing in it until the walk ends or the year changes. */
+let sceneIndex: SceneIndex = {}
+let painted: { id: string; year: number } | undefined
+const paintedUi = $('#walk-painted')
+
+function unpaint() {
+  painted = undefined
+  paintedUi.hidden = true
+  void city?.setPhoto(undefined)
+}
+$('#walk-unpaint').addEventListener('click', unpaint)
+
 /** Offer the posed photo taken near where the walker stands. */
 function updateNearby(pos?: [number, number]) {
   const here = pos ?? walker.view.pos
@@ -479,6 +493,16 @@ async function standIn(id: string) {
   document.body.classList.add('is-standing-in')
   refreshFrames()
   updateNearby()
+  const scene = city ? sceneFor(sceneIndex, id, camera) : undefined
+  paintedUi.hidden = true
+  if (scene) {
+    painted = { id, year: state.year }
+    const url = (name: string) => `${BASE}data/3d/scenes/${name}`
+    void city?.setPhoto({ id, camera, image: url(scene.image), mask: url(scene.mask), aspect: scene.width / scene.height }).catch((err) => {
+      console.warn('Photo scene unavailable:', err)
+      unpaint()
+    })
+  } else unpaint()
   standing = openStandIn($('#standin'), {
     map,
     walker,
@@ -486,10 +510,14 @@ async function standIn(id: string) {
     camera,
     year: state.year,
     adjust: DEBUG,
-    onClose: () => {
+    painted: !!scene,
+    onCamera: (c) => city?.setPhotoCamera(c),
+    onClose: ({ walkIn }) => {
       standing = undefined
       standingIn = false
       document.body.classList.remove('is-standing-in')
+      if (walkIn && painted) paintedUi.hidden = false
+      else unpaint()
       refreshFrames()
       nearId = undefined
       updateNearby()
@@ -573,6 +601,8 @@ $('#exit-3d').addEventListener('click', exit3D)
 
 timebar.setYear(state.year)
 timebar.setBasemap(basemapForYear(state.year).basemap, basemapForYear(state.year).nearestOnly)
+
+void loadSceneIndex(BASE).then((index) => (sceneIndex = index))
 
 const depthReady = import('./depth')
   .then(async ({ loadDepthIndex }) => {

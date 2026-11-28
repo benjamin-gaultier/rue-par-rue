@@ -1,0 +1,40 @@
+{
+ "kahn:A 13 559": {
+  "covered": 0.0168,
+  "covers": [
+   [
+    0.0,
+    0.87,
+    0.13,
+    1.0
+   ]
+  ],
+  "crop": [
+   0.034,
+   0.029,
+   0.9625,
+   0.9747
+  ],
+  "height": 561,
+  "image": "kahn-A_13_559.jpg",
+  "leaves": 0.1441,
+  "mask": "kahn-A_13_559-mask.png",
+  "sky": 0.3652,
+  "width": 743
+ },
+ "parismusees:320002496": {
+  "covered": 0.0,
+  "crop": [
+   0.1889,
+   0.2204,
+   0.8001,
+   0.6611
+  ],
+  "height": 476,
+  "image": "parismusees-320002496.jpg",
+  "leaves": 0.0,
+  "mask": "parismusees-320002496-mask.png",
+  "sky": 0.1069,
+  "width": 838
+ }
+}

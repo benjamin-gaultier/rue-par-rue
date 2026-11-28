@@ -226,5 +226,12 @@
     "model": "cite-1836.geojson",
     "source": "SoDUCo, Annuaires historiques parisiens 1798-1914 (Nakala, Licence Ouverte / Etalab 2.0), from Bottin's Almanach du commerce (BnF Gallica)",
     "updated_at": "2026-11-27T13:04:24Z"
+  },
+  "scenes": {
+    "count": 2,
+    "failed": 0,
+    "bytes": 272416,
+    "min_confidence": 0.5,
+    "updated_at": "2026-11-28T11:40:07Z"
   }
 }
