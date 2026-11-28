@@ -265,6 +265,71 @@ button.today-item:hover img { outline: 2px solid var(--accent); outline-offset: 
 .about ul { padding-left: 18px; margin: 0; display: grid; gap: 6px; }
 .about .panel-close { position: static; margin: 0; }
 
+/* ---- walking: the posed photo nearby and the period look */
+.walk-photo {
+  display: grid; gap: 1px; max-width: min(460px, calc(100vw - 24px)); padding: 8px 14px; border-radius: 10px; cursor: pointer;
+  border: 1px solid #e3c98f; background: #2a2116; color: #f6ead2; text-align: left; box-shadow: var(--shadow);
+  font: 600 15px/1.2 var(--font-body);
+}
+.walk-photo small { font: 500 11.5px/1.3 var(--font-mono); color: #d9c6a1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.walk-photo:hover { background: #3a2e1d; }
+.walk-look { margin: 0; display: flex; align-items: center; gap: 8px; padding: 4px 6px 4px 4px; border-radius: 999px; background: rgba(11, 15, 21, 0.75); color: #e8ecf2; font-size: 12px; }
+.walk-look-btn { border: 1px solid #5b6577; background: none; color: #e8ecf2; border-radius: 999px; padding: 2px 10px; font: 600 12px var(--font-body); cursor: pointer; }
+.walk-look-btn[aria-pressed='true'] { background: #e3c98f; border-color: #e3c98f; color: #2a2116; }
+.walk-look span:empty { display: none; }
+.period-grain, .period-vignette { position: absolute; inset: 0; pointer-events: none; }
+.period-grain { background-size: 180px 180px; mix-blend-mode: overlay; animation: period-grain 0.6s steps(3) infinite; }
+.period-vignette { background: radial-gradient(ellipse 75% 70% at 50% 50%, transparent 55%, rgba(24, 16, 6, 0.9) 130%); }
+@keyframes period-grain {
+  0% { background-position: 0 0; }
+  33% { background-position: -61px 37px; }
+  66% { background-position: 43px -71px; }
+  100% { background-position: 0 0; }
+}
+
+/* ---- standing in a photograph */
+.standin-btn {
+  display: flex; justify-content: space-between; align-items: baseline; gap: 8px; padding: 10px 12px;
+  border-radius: 8px; border: 0; background: #2a2116; color: #f6ead2; cursor: pointer; text-align: left;
+  font: 600 15px/1.2 var(--font-body);
+}
+.standin-btn small { font: 500 11px var(--font-mono); color: #d9c6a1; }
+.standin-btn:hover { background: #3a2e1d; }
+.standin-root { position: absolute; inset: 0; z-index: 4; pointer-events: none; }
+.si-frame {
+  position: absolute; overflow: hidden;
+  box-shadow: 0 0 0 1px rgba(246, 234, 210, 0.75), 0 10px 40px rgba(0, 0, 0, 0.45);
+  opacity: 0; transition: opacity 700ms ease;
+}
+.si.is-in .si-frame { opacity: 1; }
+.si-photo { position: absolute; max-width: none; user-select: none; transition: opacity 120ms linear; }
+.si-card {
+  position: absolute; left: 50%; bottom: max(34px, env(safe-area-inset-bottom)); transform: translateX(-50%);
+  width: min(680px, calc(100% - 24px)); display: grid; gap: 3px; padding: 8px 14px 10px; border-radius: 10px;
+  background: rgba(23, 18, 11, 0.9); color: #f6ead2; box-shadow: var(--shadow); pointer-events: auto;
+}
+.si-eyebrow { font: 500 11px/1.4 var(--font-mono); letter-spacing: 0.06em; text-transform: uppercase; color: #d9c6a1; }
+.si-title { font: 600 18px/1.15 var(--font-display); }
+.si-fade { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 10px; font: 500 12px var(--font-mono); color: #d9c6a1; }
+.si-fade input { width: 100%; accent-color: #e3c98f; }
+.si-how, .si-credit, .si-status, .si-keys { margin: 0; font-size: 12px; line-height: 1.35; color: #d9c6a1; }
+.si-foot { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.si-credit { display: flex; flex-wrap: wrap; gap: 2px 12px; }
+.si-credit a { color: #f1d9a6; }
+.si-status:empty { display: none; }
+.si-buttons { display: flex; flex: none; gap: 8px; }
+.si-tools {
+  position: absolute; top: 12px; right: 12px; width: 300px; display: grid; gap: 6px; padding: 8px 10px; border-radius: 10px;
+  background: rgba(23, 18, 11, 0.85); color: #f6ead2; pointer-events: auto;
+}
+.si-pose { margin: 0; max-height: 220px; overflow: auto; font: 11px/1.35 var(--font-mono); color: #f6ead2; background: rgba(0, 0, 0, 0.35); padding: 6px 8px; border-radius: 6px; user-select: all; }
+.is-standing-in .walk-ui, .is-standing-in .banner-3d, .is-standing-in .side { display: none; }
+@media (max-width: 720px) {
+  .si-card { padding: 8px 10px; }
+  .si-title { font-size: 15px; }
+  .si-how, .si-tools { display: none; }
+}
+
 /* ---- MapLibre tweaks */
 .maplibregl-ctrl-attrib { font-size: 11px; }
 

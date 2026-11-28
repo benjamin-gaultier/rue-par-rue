@@ -37,8 +37,9 @@
   "photos": {
     "count": 10017,
     "cameras": {
-      "count": 0,
-      "era_1900_1929": 0
+      "count": 4,
+      "era_1900_1929": 1,
+      "placed_by_hand": 4
     },
     "sources": [
       {

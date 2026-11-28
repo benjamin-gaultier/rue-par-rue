@@ -142,7 +142,8 @@ export function buildPanel(
   root: HTMLElement,
   onClose: () => void,
   onCompare: (pic: TodayPicture) => void,
-  depth: { has: (id: string) => boolean; open: (p: PhotoProps) => void } = { has: () => false, open: () => {} }
+  depth: { has: (id: string) => boolean; open: (p: PhotoProps) => void } = { has: () => false, open: () => {} },
+  standIn: { has: (p: PhotoProps) => boolean; open: (p: PhotoProps) => void } = { has: () => false, open: () => {} }
 ): Panel {
   const close = el('button', { class: 'panel-close', type: 'button', 'aria-label': 'Close', text: '×' })
   const body = el('div', { class: 'panel-body' })
@@ -159,6 +160,15 @@ export function buildPanel(
       el('small', { text: 'AI depth estimate' })
     ])
     b.addEventListener('click', () => depth.open(p))
+    return b
+  }
+
+  const standInButton = (p: PhotoProps) => {
+    const b = el('button', { class: 'standin-btn', type: 'button' }, [
+      el('span', { text: 'Stand where the photographer stood' }),
+      el('small', { text: 'In the 3D streets of the year' })
+    ])
+    b.addEventListener('click', () => standIn.open(p))
     return b
   }
 
@@ -189,6 +199,7 @@ export function buildPanel(
           el('figcaption', { text: p.credit ?? '' })
         ]),
         el('h2', { class: 'panel-title', text: p.title }),
+        standIn.has(p) ? standInButton(p) : null,
         depth.has(p.id) ? depthButton(p) : null,
         dl,
         p.url ? el('a', { class: 'archive-link', href: p.url, target: '_blank', rel: 'noopener', text: 'Open the archive record' }) : null,

@@ -157,7 +157,10 @@ def cmd_headings(args: argparse.Namespace) -> None:
 
 def cmd_index(args: argparse.Namespace) -> None:
     manifest = build_index()
-    print(f"index: {manifest['photos']['count']} photos from {len(manifest['photos']['sources'])} sources")
+    cameras = manifest["photos"]["cameras"]
+    print(f"index: {manifest['photos']['count']} photos from {len(manifest['photos']['sources'])} sources, {cameras['count']} with a full camera ({cameras['placed_by_hand']} placed by hand)")
+    for gone in cameras.get("missing", []):
+        print(f"index: posed photo {gone} is not in any source any more")
 
 
 def add_area(parser: argparse.ArgumentParser) -> None:
