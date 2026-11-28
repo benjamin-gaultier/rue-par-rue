@@ -1,7 +1,8 @@
 ---
 stream: cite1836
 priority: 3
-status: open
+status: done
+done: 2026-11-28, PR #39 — the 42 rejects sorted by cause; the red-ink number under many of these drawings was read as the wash: a pink mark outside an ink drawing is now ignored (rue de la Licorne n°10, 12, 14, rue de Perpignan n°7 traced), and ink readings that fit only once turned back are rejected (4, all read in part): 107 → 109 traced, median IoU 0.85; the 13 numbers without a point explained in the README; follow-ups in cite1836-grey-wash and cite1836-numbers-without-points
 added: 2026-11-21
 needs: []
 ---

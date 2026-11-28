@@ -384,6 +384,21 @@ def box_share(inner, outer) -> float:
     return max(0, x1 - x0) * max(0, y1 - y0) / float(outer[2] * outer[3])
 
 
+def stray_mark(pink_box, ink_box) -> bool:
+    """True when the pink found is not the building but a mark beside an ink drawing.
+
+    Inside the drawing, a fragment whose box covers less than INK_SHARE of the
+    drawing's box. Outside it, anything that small: a house number or a note in
+    red ink. The sheets whose number the index corrects often carry the new
+    number in red under the drawing (rue de Perpignan n°7, rue de la Licorne
+    n°12), which was taken for the wash and blown up to fill the parcel.
+    """
+    share = box_share(pink_box, ink_box)
+    if share > 0:
+        return share < INK_SHARE
+    return pink_box[2] * pink_box[3] < INK_SHARE * ink_box[2] * ink_box[3]
+
+
 def ink_walls(L, paper_l: int):
     """Thick dark strokes away from the margins: the walls of a drawing in ink.
 
@@ -452,9 +467,7 @@ def segment(path: Path):
     ink = biggest_cluster(walls, 25)
     if ink is not None and not touches_edge(ink[1], pink.shape):
         enclosed = walled_area(cv2.bitwise_and(walls, ink[0]))
-        if enclosed is not None and (
-            found is None or 0 < box_share(found[1], ink[1]) < INK_SHARE
-        ):
+        if enclosed is not None and (found is None or stray_mark(found[1], ink[1])):
             x, y, w, h = ink[1]
             pad = 10
             bbox = (max(0, x - pad), max(0, y - pad), min(W, x + w + pad), min(H, y + h + pad))
@@ -747,7 +760,7 @@ def trace(area: str = "cite", log: Callable[[str], Any] = print, limit: int | No
 
     out_dir = CACHE / "plans"
     out_dir.mkdir(parents=True, exist_ok=True)
-    features, stats = [], {"no parcel match": 0, "no drawing found": 0, "poor fit": 0, "traced": 0, "image missing": 0, "wrong scale": 0, "turned": 0, "turned back": 0}
+    features, stats = [], {"no parcel match": 0, "no drawing found": 0, "poor fit": 0, "traced": 0, "image missing": 0, "wrong scale": 0, "turned": 0, "turned back": 0, "ink read in part": 0}
     for p in plans:
         if p.id not in matches or any(pid not in parcels for pid in matches[p.id][0]):
             stats["no parcel match"] += 1
@@ -787,6 +800,17 @@ def trace(area: str = "cite", log: Callable[[str], Any] = print, limit: int | No
         if fit is None:
             stats["poor fit"] += 1
             stats["turned"] += 1
+            continue
+        if fit.turned_back and drawing == SEGMENT_INK:
+            # A reading of the ink walls that fits only once turned back is
+            # rejected. When the walls on one side are too pale or broken to
+            # read, the walled area falls back on a hull whose diagonal cuts
+            # through the rooms, and the best overlap comes out askew. On the
+            # Cité all four such fits were read in part, checked by eye: rue des
+            # Marmousets n°15 and rue Chanoinesse n°8 (traced before this
+            # check), rue de la Pelleterie n°9 and rue de Perpignan n°11.
+            stats["poor fit"] += 1
+            stats["ink read in part"] += 1
             continue
         if fit.turned_back:
             stats["turned back"] += 1

@@ -589,7 +589,7 @@ def build(area: str, log: Callable[[str], Any] = print) -> dict:
     import re
 
     text = re.sub(r"(-?\d+\.\d{7})\d+", r"\1", text)
-    out.write_text(text)
+    out.write_text(text, encoding="utf-8")
     log(f"model3d: wrote {out.relative_to(paths.REPO_ROOT)} ({len(text) / 1e6:.1f} MB)")
     return {
         "file": manifest_file(area, "model"),
