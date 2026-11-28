@@ -58,22 +58,22 @@
     {
       "id": "kahn:A 13 559",
       "camera": {
-        "lon": 2.347635,
-        "lat": 48.852656,
-        "height": 1.6,
-        "bearing": 73.75,
+        "lon": 2.346615,
+        "lat": 48.852762,
+        "height": 0.8,
+        "bearing": 81.03,
         "pitch": 0.0,
-        "roll": 0.0,
-        "hfov": 56.9,
-        "shift": 0.236
+        "roll": -0.2,
+        "hfov": 40.07,
+        "shift": 0.2737
       },
       "crop": [0.034, 0.029, 0.9625, 0.9747],
-      "points": 6,
-      "reprojection_error": 0.0061,
-      "confidence": 0.5,
+      "points": 10,
+      "reprojection_error": 0.0037,
+      "confidence": 0.7,
       "by": "Claude (AI assistant)",
-      "date": "2026-11-27",
-      "how": "Worked out from where six things fall in the autochrome: the outer corners and tops of the two towers (69 m) and the spire and its tip (96 m), placed from the cathedral's APUR footprint. Average error 4.5 pixels in a picture 743 wide. Checked in the stand-in view."
+      "date": "2026-11-28",
+      "how": "Solved from ten points in the autochrome, all placed from the cathedral's APUR footprint: the three top corners of each tower at the cornice (67.5 m), the spire's tip (96 m), the east corner and rose of the south transept, and the north-west edge of the front. The towers were taken as square, flush with the front and symmetric about the cathedral's axis; they come out 40 m wide outer to outer, where 41 m is documented. The camera was kept in the open street. Average error 2.7 pixels in a picture 743 wide; the first pose (1.6 m up, 75 m further east, 57 degrees wide) was about 45 pixels off on the same points. The camera's height, 0.8 m, is uncertain by about 0.25 m, and the people at the parapet suggest a horizon about 20 pixels higher than the towers do."
     }
   ]
 }
