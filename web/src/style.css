@@ -277,6 +277,7 @@ button.today-item:hover img { outline: 2px solid var(--accent); outline-offset: 
 .walk-look-btn { border: 1px solid #5b6577; background: none; color: #e8ecf2; border-radius: 999px; padding: 2px 10px; font: 600 12px var(--font-body); cursor: pointer; }
 .walk-look-btn[aria-pressed='true'] { background: #e3c98f; border-color: #e3c98f; color: #2a2116; }
 .walk-look span:empty { display: none; }
+.walk-painted[hidden] { display: none; }
 .period-grain, .period-vignette { position: absolute; inset: 0; pointer-events: none; }
 .period-grain { background-size: 180px 180px; mix-blend-mode: overlay; animation: period-grain 0.6s steps(3) infinite; }
 .period-vignette { background: radial-gradient(ellipse 75% 70% at 50% 50%, transparent 55%, rgba(24, 16, 6, 0.9) 130%); }

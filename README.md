@@ -172,7 +172,7 @@ Time, from `node tools/baseline/measure.mjs`. "Draw" is one frame drawn and fini
 - Draw times move by a millisecond or two from run to run. Frames were painted every 20 ms in every run, the refresh interval of this PC's screen: none was late. The detailed layer makes 33 or 34 draw calls.
 - No real phone has been measured yet.
 
-On Windows, Chrome compiles every shader with Direct3D's FXC compiler before the first 3D frame. `python -I tools/fxc/check.py` (on a Windows PC, see [tools/fxc/README.md](tools/fxc/README.md)) compiles all 19 fragment shaders the app draws the same way, on a 1 MB stack, and fails when one takes more than 5 seconds. On 2026-11-21 (AMD Ryzen 7 5700X, d3dcompiler_47 10.0.26100.9711) they took 8.6 s in all, with no stack overflow:
+On Windows, Chrome compiles every shader with Direct3D's FXC compiler before the first 3D frame. `python -I tools/fxc/check.py` (on a Windows PC, see [tools/fxc/README.md](tools/fxc/README.md)) compiles all 21 fragment shaders the app draws the same way, on a 1 MB stack, and fails when one takes more than 5 seconds. On 2026-11-21 (AMD Ryzen 7 5700X, d3dcompiler_47 10.0.26100.9711) the first 19 took 8.6 s in all, with no stack overflow; the two that paint a photo on the model, added on 2026-11-28, take 0.01 s together:
 
 | Shader | HLSL kB | Compile s | Instruction slots |
 | --- | ---: | ---: | ---: |
@@ -278,6 +278,14 @@ In the 3D view the archive photographs stand as picture frames where they were t
 **Walk the streets** puts the camera about 2 m above the ground. Use the arrow keys or W A S D (Shift to go faster) and drag to look around and up. Buildings standing in the chosen year block the way, so changing the year changes the streets you can walk; if a building appears where you stand, you step out to the nearest open ground. Looking above the horizon uses MapLibre's experimental pitch beyond 90° with an unclamped camera centre.
 
 WebGL can only draw images served with CORS headers. Albert-Kahn images load from the museum's portal; Paris Musées images come from small same-origin thumbnails (`python -m rpr thumbs --area cite`, 1,068 images, 7.6 MB, CC0).
+
+#### Photos painted on the model
+
+A photo whose camera has been lined up against the model opens where it was taken: the model seen from the photographer's place, under the photo, with a slider between them. When that camera was placed with a confidence of 0.5 or more and the photo is cleared for reuse, the model is also **painted with the photo**. The photo is thrown onto the walls and the ground from the camera, like a slide from a projector. **Walk into the picture** lets you walk away from that spot with the paint still on; the walk bar says the model is painted and **Take it off** removes it. Changing the year or leaving the walk takes it off too, since the photo belongs to its own year.
+
+`python -m rpr scenes` prepares these photos (no generative model, only numpy and Pillow): each is cut to its camera's crop, and a mask marks what must not be painted. The sky is found as light, smooth areas joined to the top of the picture; leaves as green areas (in colour photos) with their dark shade, leaving out green that lies wholly in the bottom fifth (shade or moss on the ground); museum labels as boxes set by hand in `pipeline/scenes.json`. On Kahn's autochrome of Notre-Dame from the quai (A 13 559) the sky is 37% of the picture and the leaves 14%. Two photos have a scene, 0.27 MB in all, in `web/public/data/3d/scenes/`.
+
+Walls the camera did not see, and those hidden behind others, keep the model's colours. Where the model's walls differ from the real ones (a house the model lacks, today's trees standing in 1914), the picture slips onto the wrong wall, and the app says so. While a photo is painted the model is drawn twice: 13 more draw calls a frame (40 to 53 in the view measured) and 0.4 M more triangles. A depth pass from the photo's camera, 13 draw calls, runs only when the photo, its camera or the year changes.
 
 #### 3D photos (AI depth)
 

@@ -9,6 +9,9 @@
  *
  * The photograph is a plain <img> above the map, as in the then-and-now
  * viewer: Paris Musées sends no CORS headers, so it cannot be a WebGL texture.
+ * Where the pipeline made a same-origin copy (a photo scene), the model is
+ * also painted with the photograph from its camera (photoscene.ts), and you
+ * can walk into the picture.
  * It only works for photos with a full camera (`cameraOf`); see
  * pipeline/rpr/cameras.py for how a camera is placed.
  */
@@ -87,6 +90,37 @@ export function metresBetween(a: [number, number], b: [number, number]): number 
   return Math.hypot((a[0] - b[0]) * 111320 * k, (a[1] - b[1]) * 110574)
 }
 
+/** One photo's entry in data/3d/scenes/index.json (pipeline/rpr/sources/scenes.py). */
+export interface SceneEntry {
+  image: string
+  mask: string
+  width: number
+  height: number
+  /** The camera's crop the picture was cut with: the scene is stale if the camera's crop differs. */
+  crop: [number, number, number, number]
+  sky: number
+  leaves: number
+  covered: number
+}
+
+export type SceneIndex = Record<string, SceneEntry>
+
+export async function loadSceneIndex(base: string): Promise<SceneIndex> {
+  try {
+    const res = await fetch(`${base}data/3d/scenes/index.json`)
+    return res.ok ? ((await res.json()) as SceneIndex) : {}
+  } catch {
+    return {}
+  }
+}
+
+/** The scene made for this camera, if its picture was cut with the camera's crop. */
+export function sceneFor(index: SceneIndex, id: string, camera: Camera): SceneEntry | undefined {
+  const e = index[id]
+  if (!e) return undefined
+  return e.crop.every((v, i) => Math.abs(v - camera.crop[i]) < 1e-4) ? e : undefined
+}
+
 /** The posed photo nearest a point, within `metres`, or undefined. */
 export function nearestPosed<T extends { camera: Camera }>(posed: T[], at: [number, number], metres: number): T | undefined {
   let best: T | undefined
@@ -121,6 +155,10 @@ export function poseEntry(id: string, c: Camera, date: string): string {
   )
 }
 
+/** Said in the card when the model is painted with the photograph. */
+export const PAINTED_NOTE =
+  'The model is painted with this photograph, thrown from where it was taken. Sky, leaves and labels are left out, and walls the camera did not see keep the model’s colours. Where the model’s walls differ from the real ones, the picture slips.'
+
 export interface StandInOptions {
   map: MapLibreMap
   walker: Walker
@@ -130,12 +168,17 @@ export interface StandInOptions {
   year: number
   /** Show the controls that move the camera and copy the pose. */
   adjust?: boolean
-  onClose: () => void
+  /** The model is painted with this photograph (photoscene.ts): say so, and offer to walk into it. */
+  painted?: boolean
+  /** The camera changed (adjust mode). */
+  onCamera?: (c: Camera) => void
+  /** `walkIn`: the walker leaves by walking into the picture, which stays painted on the model. */
+  onClose: (how: { walkIn: boolean }) => void
 }
 
 export interface StandIn {
-  /** Move back to the walk's eye and remove the photograph. */
-  close(): Promise<void>
+  /** Move back to the walk's eye and remove the photograph (`walkIn`: keep it painted on the model). */
+  close(walkIn?: boolean): Promise<void>
   /** Remove everything at once (the walk is ending). */
   dispose(): void
   /** Change part of the camera (adjust mode and tests). */
@@ -154,6 +197,7 @@ export function openStandIn(root: HTMLElement, o: StandInOptions): StandIn {
   let fade = 1
   let closing = false
   let disposed = false
+  let walkIn = false
   const startView = walker.view
   const startFov = map.getVerticalFieldOfView()
   walker.held = true
@@ -163,20 +207,22 @@ export function openStandIn(root: HTMLElement, o: StandInOptions): StandIn {
   const frame = el('div', { class: 'si-frame' }, [img])
   const slider = el('input', { type: 'range', id: 'si-fade', min: '0', max: '100', value: '100', 'aria-label': 'Balance between the 3D model and the photograph' })
   const leave = el('button', { class: 'tb-btn si-leave', type: 'button', text: 'Leave the photograph' })
+  const walkInto = o.painted ? el('button', { class: 'tb-btn si-walk', type: 'button', text: 'Walk into the picture' }) : null
   const status = el('p', { class: 'si-status', role: 'status' })
   const credit = [photo.credit, photo.license].filter(Boolean).join(' · ')
   const card = el('section', { class: 'si-card', 'aria-label': 'Standing in the photograph' }, [
     el('span', { class: 'si-eyebrow', text: [dateLabel(photo), photo.creator].filter(Boolean).join(' · ') }),
     el('strong', { class: 'si-title', text: photo.title }),
-    el('label', { class: 'si-fade', for: 'si-fade' }, [el('span', { text: `Model of ${o.year}` }), slider, el('span', { text: 'Photograph' })]),
+    el('label', { class: 'si-fade', for: 'si-fade' }, [el('span', { text: o.painted ? 'Painted model' : `Model of ${o.year}` }), slider, el('span', { text: 'Photograph' })]),
     el('p', { class: 'si-how', text: cameraLabel(cam, o.year) }),
+    o.painted ? el('p', { class: 'si-how si-painted', text: PAINTED_NOTE }) : null,
     status,
     el('div', { class: 'si-foot' }, [
       el('p', { class: 'si-credit' }, [
         el('span', { text: credit }),
         photo.url ? el('a', { href: photo.url, target: '_blank', rel: 'noopener', text: 'Archive record' }) : null
       ]),
-      el('div', { class: 'si-buttons' }, [leave])
+      el('div', { class: 'si-buttons' }, [walkInto, leave])
     ])
   ])
   const box = el('div', { class: 'si' }, [frame, card])
@@ -271,11 +317,13 @@ export function openStandIn(root: HTMLElement, o: StandInOptions): StandIn {
       if (c.crop && img.naturalWidth) aspect = pictureAspect(img.naturalWidth, img.naturalHeight, cam.crop)
       settle()
       readout?.()
+      o.onCamera?.({ ...cam })
     },
     fade: setFade,
-    async close() {
+    async close(into = false) {
       if (closing) return
       closing = true
+      walkIn = into
       await ready
       if (disposed) return
       box.classList.remove('is-in')
@@ -294,7 +342,7 @@ export function openStandIn(root: HTMLElement, o: StandInOptions): StandIn {
       map.setVerticalFieldOfView(DEFAULT_VFOV)
       root.replaceChildren()
       root.hidden = true
-      o.onClose()
+      o.onClose({ walkIn })
     }
   }
 
@@ -307,6 +355,7 @@ export function openStandIn(root: HTMLElement, o: StandInOptions): StandIn {
   }
   window.addEventListener('keydown', onKey)
   leave.addEventListener('click', () => void api.close())
+  walkInto?.addEventListener('click', () => void api.close(true))
   const ro = new ResizeObserver(settle)
   ro.observe(root)
 

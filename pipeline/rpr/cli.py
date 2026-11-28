@@ -81,6 +81,12 @@ def cmd_depth(args: argparse.Namespace) -> None:
     _update_manifest(f"depth_{args.set.replace('-', '_')}", depth.build(args.set))
 
 
+def cmd_scenes(args: argparse.Namespace) -> None:
+    from rpr.sources import scenes
+
+    _update_manifest("scenes", scenes.build(rebuild=args.rebuild))
+
+
 def cmd_eraimages(args: argparse.Namespace) -> None:
     from rpr.sources import eraimages
 
@@ -206,6 +212,10 @@ def main(argv: list[str] | None = None) -> int:
     p = sub.add_parser("depth", help="AI depth maps for a set of photos (needs onnxruntime, numpy, Pillow)")
     p.add_argument("--set", choices=["notre-dame"], default="notre-dame")
     p.set_defaults(func=cmd_depth)
+
+    p = sub.add_parser("scenes", help="posed photos made ready to paint onto the 3D model (needs numpy, Pillow)")
+    p.add_argument("--rebuild", action="store_true", help="redo existing scenes")
+    p.set_defaults(func=cmd_scenes)
 
     p = sub.add_parser("eraimages", help="full-size images of an area's photos of 1900-1929, into pipeline/cache/era1920/ (needs [vision])")
     add_area(p)
