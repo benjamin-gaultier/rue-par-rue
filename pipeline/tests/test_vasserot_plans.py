@@ -118,6 +118,24 @@ def test_segment_ignores_a_washed_fragment_inside_an_ink_drawing(tmp_path):
     assert how == vp.SEGMENT_INK
 
 
+def test_segment_ignores_a_number_written_in_red_beside_an_ink_drawing(tmp_path):
+    def draw(cv2, img):
+        cv2.rectangle(img, (200, 300), (400, 700), (30, 30, 30), 9)
+        # The corrected house number, in red ink under the drawing (rue de Perpignan n°7).
+        cv2.putText(img, "5", (420, 800), cv2.FONT_HERSHEY_SIMPLEX, 2, (60, 40, 200), 8)
+
+    *_, how = vp.segment(_sheet(tmp_path, draw))
+    assert how == vp.SEGMENT_INK
+
+
+def test_stray_mark():
+    drawing = (100, 100, 400, 500)
+    assert vp.stray_mark((120, 120, 40, 40), drawing)  # a washed corner inside the drawing
+    assert not vp.stray_mark((100, 100, 300, 400), drawing)  # the wash fills the drawing
+    assert vp.stray_mark((520, 650, 60, 50), drawing)  # a red number beside it
+    assert not vp.stray_mark((600, 100, 300, 400), drawing)  # a washed building beside a small inked box
+
+
 def test_box_share_and_edge():
     assert vp.box_share((0, 0, 10, 10), (0, 0, 20, 20)) == 0.25
     assert vp.box_share((50, 50, 10, 10), (0, 0, 20, 20)) == 0
